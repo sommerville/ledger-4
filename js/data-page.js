@@ -54,6 +54,23 @@
         return (y && m) ? new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short' }) : '';
     }
     function ddMoneyTxt(n) { return typeof fmt === 'function' ? fmt(n || 0) : '$' + Math.round(n || 0).toLocaleString(); }
+    // 4.0.5: Demo Mode. Every amount on the page shows at 1% like fmt() (inputs included), and the page is
+    // view-only so the scaled numbers can never be saved over the real ones. Metal prices are market prices: not scaled.
+    function ddDemo() { return typeof demoMode !== 'undefined' && !!demoMode; }
+    function ddDemoN(v, dp) {
+        if (!ddDemo() || v === '' || v == null) return v;
+        const n = parseFloat(v), f = Math.pow(10, dp == null ? 2 : dp);
+        return isNaN(n) ? v : Math.round(n * 0.01 * f) / f;
+    }
+    function ddDemoText(s) {   // dollar amounts typed into notes
+        return ddDemo() ? String(s).replace(/\$\s?(\d[\d,]*(?:\.\d+)?)/g, (m, d) => ddMoneyTxt(parseFloat(d.replace(/,/g, '')))) : s;
+    }
+    function ddDemoBlocked() {
+        if (!ddDemo()) return false;
+        alert('Demo Mode is on, so the Data page is view-only. Turn Demo Mode off in Settings \u2192 Display Options to log or change anything.');
+        return true;
+    }
+    function ddPriceTxt(n) { return '$' + Math.round(n || 0).toLocaleString('en-US'); }   // metal prices: never scaled
     function ddPrevKeys(mk, n) { const out = []; let k = mk; for (let i = 0; i < n; i++) { k = ddPrevMonthKey(k); out.push(k); } return out; }
     // Latest entry before month mk that matches — used for the "last: $X" hints
     function ddLastBefore(list, mk, match) {
@@ -236,7 +253,8 @@
         ddDirty.clear();
         ddStat = {};
         const mk = ddCurrentMk;
-        body.innerHTML = [ddSectionIncome(mk), ddSectionAccounts(mk), ddSectionExpenses(mk), ddSectionCoast(mk),
+        const demoNote = ddDemo() ? '<div class="dd-demo-note" style="margin:0 0 12px;padding:10px 12px;border:1px solid rgba(212,175,55,0.5);border-radius:10px;background:rgba(212,175,55,0.08);font-size:13px;line-height:1.4;">Demo Mode: amounts are shown at 1% and the page is view-only.</div>' : '';   // 4.0.5
+        body.innerHTML = demoNote + [ddSectionIncome(mk), ddSectionAccounts(mk), ddSectionExpenses(mk), ddSectionCoast(mk),
                           ddSectionDebt(mk), ddSectionLoans(mk), ddSectionRealEstate(mk), ddSectionNotes(mk)].join('');
         ddRenderChips(mk);
         ddUpdateStepper();
@@ -295,11 +313,11 @@
             <div class="dd-body" id="dd-sec-${sectionId}-${mk}">
                 ${innerHtml}
             </div>
-            <div class="dd-foot">
+            ${ddDemo() ? '' : `<div class="dd-foot">
                 ${canAdd ? `<button class="dd-fbtn" onclick="ddAddRow('${sectionId}','${mk}')">+ Add</button>` : ''}
                 ${canRm ? `<button class="dd-fbtn" id="dd-delbtn-${sectionId}-${mk}" onclick="ddToggleDelete('${sectionId}','${mk}')">Remove</button>` : ''}
                 <button class="dd-save" onclick="ddSave('${sectionId}','${mk}')">Save</button>
-            </div>
+            </div>`}
             <div id="dd-msg-${sectionId}-${mk}" class="dd-msg" style="display:none;"></div>
         </section>`;
     }
@@ -308,12 +326,14 @@
     }
     // Money input. attrs = extra attributes (class, data-*) placed on the <input>
     function ddIn(value, attrs, kind) {
+        if (ddDemo() && !/-price-/.test(attrs || '')) value = ddDemoN(value, kind === 'oz' ? 4 : 2);   // 4.0.5
         const v = value === '' || value == null ? '' : ' value="' + ddE(value) + '"';
         const step = kind === 'oz' ? '0.001' : '0.01';
         return '<span class="dd-money' + (kind === 'oz' ? ' oz' : '') + (kind === 'net' ? ' net' : '') + '"><input type="number"' + v
-             + ' placeholder="' + (kind === 'oz' ? '0' : '0.00') + '" step="' + step + '" inputmode="decimal" enterkeyhint="done" ' + (attrs || '') + (/\bclass="/.test(attrs || '') ? '' : ' class="dd-in"') + '></span>';
+             + ' placeholder="' + (kind === 'oz' ? '0' : '0.00') + '" step="' + step + '" inputmode="decimal" enterkeyhint="done" ' + (ddDemo() ? 'readonly ' : '') + (attrs || '') + (/\bclass="/.test(attrs || '') ? '' : ' class="dd-in"') + '></span>';
     }
     function ddXBtn(onclick) {
+        if (ddDemo()) return '';   // 4.0.5: view-only
         return '<button type="button" class="dd-x-btn" aria-label="Remove" onclick="' + onclick + '">' + DD_ICON.x + '</button>';
     }
     function ddExistingRow(sectionId, mk, gi, label, value, hint) {
@@ -743,7 +763,7 @@
         } else if (!rows) rows = ddEmpty('No open debts.');
         const total = monthBulk.reduce((s, e) => s + (e.amount || 0), 0);
         const bodyId = 'dd-bulk-' + mk + '-body';
-        const addBtn = open.length ? '<button type="button" class="dd-fbtn dd-bulk-add" onclick="ddAddRow(\'bulkdebt\',\'' + mk + '\')">+ Add payment</button>' : '';
+        const addBtn = open.length && !ddDemo() ? '<button type="button" class="dd-fbtn dd-bulk-add" onclick="ddAddRow(\'bulkdebt\',\'' + mk + '\')">+ Add payment</button>' : '';
         return '<div class="dd-pay small dd-bulk">'
              + '<button type="button" class="dd-payhead" onclick="ddTogglePc(\'' + bodyId + '\')">'
              + '<div class="dd-lbl"><span class="dd-name">Extra payments</span><span class="dd-hint">'
@@ -802,14 +822,15 @@
                 <span class="dd-unsaved">Unsaved</span>
             </div>
             <div class="dd-body">
-                <textarea id="dd-notes-${mk}" class="dd-ta" placeholder="Contributions, market events, job changes…">${ddE(note)}</textarea>
+                <textarea id="dd-notes-${mk}" class="dd-ta" placeholder="Contributions, market events, job changes…"${ddDemo() ? ' readonly' : ''}>${ddE(ddDemoText(note))}</textarea>
             </div>
-            <div class="dd-foot"><button class="dd-save" onclick="ddSaveNotes('${mk}')">Save note</button></div>
+            ${ddDemo() ? '' : `<div class="dd-foot"><button class="dd-save" onclick="ddSaveNotes('${mk}')">Save note</button></div>`}
             <div id="dd-notes-msg-${mk}" class="dd-msg" style="display:none;"></div>
         </section>`;
     }
 
     function ddSaveNotes(mk) {
+        if (ddDemoBlocked()) return;
         const el = document.getElementById('dd-notes-' + mk);
         if (!el) return;
         const text = el.value.trim();
@@ -858,22 +879,22 @@
             const silverOz = thisM.silver != null ? thisM.silver : (priorM.silver != null ? priorM.silver : '');
             const gp = thisM.goldPrice   || '';
             const sp = thisM.silverPrice || '';
-            const lastGp = priorM && priorKey !== mk && priorM.goldPrice ? 'Last ' + ddMoneyTxt(priorM.goldPrice) : '';
-            const lastSp = priorM && priorKey !== mk && priorM.silverPrice ? 'Last ' + ddMoneyTxt(priorM.silverPrice) : '';
+            const lastGp = priorM && priorKey !== mk && priorM.goldPrice ? 'Last ' + ddPriceTxt(priorM.goldPrice) : '';
+            const lastSp = priorM && priorKey !== mk && priorM.silverPrice ? 'Last ' + ddPriceTxt(priorM.silverPrice) : '';
             nShown++; if (gp || sp) nLogged++;
             const metalVal = (parseFloat(goldOz) || 0) * (parseFloat(gp) || 0) + (parseFloat(silverOz) || 0) * (parseFloat(sp) || 0);
             if (gp || sp) total += metalVal;
             // v3.5.1: one Investments-style row; tap it to show the oz / price fields
             const lastVal = priorM && priorKey !== mk && (priorM.goldPrice || priorM.silverPrice)
                 ? (parseFloat(priorM.gold) || 0) * (parseFloat(priorM.goldPrice) || 0) + (parseFloat(priorM.silver) || 0) * (parseFloat(priorM.silverPrice) || 0) : 0;
-            const ozHint = [goldOz !== '' ? 'Gold ' + goldOz + ' oz' : '', silverOz !== '' ? 'Silver ' + silverOz + ' oz' : ''].filter(Boolean).join(' · ');
+            const ozHint = [goldOz !== '' ? 'Gold ' + ddDemoN(goldOz, 4) + ' oz' : '', silverOz !== '' ? 'Silver ' + ddDemoN(silverOz, 4) + ' oz' : ''].filter(Boolean).join(' · ');
             const lastHint = lastVal ? 'Last ' + ddMoneyTxt(lastVal) + ' · ' + new Date(priorKey + '-15').toLocaleString('en-US', { month: 'short' }) : '';
             const mBody = 'dd-metals-body-' + mk;
             const upd = 'oninput="ddMetalsTotal(\'' + mk + '\')"';
             rows += '<div class="dd-metals" id="dd-metals-' + mk + '">'
                   + '<div class="dd-row dd-metals-head" role="button" tabindex="0" aria-expanded="false" aria-controls="' + mBody + '" onclick="ddToggleMetals(\'' + mk + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();ddToggleMetals(\'' + mk + '\')}">'
                   +   '<div class="dd-lbl"><span class="dd-name' + ((gp || sp) ? '' : ' muted') + '">Precious Metals ' + DD_ICON.chev + '</span><span class="dd-hint">' + (lastHint || ozHint || 'Gold & silver') + '</span></div>'
-                  +   '<span class="dd-money"><span class="dd-in dd-metals-val" id="dd-metals-val-' + mk + '">' + ((gp || sp) ? ddMetalsFmt(metalVal) : '<span class="dd-metals-ph">0.00</span>') + '</span></span>'
+                  +   '<span class="dd-money"><span class="dd-in dd-metals-val" id="dd-metals-val-' + mk + '">' + ((gp || sp) ? ddMetalsFmt(ddDemo() ? metalVal * 0.01 : metalVal) : '<span class="dd-metals-ph">0.00</span>') + '</span></span>'
                   + '</div>'
                   + '<div class="dd-metals-body" id="' + mBody + '" style="display:none;"><div class="dd-metals-grid">'
                   +   '<div class="dd-metal"><div class="dd-metal-t">Gold</div>'
@@ -931,6 +952,7 @@
             { sub: 'Once a year' + (total ? ' · ' + ddMoneyTxt(total) : ''), noAdd: true, noRemove: true });
     }
     function ddSaveRealEstate(mk) {
+        if (ddDemoBlocked()) return;
         const wrap = document.getElementById('dd-wrap-realestate-' + mk);
         if (!wrap) return;
         const rows = [...wrap.querySelectorAll('[data-re-prop]')];
@@ -972,6 +994,7 @@
 
     // ADD ROW
     function ddAddRow(sectionId, mk) {
+        if (ddDemoBlocked()) return;
         const container = document.getElementById('dd-'+sectionId+'-rows-'+mk);
         if (!container) return;
         if (sectionId === 'bulkdebt') { const b = document.getElementById('dd-bulk-' + mk + '-body'); if (b && b.style.display === 'none') ddTogglePc(b.id); }
@@ -1019,6 +1042,7 @@
 
     // REMOVE TOGGLE — shows the × on each row
     function ddToggleDelete(sectionId, mk) {
+        if (ddDemoBlocked()) return;
         const btn  = document.getElementById('dd-delbtn-'+sectionId+'-'+mk);
         const wrap = document.getElementById('dd-wrap-'+sectionId+'-'+mk);
         if (!btn || !wrap) return;
@@ -1030,6 +1054,7 @@
     }
 
     function ddDeleteEntry(section, snapIdx, mk) {
+        if (ddDemoBlocked()) return;
         const obj = ddObj(section, snapIdx);
         if (!obj) return;
         const acct = section === 'accounts' ? accounts.find(a => String(a.id) === String(obj.accountId)) : null;
@@ -1052,6 +1077,7 @@
     // new contributions carry linkedPayTs / linkedBonusTs and take the paycheck's date.
     // Saving redraws only that section, right away (no delayed full redraw, no double-tap duplicates).
     function ddSave(sectionId, mk) {
+        if (ddDemoBlocked()) return;
         if (sectionId === 'loans') return ddSaveLoans(mk);   // v3.4: loans have their own save
         if (sectionId === 'realestate') return ddSaveRealEstate(mk);   // 3.5.3
         if (sectionId === 'debt')  return ddSaveDebt(mk);    // v3.5: balances + extra payments together
@@ -1076,6 +1102,7 @@
         return out;
     }
     function ddSaveDebt(mk) {
+        if (ddDemoBlocked()) return;
         const problem = ddCheckNewRows('debt', mk) || ddCheckNewRows('bulkdebt', mk);
         if (problem) { ddShowMsg('debt', mk, problem, true); return; }
         const asks = ddClearedLabels('debt', mk).concat(ddClearedLabels('bulkdebt', mk).map(l => l + ' (extra payment)'));
@@ -1129,6 +1156,7 @@
     }
 
     function ddSaveSection(sectionId, mk, opts) {   // opts.answer: the removal question was already asked
+        if (ddDemoBlocked()) return 0;
         const dateStr = mk + '-15';
         let saved = 0;
         const removals   = [];   // { section, obj, label }  (label null = goes along with another removal)

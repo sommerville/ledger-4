@@ -103,7 +103,7 @@
             const v = demoMode ? n * 0.01 : n;
 return new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(Math.round(v));
         };
-const fmtRraw = n => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(Math.round(n));
+const fmtRraw = fmtR;   // 4.0.5: was unscaled, so spending, FIRE, income, retirement and coast showed real numbers in Demo Mode
 
         // Date
         const now = new Date();
@@ -206,7 +206,7 @@ now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', 
             // v3.1: logged bills only (estimated living + health insurance live in the desktop planner)
             // Gross up for federal tax + FICA (no Alaska state income tax) — LC.breakEvenHourly (3.7.1)
             const hourlyRate  = LC.breakEvenHourly(getTrackedAnnualExpenses());
-            ovBreakEvenEl.textContent = '$' + hourlyRate.toFixed(2) + '/hr';
+            ovBreakEvenEl.textContent = '$' + (demoMode ? hourlyRate * 0.01 : hourlyRate).toFixed(2) + '/hr';   // 4.0.5: Demo Mode
         } else if (ovBreakEvenEl) {
             ovBreakEvenEl.textContent = '—';
         }

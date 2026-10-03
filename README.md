@@ -6,8 +6,8 @@ Ledger 3.0 was the pivot from Ledger 2: backups are locked and go to the cloud, 
 
 | App | Open it at | What it does |
 |---|---|---|
-| **Phone app** (`index.html`) | `https://sommerville.github.io/ledger-3.2/` | **The logger.** The only app that saves financial data. You log balances, bills, income, 401(k) and coast contributions, loans you've made and property values here, and track your goals. Data stays on the phone, encrypted with your PIN. Installs as a PWA and works offline. |
-| **Desktop planner** (`desktop.html`) | `https://sommerville.github.io/ledger-3.2/desktop.html` | **The planner.** Dashboards plus the Retirement Plan, Paycheck Planner and FIRE projections. Open a backup from the phone (plain or locked). It remembers only your planning settings; your financial data is never stored there and never leaves the browser. |
+| **Phone app** (`index.html`) | `https://sommerville.github.io/ledger-4/` | **The logger.** The only app that saves financial data. You log balances, bills, income, 401(k) and coast contributions, loans you've made and property values here, and track your goals. Data stays on the phone, encrypted with your PIN. Installs as a PWA and works offline. |
+| **Desktop planner** (`desktop.html`) | `https://sommerville.github.io/ledger-4/desktop.html` | **The planner.** Dashboards plus the Retirement Plan, Paycheck Planner and FIRE projections. Open a backup from the phone (plain or locked). It remembers only your planning settings; your financial data is never stored there and never leaves the browser. |
 
 The two apps share two things: the **backup file** (`ledger-YYYY-MM-DD-locked.json`) and the **math** (`js/ledger-core.js`), so a number means the same thing on both screens.
 
@@ -37,12 +37,12 @@ Tests live in `tests/golden/` (also local only): `run.py` checks every planning 
 
 ## Setting up this repo (first time)
 
-1. Create a new repo, e.g. `ledger-3.2` (public, which free GitHub Pages needs).
+1. Create a new repo, e.g. `ledger-4` (public, which free GitHub Pages needs).
 2. Upload everything from the release zip's **`deploy/`** folder, keeping the `css/`, `js/`, `vendor/`, `icons/` and `images/` folders. The zip's `local/` folder (`library/`, `tests/`) stays on your computer.
 3. Settings → **Pages** → Source: *Deploy from a branch* → `main` / `/ (root)` → Save.
-4. After the green check under **Actions**, open `https://sommerville.github.io/ledger-3.2/` on the phone and **Add to Home Screen**. The icon is labeled "Ledger 4".
+4. After the green check under **Actions**, open `https://sommerville.github.io/ledger-4/` on the phone and **Add to Home Screen**. The icon is labeled "Ledger 4".
 
-The repo is still called `ledger-3.2` on purpose: renaming it changes the web address, and the phone's saved data belongs to that address.
+The repo is `ledger-4` (it was `ledger-3.2`). The phone's saved data and PIN belong to `https://sommerville.github.io`, which every repo there shares, so moving to a new repo name kept them. The installed home-screen app is tied to the repo's address, though: after a rename, open the new address and Add to Home Screen again.
 
 ### Running next to Ledger 2
 Both repos live under the same `https://<user>.github.io` address, so **the phone apps share the same saved data and PIN**. Ledger 3 opened with your data already there; nothing to import. That also means changes made in one app show up in the other, and Ledger 2's old Data Dump still has the save bugs fixed in 3.2. **Archive the Ledger 2 repo** (Settings → Archive) so it can't write to your data.

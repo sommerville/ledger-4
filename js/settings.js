@@ -20,8 +20,7 @@
 
         // Refresh all displays
         refreshAll();
-        updateStats();
-        updateExpenseStats();
+        updateStats();   // 4.0.5: the old updateExpenseStats() call is gone (it no longer exists and threw before the message)
 
         // Show visual indicator
         if (demoMode) {
@@ -212,14 +211,17 @@
 
     function splashTap() {
         const el = document.getElementById('splashScreen');
-        if (!el) return;
-        // Fade out whole splash
+        if (!el || el._leaving) return;
+        el._leaving = true;
+        // 4.0.6: crossfade. The CLAUDE screen starts underneath (z-index 19999, the crest is 20000) and the crest
+        // fades off it, on the same navy (was: fade to the dark page, then pop the next screen in)
+        showClaudeSplash();
         el.style.transition = 'opacity 0.5s ease';
         el.style.opacity = '0';
         setTimeout(() => {
             el.style.display = 'none';
             el.style.opacity = '1';
-            showClaudeSplash();
+            el._leaving = false;
         }, 500);
     }
 
@@ -271,13 +273,17 @@
 
     function claudeSplashDismiss() {
         const el = document.getElementById('claudeSplashScreen');
-        if (!el || el.style.display === 'none') return;
+        if (!el || el.style.display === 'none' || el._leaving) return;
+        el._leaving = true;
+        // 4.0.6: crossfade. The PIN screen goes up underneath (z-index 10000) and the CLAUDE screen fades off it
+        // (was: fade to the dark page, then the PIN screen popped in all at once)
+        checkPinStatus();
         el.style.transition = 'opacity 0.4s ease';
         el.style.opacity = '0';
         setTimeout(() => {
             el.style.display = 'none';
             el.style.opacity = '1';
-            checkPinStatus();
+            el._leaving = false;
         }, 400);
     }
 

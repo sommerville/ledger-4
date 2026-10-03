@@ -231,12 +231,14 @@
             { sub: 'Owed to you ' + ddMoneyTxt(owed), noAdd: true });
     }
     function ddLoanDelete(evId, mk) {
+        if (ddDemoBlocked()) return;
         const e = loanEvents.find(x => String(x.id) === String(evId));
         if (!e || !confirm('Remove this ' + (e.type === 'lend' ? 'loan' : 'payment') + ' of ' + ddMoneyTxt(e.amount) + '?')) return;
         loanEvents = loanEvents.filter(x => x !== e); saveLoanEvents();
         ddRefreshSection('loans', mk);
     }
     function ddSaveLoans(mk) {
+        if (ddDemoBlocked()) return;
         const wrap = document.getElementById('dd-wrap-loans-' + mk);
         if (!wrap) return;
         const num = inp => { const raw = inp.value.trim(); return raw === '' ? '' : parseFloat(raw); };
