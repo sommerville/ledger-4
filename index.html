@@ -850,7 +850,7 @@
         <div class="modal-header">
             <h2>Settings</h2>
         </div>
-        <!-- 4.0.7: order Darrin chose: Data Management, Display Options, Themes, Security, About -->
+        <!-- 4.0.7: order Darrin chose: Data Management, Display Options, Themes, About (Security removed in 4.0.9) -->
         <div class="settings-section">
             <h3>Data Management</h3>
             <p>Backup, restore, or delete your portfolio data.</p>
@@ -867,18 +867,9 @@
             <button class="action-btn" onclick="openConfigThemes()">Select Theme</button>
         </div>
         <div class="settings-section">
-            <h3>Security</h3>
-            <div style="background:rgba(212,175,55,0.1); border:1px solid #D4AF37; border-radius:8px; padding:10px; margin-bottom:12px; font-size:13px" class="col-gold">
-                🔒 Locked with your PIN on this phone
-            </div>
-            <!-- 3.6: result of navigator.storage.persist() — backup.js _renderPersistState() -->
-            <p id="storagePersistStatus" style="font-size:12px; margin:0 0 12px; opacity:0.85;"></p>
-            <button class="action-btn dark" onclick="lockApp()">Lock App</button>
-        </div>
-        <div class="settings-section">
             <h3>About</h3>
             <div id="settingsAboutCard" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
-                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.0.8 &nbsp;·&nbsp; Mobile</div>
+                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.0.9 &nbsp;·&nbsp; Mobile</div>
                 <div class="about-divider" style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px;"></div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <span style="font-size:18px;">🤖</span>
@@ -996,6 +987,8 @@
             <h3>Save Data</h3>
             <p>Save all your accounts and entries as a backup file.</p>
             <p style="font-size:12px;opacity:.75;margin:0 0 8px;">🔒 OneDrive copies are locked with your PIN (open them on the desktop with the same 4-digit PIN). Downloads to this phone are not locked.</p>
+            <!-- 3.6: result of navigator.storage.persist() — backup.js _renderPersistState(); moved here from Settings → Security in 4.0.9 -->
+            <p id="storagePersistStatus" style="font-size:12px; margin:0 0 8px; opacity:0.85;"></p>
             <div id="exportMsg" class="msg" style="display:none; margin-bottom:10px;"></div>
             <button class="green-btn" onclick="exportData('share')">📤 Save to OneDrive / Share…</button>
             <button class="action-btn dark u-mt10" onclick="exportData('download')">Download Backup File</button>
