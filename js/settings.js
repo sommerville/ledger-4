@@ -74,11 +74,18 @@
 
     // 4.0.1: the home screen is built behind the lock screen first, then the lock fades away over it
     // (was: fade, then build, so the build time came on top of the fade).
+    // 4.0.8: the home screen is built once per launch. Unlocking again after Lock App used to rerun initApp(),
+    // whose buildChart() threw "Canvas is already in use" before the fade, so the PIN screen stayed up for good.
+    // Now a re-unlock only refreshes, and nothing that throws can keep the lock screen from fading.
+    let _appStarted = false;
     function _unlockWithTransition() {
         const lock = document.getElementById('lockScreen');
         // Fire fullscreen early so browser has time to settle
         requestFullscreen();
-        initApp();
+        try {
+            if (!_appStarted) { initApp(); _appStarted = true; }
+            else refreshAll();
+        } catch (e) { console.error('Unlock: building the home screen failed', e); }
         requestAnimationFrame(() => {
             lock.style.transition = 'opacity 0.35s ease';
             lock.style.opacity = '0';
