@@ -889,8 +889,11 @@
         }
         ddStat.accounts = { n: nLogged, of: nShown };
         if (!rows) rows = ddEmpty('No investment accounts. Set them up in Accounts.');
+        // 4.0.3: the subtitle shows the portfolio balance for the month (every account's latest balance through mk,
+        // the same number as that month's Investments snapshot), not just the sum of the accounts updated so far.
+        const portfolio = LC.investTotal(accounts, entries, mk);
         return ddSectionWrap('Investments', '', '<div id="dd-accounts-rows-'+mk+'">'+rows+'</div>', mk, 'accounts',
-            { sub: nLogged + ' of ' + nShown + ' updated' + (total ? ' · ' + ddMoneyTxt(total) : '') });
+            { sub: nLogged + ' of ' + nShown + ' updated' + (portfolio ? ' · Portfolio ' + ddMoneyTxt(portfolio) : '') });
     }
 
     // PRECIOUS METALS row (v3.5.1): expand/collapse + live total
