@@ -5,7 +5,7 @@
 // A track is one number you're climbing (portfolio, net worth, …) with an ordered ladder of steps.
 //  - The current step is the first one never reached. Once a step is reached it stays done (✓ + the month it
 //    was first reached), even if the number dips later. Nothing is stored for that: the month comes from history.
-//  - Ladders are editable in Settings → Goal steps (pf_goalLadders, encrypted; in the backup as goalLadders).
+//  - Ladders are editable in Goals page → Edit goal steps (pf_goalLadders, encrypted; in the backup as goalLadders).
 //    A track with no saved ladder uses its defaults below.
 //  - Some tracks carry extra rows that aren't ladder steps: the two critical-mass points (Portfolio) and
 //    Coast FIRE (Taxable). They're worked out from today's numbers each time.
@@ -33,7 +33,7 @@
     const goalTrack = id => GOAL_TRACKS.find(t => t.id === id);
     const CRIT_INFLATION = 0.03;   // critical mass (spending): growth after inflation = 7% − 3%
 
-    // ── Ladders (Settings → Goal steps) ──
+    // ── Ladders (Goals page → Edit goal steps) ──
     let goalLadders = null;   // { trackId: [amounts] } — only tracks you've changed
     function goalsLoad() {
         if (goalLadders) return goalLadders;
@@ -179,7 +179,7 @@
         const label = v => fmt(v).replace('.00', '');
         let body = '';
         if (st.current) body += _gTargetRow(T, id, label(st.current.target), st.current.target, null, st.value, { next: true });
-        else body += `<div style="font-size:13px;color:${T.greenClr};font-weight:700;padding:4px 0 8px;">✓ Every step reached. Add more in Settings → Goal steps.</div>`;
+        else body += `<div style="font-size:13px;color:${T.greenClr};font-weight:700;padding:4px 0 8px;">✓ Every step reached. Add more with Edit goal steps on the Goals page.</div>`;
         const last = st.done[st.done.length - 1];
         if (last && !opts.compact) body += _gTargetRow(T, id, 'Last reached: ' + label(last.target), last.target, last.mk, st.value);
         goalExtras(id).forEach(x => { body += _gTargetRow(T, id, x.label, x.target, x.mk, st.value, { note: opts.compact ? '' : x.note }); });
@@ -217,7 +217,7 @@
             + `<button class="action-btn dark u-mt10" onclick="openGoalSteps()">Edit goal steps</button>`;
     }
 
-    // ── Settings → Goal steps ──
+    // ── Goals page → Edit goal steps ──
     function openGoalSteps() { openModal('goalStepsModal'); renderGoalSteps(); }
     function renderGoalSteps(msg) {
         const el = document.getElementById('goalStepsBody'); if (!el) return;

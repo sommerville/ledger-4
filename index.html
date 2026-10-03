@@ -856,11 +856,6 @@
             <button class="action-btn" onclick="openConfigThemes()">Select Theme</button>
         </div>
         <div class="settings-section">
-            <h3>Goals</h3>
-            <p>Set the steps each goal climbs: portfolio, net worth, taxable, coast, income.</p>
-            <button class="action-btn" onclick="openGoalSteps()">Goal Steps</button>
-        </div>
-        <div class="settings-section">
             <h3>Display Options</h3>
             <p>Customize how your portfolio is displayed.</p>
             <button class="action-btn" onclick="openModal('displayOptionsModal')">Display Settings</button>
@@ -882,7 +877,7 @@
         <div class="settings-section">
             <h3>About</h3>
             <div id="settingsAboutCard" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
-                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.0.1 &nbsp;·&nbsp; Mobile</div>
+                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.0.2 &nbsp;·&nbsp; Mobile</div>
                 <div class="about-divider" style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px;"></div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <span style="font-size:18px;">🤖</span>
@@ -952,7 +947,7 @@
     </div>
 </div>
 
-<!-- Goal steps editor (3.8, Settings → Goals) — goals.js renderGoalSteps() -->
+<!-- Goal steps editor (3.8; 4.0.2: opened from the Goals page, no longer in Settings) — goals.js renderGoalSteps() -->
 <div id="goalStepsModal" class="modal">
     <div class="modal-box">
         <div class="modal-header">

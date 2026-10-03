@@ -31,7 +31,7 @@
             coastAccounts,
             loanPeople,         // v3.4
             loanEvents,         // v3.4
-            goalLadders: goalsLoad(),   // 3.8: Settings → Goal steps (only tracks you changed)
+            goalLadders: goalsLoad(),   // 3.8: Goals page → Edit goal steps (only tracks you changed)
             homeOrder: (() => { try { return JSON.parse(localStorage.getItem('pf_homeOrder') || 'null'); } catch (e) { return null; } })(),   // 3.8.1: home icon layout
             logbook: JSON.parse(localStorage.getItem('pf_logbook') || '[]'),
             monthNotes: monthNotes,

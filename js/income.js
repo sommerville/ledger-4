@@ -355,7 +355,7 @@ const lbl = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         const bestMonth   = nonZero.length ? nonZero.reduce((b, m) => m.tot > b.tot ? m : b) : null;
         const worstMonth  = nonZero.length ? nonZero.reduce((b, m) => m.tot < b.tot ? m : b) : null;
 
-        // 3.8: income goals are goal tracks (goals.js); steps are set in Settings → Goal steps
+        // 3.8: income goals are goal tracks (goals.js); steps are set in Goals page → Edit goal steps
 
         function statRow(label, value, sub) {
             return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid ${borderClr};">
