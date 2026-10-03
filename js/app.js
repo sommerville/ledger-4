@@ -625,11 +625,16 @@ tsBar.textContent = '🕐 ' + d.toLocaleDateString('en-US', {weekday:'short', ye
     }
 
     // ─── Fullscreen Functions ────────────────────────────────
-    // Fullscreen disabled - suppresses Android system overlay message
+    // 4.0.4: only for the app opened in a browser tab. The installed app is already fullscreen from the
+    // manifest ("display": "fullscreen"), and asking again stacked Chrome's page fullscreen on top: the
+    // "To exit full screen…" toast, and Android's back/home/apps buttons vanishing almost as soon as they
+    // were swiped up (until Back dropped the page fullscreen).
     function requestFullscreen() {
-        // Skip fullscreen if running as installed PWA (already fullscreen/standalone)
-        if (window.matchMedia('(display-mode: standalone)').matches ||
-            window.navigator.standalone === true) return;
+        // Skip when installed (manifest fullscreen or standalone) or already fullscreen
+        if (window.matchMedia('(display-mode: fullscreen)').matches ||
+            window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone === true ||
+            document.fullscreenElement || document.webkitFullscreenElement) return;
         // Defer so the DOM has painted and dvh has resolved before the browser
         // recalculates the viewport in fullscreen mode.
         requestAnimationFrame(() => {
