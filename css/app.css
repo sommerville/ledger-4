@@ -1,0 +1,846 @@
+/* Sommerville Ledger 3 — app.css (3.5.1 split). Was the two <style> blocks in index.html, same order. */
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+button,a,input,select{-webkit-tap-highlight-color:transparent;outline:none}
+button:focus,a:focus,input:focus,select:focus{outline:none}
+
+/* Prevent white flash — html gets theme class before body renders */
+html{overscroll-behavior:none;height:100%;background:#16213e}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#1e3c72 0%,#2a69ac 100%);min-height:100vh;padding:20px;touch-action:pan-y;overscroll-behavior:none}
+html.sunset-theme{background:#0E0208}
+.container{max-width:800px;margin:0 auto;background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:visible}
+#notepadPage,
+/* ── Overview / Statement Page ── */
+#overviewPage{overflow-y:auto !important}
+
+/* Smooth page entrance - applied when navigate() shows a page */
+@keyframes pageFadeIn{from{opacity:0;transform:translateY(6px)}
+to{opacity:1;transform:translateY(0)}
+}
+.page-entering{animation:pageFadeIn 0.22s ease-out forwards}
+.header{background:linear-gradient(135deg,#1e3c72 0%,#2a69ac 100%);color:white;padding:30px 20px;text-align:center}
+.header h1{font-size:28px;margin-bottom:10px}
+.total-balance{font-size:42px;font-weight:bold;margin-top:15px}
+.balance-label{margin-top:5px;opacity:0.9}
+.content{padding:20px}
+.chart-controls{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.chart-controls button{flex:1;min-width:80px;padding:10px;border:2px solid #2a69ac;background:white;color:#2a69ac;border-radius:10px;font-weight:600;cursor:pointer;transition:all 0.2s;font-size:14px}
+.chart-controls button.active{background:#2a69ac;color:white}
+.chart-controls button:hover{transform:translateY(-2px)}
+.chart-container{position:relative;height:280px;margin-bottom:30px;background:#f8f9fa;border-radius:15px;padding:15px;box-sizing:border-box}
+#myChart{display:block;width:100% !important;height:100% !important}
+.action-btn{display:block;width:100%;padding:14px;margin-bottom:12px;background:linear-gradient(135deg,#1e3c72 0%,#2a69ac 100%);color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;-webkit-tap-highlight-color:transparent;outline:none}
+.action-btn:focus{outline:none}
+.action-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(42,105,172,0.4)}
+.action-btn.dark{background:linear-gradient(135deg,#636e72 0%,#2d3436 100%)}
+
+/* Modal */
+.modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:transparent;pointer-events:none}.modal.open{pointer-events:all}
+
+/* Backdrop fades in smoothly — no flash of bare page */
+.modal.open{display:flex;align-items:flex-start;justify-content:center;padding-top:40px;background:rgba(0,0,0,0.6);animation:backdropFade 0.15s ease-out forwards}
+@keyframes backdropFade{from{background:rgba(0,0,0,0)}
+to{background:rgba(0,0,0,0.6)}
+}
+.modal-box{background:white;border-radius:20px;padding:25px;width:92%;max-width:480px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:modalFadeIn 0.18s ease-out}
+@keyframes modalFadeIn{from{opacity:0;transform:translateY(8px) scale(0.98)}
+to{opacity:1;transform:translateY(0) scale(1)}
+}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-header h2{font-size:22px;color:#333}
+.close-btn{background:none;border:none;font-size:28px;cursor:pointer;color:#aaa;line-height:1;padding:0 4px}
+.close-btn:hover{color:#333}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:14px;color:#666;margin-bottom:5px}
+.form-group input,.form-group select{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:10px;font-size:16px;background:white}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.submit-btn{width:100%;padding:14px;background:linear-gradient(135deg,#1e3c72 0%,#2a69ac 100%);color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-top:6px}
+.submit-btn:hover{opacity:0.9}
+.msg{padding:12px;border-radius:10px;font-size:14px;font-weight:600;margin-bottom:12px;text-align:center}
+.msg.success{background:#e3fcef;color:#1a7f4b;border:2px solid #a8e6c4}
+.msg.error{background:#ffe0e0;color:#c0392b;border:2px solid #f5b7b1}
+
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Account items in themed modals */
+
+.settings-section{background:#f8f9fa;border-radius:15px;padding:18px;margin-bottom:14px}
+.settings-section h3{font-size:15px;color:#333;margin-bottom:6px}
+.settings-section p{font-size:13px;color:#666;margin-bottom:12px}
+.danger-btn{width:100%;padding:12px;background:#ff4757;color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+.green-btn{width:100%;padding:12px;background:linear-gradient(135deg,#11998e 0%,#38ef7d 100%);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+.file-label{display:block;width:100%;padding:12px;background:linear-gradient(135deg,#11998e 0%,#38ef7d 100%);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;text-align:center}
+@media (max-width:600px){.form-row{grid-template-columns:1fr}
+.header h1{font-size:22px}
+.total-balance{font-size:32px}
+}
+
+/* Desktop Mode - Wider Layout */
+
+/* Alaskan Theme - Luxury Wealth Management */
+body.alaskan-theme{background:#04090F;color:#C0C0C0;font-family:"SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,sans-serif;min-height:100vh;position:relative}
+
+/* Aurora Borealis animated background - z-index: -1 keeps it fully beneath all content & modals */
+body.alaskan-theme::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 140% 60% at 20% -10%,rgba(0,200,120,0.18) 0%,transparent 55%),radial-gradient(ellipse 110% 50% at 75% -5%,rgba(60,100,220,0.22) 0%,transparent 50%),radial-gradient(ellipse 90% 40% at 50% 0%,rgba(100,0,180,0.14) 0%,transparent 45%),radial-gradient(ellipse 200% 30% at 0% 10%,rgba(0,180,100,0.10) 0%,transparent 40%),linear-gradient(180deg,#020A14 0%,#04111E 30%,#061525 55%,#08101A 75%,#030A10 100%);animation:auroraShift 18s ease-in-out infinite alternate}
+
+/* Mountain silhouette at bottom - also behind everything */
+body.alaskan-theme::after{content:'';position:fixed;bottom:0;left:0;right:0;height:220px;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpolygon points='0,220 0,160 120,90 240,140 360,60 480,110 560,40 640,80 720,20 800,70 880,30 960,75 1040,50 1120,100 1200,55 1280,95 1360,70 1440,120 1440,220' fill='%23020D18' opacity='0.95'/%3E%3Cpolygon points='0,220 0,185 100,155 180,175 260,140 340,165 420,130 500,150 600,115 680,145 760,100 840,135 920,105 1000,130 1100,110 1200,135 1300,120 1440,145 1440,220' fill='%23030E1A' opacity='0.98'/%3E%3C/svg%3E") no-repeat bottom center / 100% 100%}
+@keyframes auroraShift{0%{opacity:1;transform:scaleX(1) scaleY(1)}
+25%{opacity:0.85;transform:scaleX(1.04) scaleY(1.02)}
+50%{opacity:1;transform:scaleX(0.97) scaleY(1.03)}
+75%{opacity:0.9;transform:scaleX(1.02) scaleY(0.98)}
+100%{opacity:1;transform:scaleX(1) scaleY(1)}
+}
+body.alaskan-theme .container{background:linear-gradient(135deg,rgba(15,30,51,0.92) 0%,rgba(10,26,47,0.95) 100%);border:1px solid #1A2A42;box-shadow:0 8px 32px rgba(0,0,0,0.6);backdrop-filter:blur(2px)}
+body.alaskan-theme .header{background:linear-gradient(135deg,#0A1A2F 0%,#050F1A 100%);border-bottom:1px solid #D4AF37;box-shadow:0 2px 8px rgba(212,175,55,0.1)}
+body.alaskan-theme .total-balance{color:#FFFFFF;text-shadow:0 2px 8px rgba(212,175,55,0.2)}
+body.alaskan-theme .balance-label{color:#8A8F98;letter-spacing:0.5px;text-transform:uppercase;font-size:12px}
+body.alaskan-theme .chart-controls button{background:#1A2A42;color:#8A8F98;border:1px solid #2A3A52;font-weight:500;letter-spacing:0.3px}
+body.alaskan-theme .chart-controls button:hover{color:#D4AF37;border-color:#D4AF37;background:#1F2F47;box-shadow:0 0 12px rgba(212,175,55,0.15)}
+body.alaskan-theme .chart-controls button.active{background:linear-gradient(135deg,#D4AF37 0%,#C9A632 100%);color:#0A1A2F;border-color:#D4AF37;font-weight:600;box-shadow:0 4px 16px rgba(212,175,55,0.25)}
+body.alaskan-theme .action-btn{background:linear-gradient(135deg,#2A3A52 0%,#1A2A42 100%);color:#C0C0C0;border:1px solid #3A4A62;font-weight:600;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+body.alaskan-theme .action-btn:hover{background:linear-gradient(135deg,#3A4A62 0%,#2A3A52 100%);border-color:#D4AF37;color:#D4AF37;box-shadow:0 6px 20px rgba(212,175,55,0.2);transform:translateY(-2px)}
+body.alaskan-theme .action-btn.dark{background:#1A2A42;border:1px solid #2A3A52;color:#C0C0C0}
+body.alaskan-theme .action-btn.dark:hover{background:#1F2F47;border-color:#D4AF37;color:#D4AF37}
+
+/* FIRE page title colors matching action button */
+body.alaskan-theme .fire-title{color:#C0C0C0 !important}
+
+body.alaskan-theme [id^="edit-"],body.alaskan-theme [id^="expense-edit-"],body.alaskan-theme [id^="add-form-"],body.alaskan-theme [id^="expense-add-form-"],body.alaskan-theme [id^="debt-add-form-"]{background:#1A2A42 !important}
+body.alaskan-theme [id^="edit-"] input,body.alaskan-theme [id^="expense-edit-"] input,body.alaskan-theme [id^="add-form-"] input,body.alaskan-theme [id^="expense-add-form-"] input,body.alaskan-theme [id^="debt-add-form-"] input,body.alaskan-theme [id^="edit-"] select,body.alaskan-theme [id^="add-form-"] select,body.alaskan-theme [id^="expense-add-form-"] select,body.alaskan-theme [id^="debt-add-form-"] select{background:#0A1A2F !important;color:#E0E0E0 !important;border:1px solid #2A3A52 !important}
+body.alaskan-theme [id^="edit-"] label,body.alaskan-theme [id^="expense-edit-"] label,body.alaskan-theme [id^="add-form-"] label,body.alaskan-theme [id^="expense-add-form-"] label,body.alaskan-theme [id^="debt-add-form-"] label{color:#C0C0C0 !important}
+body.alaskan-theme .modal-box{background:linear-gradient(135deg,#0F1E33 0%,#0A1A2F 100%);color:#C0C0C0;border:1px solid #2A3A52;box-shadow:0 16px 48px rgba(0,0,0,0.5)}
+body.alaskan-theme .modal-header{border-bottom:1px solid #2A3A52;background:linear-gradient(135deg,#0A1A2F 0%,#050F1A 100%)}
+
+/* Month buttons */
+body.alaskan-theme .modal-header h2{color:#D4AF37;font-weight:600;letter-spacing:0.5px}
+
+body.alaskan-theme [style*="MONTH TOTAL"]{color:#C0C0C0 !important}
+body.alaskan-theme [style*="font-size:12px;color:#666"],body.alaskan-theme [style*="text-transform:uppercase"]{color:#C0C0C0 !important}
+body.alaskan-theme button[onclick^="showEditForm"],body.alaskan-theme button[onclick*="Edit"]{color:#C0C0C0 !important}
+body.alaskan-theme #myChart{background:#1A2A42;border-radius:8px;padding:10px}
+body.alaskan-theme .chart-container{background:#0F1E33;border:1px solid #2A3A52}
+
+body.alaskan-theme .bg-white-card,body.alaskan-theme .bg-card-blue,body.alaskan-theme .bg-card-blue-r12,body.alaskan-theme .bg-card-blue-r12-14,body.alaskan-theme .bg-card-blue-r12-p10,body.alaskan-theme .u-card-blue,body.alaskan-theme .bg-card-muted{background:#1A2A42 !important}
+
+/* Projections table */
+
+body.alaskan-theme .col-dark,body.alaskan-theme .col-muted{color:#C0C0C0 !important}
+
+/* Settings sections */
+body.alaskan-theme .settings-section{background:#1A2A42;border:1px solid #2A3A52}
+body.alaskan-theme .settings-section h3{color:#D4AF37}
+body.alaskan-theme .settings-section p{color:#8A8F98}
+body.alaskan-theme .bg-success,
+/* Compound Calculator - Future Value box same as totals box below */
+body.alaskan-theme .bg-success{background:#0F6B5A !important}
+
+/* Projection table highlights */
+
+body.alaskan-theme h3.col-navy,
+/* Account balance amounts - match growth green */
+body.alaskan-theme .col-navy{color:#7BA3D8 !important}
+
+/* Goal button + symbol color */
+body.alaskan-theme .col-blue{color:#D4AF37 !important}
+body.alaskan-theme .bg-success{background:#1A2A42 !important}
+body.alaskan-theme #calcFutureValue{color:#D4AF37 !important}
+
+/* Compound Calculator label text */
+body.alaskan-theme #calculatorPage label{color:#C0C0C0 !important}
+body.alaskan-theme #calculatorPage .col-navy{color:#C0C0C0 !important}
+body.alaskan-theme #calculatorPage [style*="font-size:24px"],body.alaskan-theme #calculatorPage [style*="font-size:28px"]{color:#D4AF37 !important}
+
+/* Sliders — match v3.5 */
+body.alaskan-theme input[type=range]{accent-color:#D4AF37}
+
+/* Theme checkboxes */
+body.alaskan-theme input[type=checkbox]{accent-color:#D4AF37}
+
+/* Faint gold bg for unchecked checkbox labels */
+body.alaskan-theme label:has(input[type=checkbox]:not(:checked)){background:rgba(212,175,55,0.08)}
+
+/* Make sure select dropdowns are visible */
+body.alaskan-theme select option{background:#1A2A42;color:#E0E0E0}
+body.alaskan-theme [id^="add-form-"],body.alaskan-theme [id^="expense-add-form-"],body.alaskan-theme [id^="debt-add-form-"],body.alaskan-theme [id^="addGoalForm"]{background:#1A2A42 !important;border:1px solid #2A3A52}
+body.alaskan-theme [id^="add-form-"] label,body.alaskan-theme [id^="expense-add-form-"] label,body.alaskan-theme [id^="debt-add-form-"] label,body.alaskan-theme [id^="addGoalForm"] label{color:#8A8F98 !important}
+body.alaskan-theme [id^="addGoalForm"] h3{color:#7BA3D8 !important}
+
+/* Projections page - Current Portfolio Value box */
+
+body.alaskan-theme input,body.alaskan-theme select{background:#1A2A42 !important;color:#E0E0E0;border:1px solid #2A3A52}
+body.alaskan-theme input:focus,body.alaskan-theme select:focus{border-color:#D4AF37;box-shadow:0 0 12px rgba(212,175,55,0.2);outline:none}
+body.alaskan-theme .submit-btn{background:linear-gradient(135deg,#D4AF37 0%,#C9A632 100%);border:none;color:#0A1A2F;font-weight:700;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(212,175,55,0.3)}
+body.alaskan-theme .submit-btn:hover{background:linear-gradient(135deg,#E5BF42 0%,#D4AF37 100%);box-shadow:0 6px 20px rgba(212,175,55,0.4)}
+body.alaskan-theme .settings-section{border-bottom:1px solid #1A2A42}
+body.alaskan-theme .green-btn{background:#0F6B5A;border:none;color:#FFFFFF;font-weight:700;box-shadow:0 4px 16px rgba(15,107,90,0.3)}
+body.alaskan-theme .green-btn:hover{background:#138770;box-shadow:0 6px 20px rgba(15,107,90,0.4)}
+body.alaskan-theme .file-label{background:#0F6B5A;border:none;color:#FFFFFF;font-weight:700;box-shadow:0 4px 16px rgba(15,107,90,0.3)}
+body.alaskan-theme .file-label:hover{background:#138770;box-shadow:0 6px 20px rgba(15,107,90,0.4)}
+body.alaskan-theme [id^="edit-"] .submit-btn,body.alaskan-theme [id^="expense-edit-"] .submit-btn,body.alaskan-theme [id^="add-form-"] .submit-btn,body.alaskan-theme [id^="expense-add-form-"] .submit-btn,body.alaskan-theme [id^="debt-add-form-"] .submit-btn{box-shadow:none !important}
+body.alaskan-theme button[onclick*="saveEdit"],body.alaskan-theme button[onclick*="addEntryForMonth"],body.alaskan-theme button[onclick*="addExpenseForMonth"],body.alaskan-theme button[onclick*="saveDebtEntryForMonth"]{background:#D4AF37 !important;color:#0A1A2F !important;font-weight:700;box-shadow:none !important}
+body.alaskan-theme button[onclick*="deleteEntry"],body.alaskan-theme button[onclick*="deleteExpense"]{background:#DC3545 !important;color:#FFFFFF !important;font-weight:700;box-shadow:none !important}
+body.alaskan-theme button[onclick*="cancelEdit"],body.alaskan-theme button[onclick*="hideAddForm"],body.alaskan-theme button[onclick*="hideAddExpenseForm"],body.alaskan-theme button[onclick*="cancelEditExpense"]{background:#4A5A72 !important;color:#C0C0C0 !important;font-weight:600;box-shadow:none !important}
+body.alaskan-theme .col-navy{color:#28a745 !important}
+body.alaskan-theme button[onclick*="showEditForm"],body.alaskan-theme button[onclick*="showEditExpenseForm"]{background:#1A2A42 !important;border-color:#2A3A52 !important;color:#C0C0C0 !important}
+body.alaskan-theme button[onclick*="showEditForm"]:hover,body.alaskan-theme button[onclick*="showEditExpenseForm"]:hover{border-color:#D4AF37 !important;color:#D4AF37 !important}
+body.alaskan-theme .danger-btn{background:#8B2E2E;border:none;color:#FFFFFF;font-weight:700;box-shadow:0 4px 16px rgba(139,46,46,0.3)}
+body.alaskan-theme strong{color:#D4AF37}
+body.alaskan-theme .balance-label{color:#8A8F98}
+body.alaskan-theme h1,body.alaskan-theme h2,body.alaskan-theme h3{color:#E0E0E0}
+body.alaskan-theme .msg.success{background:#0F6B5A;border-left:4px solid #138770;color:#FFFFFF}
+body.alaskan-theme .msg.error{background:#8B2E2E;border-left:4px solid #A03838;color:#FFFFFF}
+
+/* ═══════════════════════════════════════════════════════════
+           SUNSET THEME — Hawaiian Beach
+           ═══════════════════════════════════════════════════════════ */
+body.sunset-theme{background:#0E0208;color:#F0D8C0;min-height:100vh;position:relative}
+
+/* Animated sunset sky glow */
+body.sunset-theme::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 120% 55% at 65% 85%,rgba(240,180,40,0.45) 0%,transparent 50%),radial-gradient(ellipse 100% 45% at 65% 88%,rgba(220,90,20,0.5) 0%,transparent 45%),radial-gradient(ellipse 160% 60% at 50% 100%,rgba(160,20,10,0.6) 0%,transparent 55%),radial-gradient(ellipse 200% 40% at 20% 70%,rgba(180,40,10,0.25) 0%,transparent 40%),linear-gradient(180deg,#060110 0%,#1A0408 20%,#3A0C10 40%,#6A1A08 60%,#C04818 78%,#E08020 90%,#F5B828 100%);animation:sunsetPulse 12s ease-in-out infinite alternate}
+
+/* Beach + ocean silhouette at bottom */
+body.sunset-theme::after{content:'';position:fixed;bottom:0;left:0;right:0;height:220px;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%201440%20220%27%20preserveAspectRatio%3D%27none%27%3E%3C%21--%20Deep%20ocean%20base%20--%3E%3Crect%20x%3D%270%27%20y%3D%27120%27%20width%3D%271440%27%20height%3D%27100%27%20fill%3D%27%2523120830%27%2F%3E%3C%21--%20Ocean%20wave%20layers%20--%3E%3Cpath%20d%3D%27M0%2C155%20C80%2C140%20160%2C170%20240%2C155%20C320%2C140%20400%2C165%20480%2C150%20C560%2C135%20640%2C160%20720%2C148%20C800%2C136%20880%2C158%20960%2C145%20C1040%2C132%201120%2C155%201200%2C142%20C1280%2C129%201360%2C150%201440%2C138%20L1440%2C220%20L0%2C220%20Z%27%20fill%3D%27%25231A0C40%27%20opacity%3D%270.85%27%2F%3E%3Cpath%20d%3D%27M0%2C168%20C90%2C155%20180%2C178%20270%2C163%20C360%2C148%20450%2C172%20540%2C158%20C630%2C144%20720%2C168%20810%2C155%20C900%2C142%20990%2C165%201080%2C153%20C1170%2C141%201260%2C162%201350%2C150%20L1440%2C155%20L1440%2C220%20L0%2C220%20Z%27%20fill%3D%27%2523200840%27%20opacity%3D%270.9%27%2F%3E%3C%21--%20Sea%20foam%20%2F%20lighter%20wave%20crests%20--%3E%3Cpath%20d%3D%27M0%2C162%20C60%2C158%20120%2C165%20180%2C161%20C240%2C157%20300%2C163%20360%2C159%20C420%2C155%20480%2C162%20540%2C158%20C600%2C154%20660%2C161%20720%2C157%20C780%2C153%20840%2C160%20900%2C156%20C960%2C152%201020%2C159%201080%2C155%20C1140%2C151%201200%2C158%201260%2C154%20C1320%2C150%201380%2C157%201440%2C153%27%20fill%3D%27none%27%20stroke%3D%27rgba%28255%2C255%2C255%2C0.18%29%27%20stroke-width%3D%272%27%2F%3E%3C%21--%20Sandy%20beach%20--%3E%3Cpath%20d%3D%27M0%2C175%20C120%2C168%20240%2C182%20360%2C172%20C480%2C162%20600%2C178%20720%2C170%20C840%2C162%20960%2C176%201080%2C168%20C1200%2C160%201320%2C174%201440%2C166%20L1440%2C220%20L0%2C220%20Z%27%20fill%3D%27%2523C08030%27%20opacity%3D%270.7%27%2F%3E%3Cpath%20d%3D%27M0%2C190%20C180%2C183%20360%2C196%20540%2C188%20C720%2C180%20900%2C193%201080%2C186%20C1260%2C179%201380%2C192%201440%2C187%20L1440%2C220%20L0%2C220%20Z%27%20fill%3D%27%2523D09040%27%20opacity%3D%270.55%27%2F%3E%3C%21--%20Palm%20tree%20LEFT%20--%3E%3C%21--%20Trunk%20--%3E%3Cpath%20d%3D%27M90%2C175%20C88%2C160%2086%2C140%2092%2C118%20C96%2C100%2094%2C82%2098%2C60%27%20stroke%3D%27%25231A0808%27%20stroke-width%3D%278%27%20stroke-linecap%3D%27round%27%20fill%3D%27none%27%20opacity%3D%270.95%27%2F%3E%3C%21--%20Fronds%20--%3E%3Cpath%20d%3D%27M98%2C60%20C80%2C42%2055%2C35%2038%2C28%27%20stroke%3D%27%25230A1A08%27%20stroke-width%3D%274%27%20stroke-linecap%3D%27round%27%20fill%3D%27none%27%20opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M98%2C60%20C118%2C40%20145%2C35%20165%2C25%27%20stroke%3D%27%25230A1A08%27%20stroke-width%3D%274%27%20stroke-linecap%3D%27round%27%20fill%3D%27none%27%20opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M98%2C60%20C95%2C38%2092%2C18%2095%2C2%27%20stroke%3D%27%25230A1A08%27%20stroke-width%3D%274%27%20stroke-linecap%3D%27round%27%20fill%3D%27none%27%20opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M98%2C60%20C75%2C55%2052%2C58%2032%2C62%27%20stroke%3D%27%25230A1A08%27%20stroke-width%3D%274%27%20stroke-linecap%3D%27round%27%20fill%3D%27none%27%20opacity%3D%270.85%27%2F%3E%3Cpath%20d%3D%27M98%2C60%20C118%2C58%20140%2C62%20158%2C68%27%20stroke%3D%27%25230A1A08%27%20stroke-width%3D%274%27%20stroke-linecap%3D%27round%27%20fill%3D%27none%27%20opacity%3D%270.85%27%2F%3E%3C%21--%20Frond%20leaves%20%28teardrop%20shape%20accents%29%20--%3E%3Cellipse%20cx%3D%2735%27%20cy%3D%2726%27%20rx%3D%2718%27%20ry%3D%277%27%20transform%3D%27rotate%28-25%2035%2026%29%27%20fill%3D%27%2523081808%27%20opacity%3D%270.9%27%2F%3E%3Cellipse%20cx%3D%27165%27%20cy%3D%2723%27%20rx%3D%2718%27%20ry%3D%277%27%20transform%3D%27rotate%2815%20165%2023%29%27%20fill%3D%27%2523081808%27%20opacity%3D%270.9%27%2F%3E%3Cellipse%20cx%3D%2795%27%20cy%3D%270%27%20rx%3D%2712%27%20ry%3D%277%27%20transform%3D%27rotate%28-5%2095%200%29%27%20fill%3D%27%2523081808%27%20opacity%3D%270.9%27%2F%3E%3Cellipse%20cx%3D%2730%27%20cy%3D%2760%27%20rx%3D%2716%27%20ry%3D%276%27%20transform%3D%27rotate%28-8%2030%2060%29%27%20fill%3D%27%2523081808%27%20opacity%3D%270.85%27%2F%3E%3Cellipse%20cx%3D%27160%27%20cy%3D%2766%27%20rx%3D%2716%27%20ry%3D%276%27%20transform%3D%27rotate%2810%20160%2066%29%27%20fill%3D%27%2523081808%27%20opacity%3D%270.85%27%2F%3E%3C%21--%20Coconuts%20--%3E%3Ccircle%20cx%3D%27100%27%20cy%3D%2766%27%20r%3D%275%27%20fill%3D%27%2523301008%27%20opacity%3D%270.9%27%2F%3E%3Ccircle%20cx%3D%27106%27%20cy%3D%2772%27%20r%3D%275%27%20fill%3D%27%2523301008%27%20opacity%3D%270.9%27%2F%3E%3C%21--%20Birds%20silhouettes%20--%3E%3Cpath%20d%3D%27M820%2C55%20C828%2C50%20836%2C55%20840%2C50%20C844%2C45%20852%2C50%20860%2C46%27%20stroke%3D%27%2523180408%27%20stroke-width%3D%272.5%27%20fill%3D%27none%27%20stroke-linecap%3D%27round%27%20opacity%3D%270.8%27%2F%3E%3Cpath%20d%3D%27M950%2C40%20C958%2C35%20965%2C40%20969%2C35%20C973%2C30%20980%2C35%20988%2C31%27%20stroke%3D%27%2523180408%27%20stroke-width%3D%272.5%27%20fill%3D%27none%27%20stroke-linecap%3D%27round%27%20opacity%3D%270.75%27%2F%3E%3Cpath%20d%3D%27M1060%2C62%20C1066%2C57%201072%2C62%201075%2C57%20C1078%2C52%201085%2C57%201091%2C53%27%20stroke%3D%27%2523180408%27%20stroke-width%3D%272%27%20fill%3D%27none%27%20stroke-linecap%3D%27round%27%20opacity%3D%270.7%27%2F%3E%3C%21--%20Distant%20island%2Fheadland%20right%20side%20--%3E%3Cpath%20d%3D%27M1200%2C145%20C1240%2C128%201280%2C120%201320%2C130%20C1360%2C140%201400%2C148%201440%2C145%20L1440%2C175%20L1200%2C175%20Z%27%20fill%3D%27%2523180408%27%20opacity%3D%270.6%27%2F%3E%3C%2Fsvg%3E") no-repeat bottom center / 100% 100%}
+@keyframes sunsetPulse{0%{opacity:1;filter:brightness(1)}
+30%{opacity:0.88;filter:brightness(0.95)}
+60%{opacity:0.95;filter:brightness(1.04)}
+100%{opacity:1;filter:brightness(1)}
+}
+body.sunset-theme .container{background:linear-gradient(135deg,rgba(30,6,4,0.93) 0%,rgba(20,4,2,0.95) 100%);border:1px solid #5A1C10;box-shadow:0 8px 32px rgba(180,60,0,0.3);backdrop-filter:blur(2px)}
+body.sunset-theme .header{background:linear-gradient(135deg,#2A0808 0%,#140404 50%,#0E0204 100%);border-bottom:2px solid #E08020;box-shadow:0 2px 12px rgba(240,160,30,0.25)}
+body.sunset-theme .total-balance{color:#FFFFFF;text-shadow:0 2px 10px rgba(240,180,40,0.35)}
+body.sunset-theme .balance-label{color:#C09070 !important;letter-spacing:0.5px;text-transform:uppercase;font-size:12px;opacity:1 !important}
+body.sunset-theme h1{color:#F0D0A0}
+body.sunset-theme h2,body.sunset-theme h3{color:#E8C890}
+body.sunset-theme .header h1{color:#FFFFFF !important}
+body.sunset-theme .chart-controls button{background:rgba(60,12,8,0.85) !important;color:#C09070 !important;border:1px solid #5A2018 !important;font-weight:500}
+body.sunset-theme .chart-controls button:hover{color:#F5C030 !important;border-color:#F5C030 !important;background:rgba(80,20,8,0.9) !important}
+body.sunset-theme .chart-controls button.active{background:linear-gradient(135deg,#E08020 0%,#C05010 100%) !important;color:#FFF8E8 !important;border-color:#E08020 !important;font-weight:600;box-shadow:0 4px 16px rgba(224,128,32,0.35)}
+
+/* Action buttons */
+body.sunset-theme .action-btn{background:linear-gradient(135deg,#3A1008 0%,#280A06 100%);color:#F0D0A0;border:1px solid #5A2018;font-weight:600;letter-spacing:0.4px;box-shadow:0 4px 16px rgba(0,0,0,0.4)}
+body.sunset-theme .action-btn:hover{background:linear-gradient(135deg,#5A1A0A 0%,#401208 100%);border-color:#F5C030;color:#F5C030;box-shadow:0 6px 20px rgba(245,192,48,0.25);transform:translateY(-2px)}
+body.sunset-theme .action-btn.dark{background:linear-gradient(135deg,#1E0608 0%,#140404 100%);border:1px solid #3A1208;color:#C09070}
+body.sunset-theme .action-btn.dark:hover{background:linear-gradient(135deg,#2A0A0A 0%,#1E0606 100%);border-color:#F5C030;color:#F5C030}
+body.sunset-theme .submit-btn{background:linear-gradient(135deg,#E08020 0%,#C05810 100%);border:none;color:#FFF8E8;font-weight:700;box-shadow:0 4px 16px rgba(224,128,32,0.4)}
+body.sunset-theme .submit-btn:hover{background:linear-gradient(135deg,#F09030 0%,#D06820 100%);box-shadow:0 6px 20px rgba(240,144,48,0.5)}
+body.sunset-theme .green-btn{background:linear-gradient(135deg,#C04010 0%,#A02A08 100%);border:none;color:#FFF0E0;font-weight:700;box-shadow:0 4px 16px rgba(192,64,16,0.4)}
+body.sunset-theme .green-btn:hover{background:linear-gradient(135deg,#D05020 0%,#B03810 100%)}
+body.sunset-theme .file-label{background:linear-gradient(135deg,#C04010 0%,#A02A08 100%);border:none;color:#FFF0E0;font-weight:700}
+body.sunset-theme .file-label:hover{background:linear-gradient(135deg,#D05020 0%,#B03810 100%)}
+body.sunset-theme .danger-btn{background:linear-gradient(135deg,#8B1010 0%,#6A0808 100%);border:none;color:#FFEEEE;font-weight:700}
+body.sunset-theme .modal-box{background:linear-gradient(135deg,#200808 0%,#180606 100%);color:#F0D0A0;border:1px solid #5A2018;box-shadow:0 16px 48px rgba(0,0,0,0.6)}
+
+/* Modal header */
+body.sunset-theme .modal-header{border-bottom:1px solid #5A2018;background:linear-gradient(135deg,#2A0808 0%,#180606 100%)}
+body.sunset-theme .modal-header h2{color:#F5C030 !important;font-weight:600;letter-spacing:0.5px}
+body.sunset-theme .close-btn{color:#F5C030}
+body.sunset-theme input,
+/* ── Sunset: Selects ── */
+body.sunset-theme select{background:#2A0A08 !important;color:#F0D0A0 !important;border:1px solid #5A2018 !important}
+body.sunset-theme input:focus,body.sunset-theme select:focus{border-color:#F5C030 !important;box-shadow:0 0 12px rgba(245,192,48,0.25);outline:none}
+body.sunset-theme select option{background:#2A0A08;color:#F0D0A0}
+body.sunset-theme input[type=range]{accent-color:#E08020}
+body.sunset-theme input[type=checkbox]{accent-color:#E08020}
+body.sunset-theme .chart-container{background:rgba(20,4,2,0.7);border:1px solid #5A2018}
+
+/* Settings section */
+body.sunset-theme .settings-section{background:rgba(40,10,6,0.85);border:1px solid #5A2018}
+body.sunset-theme .settings-section h3{color:#F5C030}
+body.sunset-theme .settings-section p{color:#C09070}
+
+/* ── Sunset: Month buttons ── */
+
+body.sunset-theme .bg-white-card,body.sunset-theme .bg-card-blue,body.sunset-theme .bg-card-blue-r12,body.sunset-theme .bg-card-blue-r12-14,body.sunset-theme .bg-card-blue-r12-p10,body.sunset-theme .u-card-blue,body.sunset-theme .bg-card-muted{background:rgba(40,10,6,0.85) !important}
+
+body.sunset-theme .col-dark,body.sunset-theme .col-muted,body.sunset-theme .col-dimmer{color:#C09070 !important}
+body.sunset-theme .col-navy{color:#F5C030 !important}
+body.sunset-theme .col-blue{color:#F5C030 !important}
+body.sunset-theme .fire-title{color:#F0D0A0 !important}
+
+body.sunset-theme #calcFutureValue{color:#F5C030 !important}
+body.sunset-theme .bg-success{background:rgba(40,10,6,0.9) !important}
+body.sunset-theme #calcFutureValue,body.sunset-theme .col-green{color:#F5C030 !important}
+
+/* ── Sunset: Proj table ── */
+
+/* Proj table */
+
+/* Account items */
+
+body.sunset-theme strong{color:#F5C030}
+body.sunset-theme button[onclick*="saveEdit"],body.sunset-theme button[onclick*="addEntryForMonth"],body.sunset-theme button[onclick*="addExpenseForMonth"],body.sunset-theme button[onclick*="saveDebtEntryForMonth"]{background:#E08020 !important;color:#180404 !important;font-weight:700}
+body.sunset-theme button[onclick*="deleteEntry"],body.sunset-theme button[onclick*="deleteExpense"]{background:#8B1010 !important;color:#FFFFFF !important;font-weight:700}
+body.sunset-theme button[onclick*="cancelEdit"],body.sunset-theme button[onclick*="hideAddForm"],body.sunset-theme button[onclick*="cancelEditExpense"]{background:#4A1A10 !important;color:#F0D0A0 !important;font-weight:600}
+body.sunset-theme .msg.success{background:#5A2008;border-left:4px solid #E08020;color:#F5E8D0}
+body.sunset-theme .msg.error{background:#5A0808;border-left:4px solid #C02020;color:#FFFFFF}
+body.sunset-theme [id^="edit-"],body.sunset-theme [id^="expense-edit-"],body.sunset-theme [id^="add-form-"],body.sunset-theme [id^="expense-add-form-"],body.sunset-theme [id^="debt-add-form-"]{background:rgba(40,10,6,0.9) !important}
+body.sunset-theme [id^="edit-"] label,body.sunset-theme [id^="expense-edit-"] label,body.sunset-theme [id^="add-form-"] label,body.sunset-theme [id^="expense-add-form-"] label,body.sunset-theme [id^="debt-add-form-"] label{color:#C09070 !important}
+
+/* Proj-starting box */
+
+body.sunset-theme .bg-alaskan:not(#budgetPage *):not(#budgetComparison *):not(#budgetBreakdown *){background:rgba(35,8,4,0.88) !important;border-color:#5A2018 !important}
+body.sunset-theme .bg-deep-alaskan{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}
+
+body.sunset-theme .bdr-alaskan{border-color:#5A2018 !important}
+
+/* Notepad textarea */
+body.sunset-theme #notepadText{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}
+body.sunset-theme #logbookPrevBtn,body.sunset-theme #logbookNextBtn{background:rgba(35,8,4,0.88) !important;border-color:#5A2018 !important;color:#F0D0A0 !important}
+
+/* Custom edit modal (metals/amount inline edit) */
+body.sunset-theme .settings-section{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important}
+body.sunset-theme .settings-section h3{color:#F5C030 !important}
+body.sunset-theme .action-btn{background:linear-gradient(135deg,#5A2010 0%,#3A1008 100%) !important;color:#F0D0A0 !important;border:1px solid #7A3018 !important}
+body.sunset-theme .action-btn:hover{background:linear-gradient(135deg,#7A3020 0%,#5A2010 100%) !important;border-color:#F5C030 !important;color:#F5C030 !important}
+body.sunset-theme .action-btn.dark{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important;color:#F0D0A0 !important}
+body.sunset-theme .modal-header{border-bottom:1px solid #5A2018 !important;background:linear-gradient(135deg,rgba(20,4,2,0.98) 0%,rgba(10,2,1,0.99) 100%) !important}
+
+/* Any remaining inline color:#A0A0A0, color:#E0E0E0 in sunset context */
+body.sunset-theme .col-grey{color:#C09070 !important}
+body.sunset-theme .col-silver{color:#F0D0A0 !important}
+body.sunset-theme .col-silver2{color:#F0D0A0 !important}
+
+/* ── Sunset: Account items ── */
+
+/* ── Sunset: Metals box ── */
+
+/* ── Sunset: Content-box ── */
+
+/* ── Sunset: Month totals ── */
+
+body.sunset-theme select{background:rgba(30,6,3,0.95) !important;color:#F0D0A0 !important;border:1px solid #5A2018 !important}
+body.sunset-theme select:focus{border-color:#F5C030 !important;box-shadow:0 0 12px rgba(245,192,48,0.2) !important;outline:none !important}
+body.sunset-theme select option{background:#200608 !important;color:#F0D0A0 !important}
+body.sunset-theme #budgetPage .bg-card-blue,body.sunset-theme #budgetPage .u-card-blue,body.sunset-theme #budgetPage .bg-card-blue-r12,body.sunset-theme #budgetPage .bg-card-blue-r12-14,body.sunset-theme #budgetPage .bg-card-blue-r12-p10{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important}
+body.sunset-theme #budgetPage label{color:#C09070 !important}
+body.sunset-theme #budgetPage input[type=number]{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}
+body.sunset-theme #customBudgetSection{background:rgba(35,8,4,0.88) !important;border:1px solid #F5C030 !important}
+body.sunset-theme #customBudgetSection label{color:#C09070 !important}
+body.sunset-theme #customBudgetSection input[type=number]{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}
+
+/* ── Sunset: Calculator page ── */
+body.sunset-theme #calculatorPage label{color:#C09070 !important}
+body.sunset-theme #calculatorPage .col-navy{color:#C09070 !important}
+body.sunset-theme #calculatorPage [style*="font-size:24px"],body.sunset-theme #calculatorPage [style*="font-size:28px"]{color:#F5C030 !important}
+
+/* ── Sunset: Logbook copy btn ── */
+body.sunset-theme #logbookCopyBtn{background:rgba(245,192,48,0.12) !important;border-color:#F5C030 !important;color:#F5C030 !important}
+
+/* ── Sunset: Tax rate input ── */
+
+/* ── Sunset: FIRE & Coast page ── */
+body.sunset-theme #firePage .bg-card-blue,body.sunset-theme #firePage .u-card-blue,body.sunset-theme #firePage .bg-card-blue-r12,body.sunset-theme #firePage .bg-card-blue-r12-14,body.sunset-theme #firePage .bg-card-blue-r12-p10{background:#2A0808 !important;border:1px solid #5A2018 !important}
+body.sunset-theme #firePage .bdt-light{border-top-color:#5A2018 !important}
+body.sunset-theme #firePage [style*="border-top:2px solid"]{border-top-color:#F5C030 !important}
+
+body.sunset-theme #firePage [style*="border:1px solid #ddd"]{border-color:#5A2018 !important}
+body.sunset-theme #firePage h3.fire-title{color:#F5C030 !important}
+body.sunset-theme #firePage .col-navy{color:#F5C030 !important}
+body.sunset-theme #firePage .col-muted{color:#C08060 !important}
+body.sunset-theme #firePage .col-dimmer{color:#A06040 !important}
+
+/* ── Alaskan: FIRE & Coast page ── */
+body.alaskan-theme #firePage .bg-card-blue,body.alaskan-theme #firePage .u-card-blue,body.alaskan-theme #firePage .bg-card-blue-r12,body.alaskan-theme #firePage .bg-card-blue-r12-14,body.alaskan-theme #firePage .bg-card-blue-r12-p10{background:#1A2A42 !important;border:1px solid #2A3A52 !important}
+body.alaskan-theme #firePage .bdt-light{border-top-color:#2A3A52 !important}
+
+body.alaskan-theme #firePage h3.fire-title{color:#D4AF37 !important}
+body.alaskan-theme #firePage .col-navy{color:#D4AF37 !important}
+body.alaskan-theme #firePage .col-muted{color:#7A8FA0 !important}
+
+/* ── Alaskan-lite: FIRE & Coast page ── */
+
+/* ── Sunset: Add goal form ── */
+body.sunset-theme [id^="addGoalForm"]{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important}
+body.sunset-theme [id^="addGoalForm"] label{color:#C09070 !important}
+body.sunset-theme [id^="addGoalForm"] h3{color:#F5C030 !important}
+
+/* ── Sunset: Debt add form select/submit ── */
+body.sunset-theme [id^="debt-add-form-"] .submit-btn{box-shadow:none !important}
+body.sunset-theme [id^="debt-add-form-"] select,body.sunset-theme [id^="edit-"] select,body.sunset-theme [id^="add-form-"] select,body.sunset-theme [id^="expense-add-form-"] select{background:#140408 !important;color:#F0D0A0 !important;border:1px solid #5A2018 !important}
+
+body.sunset-theme .bg-card-muted{background:rgba(35,8,4,0.85) !important}
+
+body.sunset-theme .bg-success{background:rgba(35,8,4,0.9) !important}
+body.sunset-theme .col-muted{color:#C09070 !important}
+body.sunset-theme [style*="text-transform:uppercase"]{color:#C09070 !important}
+body.sunset-theme h3{color:#F5C030 !important}
+body.sunset-theme label:has(input[type=checkbox]:not(:checked)){color:#C09070 !important}
+body.sunset-theme button[onclick*="Edit"],body.sunset-theme button[onclick*="showEditExpenseForm"]{background:rgba(35,8,4,0.85) !important;color:#F5C030 !important;border:1px solid #5A2018 !important}
+body.sunset-theme button[onclick*="showEditExpenseForm"]:hover{background:rgba(60,15,5,0.95) !important}
+
+/* Desktop dashboard variables for sunset */
+
+/* Override all inline white/light backgrounds */
+@keyframes splashBlink{0%,100%{opacity:0.15}
+50%{opacity:0.85}
+}
+@keyframes claudePulse{0%{transform:scale(0.7);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes claudeGlow{0%,100%{text-shadow:0 0 8px rgba(212,175,55,0.4)}50%{text-shadow:0 0 28px rgba(212,175,55,0.95),0 0 60px rgba(212,175,55,0.4)}}
+@keyframes claudeBarGrow{from{width:0}to{width:100%}}
+@keyframes claudeFadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes shake{0%,100%{transform:translateX(0)}
+10%,30%,50%,70%,90%{transform:translateX(-10px)}
+20%,40%,60%,80%{transform:translateX(10px)}
+}
+
+/* PIN Numpad */
+.pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid #D4AF37;background:transparent;transition:background 0.15s,transform 0.1s}
+.pin-dot.filled{background:#D4AF37;transform:scale(1.15)}
+.npbtn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;aspect-ratio:1;background:rgba(255,255,255,0.07);border:1px solid rgba(212,175,55,0.35);border-radius:50%;color:#F0E8D0;font-size:22px;font-weight:500;cursor:pointer;transition:background 0.12s,transform 0.08s;line-height:1;-webkit-tap-highlight-color:transparent}
+.npbtn:active{background:rgba(212,175,55,0.25);transform:scale(0.93)}
+.npbtn-sub{display:block;font-size:8px;letter-spacing:1.5px;color:#A09070;margin-top:2px;font-weight:400}
+.npbtn-back{font-size:20px;border-color:rgba(212,175,55,0.2)}
+@keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 4px 15px rgba(212,175,55,0.4)}
+50%{transform:scale(1.05);box-shadow:0 6px 20px rgba(212,175,55,0.6)}
+}
+
+/* Calculator/Settings box theme support */
+body.alaskan-theme .bg-card-muted{background:rgba(30,30,30,0.8) !important}
+
+body.sunset-theme .bdt-light{border-top-color:#5A2018 !important}
+
+body.sunset-theme .bdr-eee{border-color:#5A2018 !important}
+
+/* #856404 dark amber is invisible on sunset dark — metals box and elsewhere */
+
+body.alaskan-theme .bdt-light{border-top-color:#2A3A52 !important}
+
+body.alaskan-theme .bdr-eee{border-color:#2A3A52 !important}
+
+/* #856404 dark amber needs override for metals box in dark theme too */
+
+body.alaskan-theme #budgetPage .bg-card-blue,body.alaskan-theme #budgetPage .u-card-blue,body.alaskan-theme #budgetPage .bg-card-blue-r12,body.alaskan-theme #budgetPage .bg-card-blue-r12-14,body.alaskan-theme #budgetPage .bg-card-blue-r12-p10{background:#1A2A42 !important;border:1px solid #2A3A52}
+body.alaskan-theme #budgetPage label{color:#A0A0A0 !important}
+body.alaskan-theme #budgetPage input[type=number]{background:#0D1829 !important;border-color:#2A3A52 !important;color:#E0E0E0 !important}
+body.alaskan-theme #customBudgetSection{background:#1A2A42 !important;border:1px solid #D4AF37 !important}
+body.alaskan-theme #customBudgetSection label{color:#A0A0A0 !important}
+body.alaskan-theme #customBudgetSection input[type=number]{background:#0D1829 !important;border-color:#2A3A52 !important;color:#E0E0E0 !important}
+
+/* Logbook copy button theme */
+body.alaskan-theme #logbookCopyBtn{background:rgba(212,175,55,0.15);border-color:#D4AF37;color:#D4AF37}
+body.alaskan-theme #logbookCopyBtn:active{transform:scale(0.95)}
+
+/* Logbook textarea container */
+body.sunset-theme #settingsAboutCard{background:rgba(40,10,6,0.5) !important;border-color:rgba(220,140,60,0.25) !important}
+
+body.sunset-theme #settingsAboutCard .about-claude-label{color:#F5C030 !important}
+body.sunset-theme #settingsAboutCard .about-claude-sub{color:#C09070 !important}
+
+/* Expenses bar chart — tighter fit */
+.expenses-chart-wrap{height:auto !important;padding:10px 10px 4px !important;margin-bottom:12px !important}
+
+/* Custom Edit Modal — Alaskan Lite */
+
+/* Tax rate input in settings — theme aware */
+
+#overviewPage{background:linear-gradient(160deg,#0A1A2F 0%,#050F1A 100%)}
+body.sunset-theme #overviewPage{background:linear-gradient(160deg,#1A0606 0%,#0E0204 100%)}
+#overviewPage.container{border-radius:0;box-shadow:none}
+.overview-header{background:linear-gradient(135deg,#0A1A2F 0%,#050F1A 100%);border-bottom:2px solid #D4AF37;padding:24px 20px 20px;color:#F0F0F0}
+.overview-header .firm-name{font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:0.6;margin-bottom:4px}
+
+.overview-header .total-value{font-size:38px;font-weight:800;margin-top:16px;color:#D4AF37;letter-spacing:-1px}
+
+.overview-card{background:rgba(10,26,47,0.88);border:1px solid #1A2A42;border-radius:12px;padding:14px 16px;margin-bottom:10px;backdrop-filter:blur(4px)}
+.overview-card .card-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#D4AF37;margin-bottom:8px}
+
+/* ── Sunset: Summary/Overview page ── */
+body.sunset-theme .overview-header{background:linear-gradient(135deg,rgba(12,3,1,0.98) 0%,rgba(6,1,0,0.99) 100%) !important;border-bottom:2px solid #F5C030 !important}
+body.sunset-theme .overview-header .total-value{color:#F5C030 !important}
+body.sunset-theme .overview-card{background:rgba(25,6,3,0.92) !important;border:1px solid #5A2018 !important;backdrop-filter:blur(4px)}
+body.sunset-theme .overview-card .card-title{color:#F5C030 !important}
+body.sunset-theme .overview-row{border-bottom:1px solid rgba(245,192,48,0.08) !important;color:#F0D0A0 !important}
+body.sunset-theme .overview-row .row-label{color:rgba(240,208,160,0.65) !important}
+body.sunset-theme .overview-row .row-value{color:#F0D0A0 !important}
+.overview-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px}
+.overview-row:last-child{border-bottom:none}
+.overview-row .row-label{color:rgba(255,255,255,0.6);font-size:13px}
+.overview-row .row-value{font-weight:600;color:#FFFFFF}
+
+/* row-value: uniform text color — no positive/negative/accent coloring */
+
+.overview-divider{height:1px;background:linear-gradient(90deg,transparent,#D4AF37,transparent);margin:12px 0;opacity:0.3}
+.overview-close-hint{text-align:center;font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:0.3;margin-top:16px;padding-bottom:8px}
+
+/* ── Tablet Mode ── */
+
+/* Two-column action grid on tablet home */
+
+/* Landscape helpers */
+@media (orientation:landscape) and (max-height:500px){.header{padding:16px 20px}
+.total-balance{font-size:32px}
+.header h1{font-size:22px;margin-bottom:4px}
+}
+/* ── Info buttons + panel (v15.2) ── */
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;padding:0;border-radius:50%;border:1.5px solid currentColor;background:transparent;color:inherit;font:italic 700 11px Georgia,serif;line-height:1;cursor:pointer;opacity:0.65;vertical-align:middle;text-transform:none;letter-spacing:0}
+.info-btn:active{opacity:1;transform:scale(0.9)}
+h1 .info-btn{width:22px;height:22px;font-size:13px}
+#infoModal{z-index:3000}
+#infoModal:not(.open){display:none !important}
+#infoModal .modal-box{max-width:520px}
+.info-sec{margin-bottom:16px}
+.info-sec h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;color:#D4AF37}
+body.sunset-theme .info-sec h4{color:#F5C030}
+.info-row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px}
+.info-row span:first-child{opacity:0.75}
+.info-row span:last-child{font-weight:700;text-align:right;white-space:nowrap}
+.info-row.total{border-top:1px solid rgba(212,175,55,0.5);border-bottom:none;margin-top:2px}
+.info-formula{font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;white-space:pre-wrap;word-break:break-word}
+.info-notes{margin:0;padding-left:18px;font-size:12.5px;line-height:1.55;opacity:0.85}
+.info-notes li{margin-bottom:4px}
+
+/* ── Utility classes (extracted from inline styles v7.3) ── */
+.u-hidden{display:none}
+
+.u-flex-between{display:flex;justify-content:space-between;align-items:center}
+.u-flex-between-4{display:flex;justify-content:space-between;margin-bottom:4px}
+
+.u-flex-1{flex:1}
+
+.u-grid-2col-10{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.u-mb0{margin:0}
+
+.u-mb10{margin-bottom:10px}
+.u-mb12{margin-bottom:12px}
+.u-mb14{margin-bottom:14px}
+.u-mb16{margin-bottom:16px}
+.u-mb20{margin-bottom:20px}
+.u-mt4{margin-top:4px}
+.u-mt10{margin-top:10px}
+.u-mt14{margin-top:14px}
+.u-mt16{margin-top:16px}
+.u-mt20{margin-top:20px}
+.u-text-right{text-align:right}
+.u-cursor{cursor:pointer}
+.u-fw6{font-weight:600}
+.u-fs13{font-size:13px}
+.u-fs13-666{font-size:13px;color:#666}
+
+.u-fs14-block-666-mb8{display:block;font-size:14px;color:#666;margin-bottom:8px}
+
+.u-card-blue{background:#f4f8ff;border-radius:12px;padding:16px;margin-bottom:16px}
+
+.u-btn-clear{width:100%;padding:12px 14px;background:none;border:none;cursor:pointer;text-align:left}
+.u-pl12-fs12{padding-left:12px;font-size:12px}
+
+/* ── Semantic theme-target classes (v7.3 refactor) ── */
+/* These replace inline style="..." attributes that theme CSS was fighting with [style*=] */
+.bg-card-blue{background:#f4f8ff}
+.bg-card-blue-r12{background:#f4f8ff;border-radius:12px;padding:16px;margin-bottom:16px}
+.bg-card-blue-r12-14{background:#f4f8ff;border-radius:12px;padding:14px;margin-bottom:18px}
+.bg-card-blue-r12-p10{background:#f4f8ff;border-radius:12px;padding:10px}
+.bg-card-muted{background:#f8f9fa}
+
+.bg-alaskan{background:#1A2A42}
+.bg-deep-alaskan{background:#0D1829}
+
+.bg-success{background:#00c805}
+
+.bg-white-card{background:#fff}
+
+.col-navy{color:#1e3c72}
+.col-blue{color:#2a69ac}
+.col-dark{color:#333}
+.col-muted{color:#666}
+.col-dimmer{color:#999}
+.col-gold{color:#D4AF37}
+.col-silver{color:#E0E0E0}
+.col-silver2{color:#C0C0C0}
+.col-grey{color:#A0A0A0}
+
+.col-green{color:#00c805}
+.col-navy-text{color:#0A1A2F}
+
+.bdr-alaskan{border:1px solid #2A3A52}
+
+.bdr-eee{border:1px solid #eee}
+.bdt-light{border-top:1px solid #e0e0e0}
+
+/* ── Setup: Accounts & companies (v3.2) ── */
+#setupPage,#dataPage{--su-bg:#04090F;--su-panel:#0C1828;--su-panel2:#0F1E33;--su-line:#14223A;--su-border:#1A2A42;--su-border2:#2A3A52;--su-text:#E2E8F0;--su-strong:#F4EBD0;--su-muted:#9AA3B5;--su-accent:#D4AF37;--su-accent-soft:rgba(212,175,55,0.14);--su-accent-text:#E8C65A;--su-on-accent:#0A1A2F;--su-neg:#F87171;--su-pos:#4ADE80;--su-danger-bg:#B42318;
+  position:fixed;inset:0;z-index:150;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--su-bg);color:var(--su-text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums}
+body.sunset-theme #setupPage,body.sunset-theme #dataPage{--su-bg:#0E0208;--su-panel:#180608;--su-panel2:#200A0C;--su-line:#2E0E0A;--su-border:#4A1810;--su-border2:#5A2018;--su-text:#F0D8C0;--su-strong:#FFF0DC;--su-muted:#C49C86;--su-accent:#F5C030;--su-accent-soft:rgba(245,192,48,0.14);--su-accent-text:#F5C030;--su-on-accent:#180404;--su-neg:#F07060;--su-pos:#F5A020;--su-danger-bg:#A01C0C}
+#setupPage *,#dataPage *{box-sizing:border-box}
+#setupPage button,#setupPage input,#setupPage select,#dataPage button,#dataPage input,#dataPage select,#dataPage textarea{font-family:inherit}
+/* ── Data page: the monthly logger (v3.3) — uses Setup's --su-* tokens ── */
+#dataPage .su-wrap{padding-top:0}
+.dd-sticky{position:sticky;top:0;z-index:5;background:var(--su-bg);padding:max(env(safe-area-inset-top,0px),10px) 16px 10px;border-bottom:1px solid var(--su-border)}
+.dd-sticky .su-top{padding:0 0 6px 0;margin-left:-10px}
+.dd-setup{height:40px;display:flex;align-items:center;gap:7px;padding:0 14px;background:var(--su-panel);border:1px solid var(--su-border2);border-radius:12px;color:var(--su-text);font-size:14px;font-weight:600;cursor:pointer}
+.dd-month{display:flex;align-items:center;gap:8px}
+.dd-step{width:46px;height:46px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--su-panel);border:1px solid var(--su-border2);border-radius:12px;color:var(--su-text);cursor:pointer}
+.dd-step:disabled{opacity:.3;cursor:default}
+.dd-msel{flex:1;min-width:0;height:46px;padding:0 12px;-webkit-appearance:none;appearance:none;text-align:center;text-align-last:center;background:var(--su-panel);border:1px solid var(--su-border2);border-radius:12px;color:var(--su-strong);font-size:18px;font-weight:700;cursor:pointer;outline:none}
+.dd-msel:focus{border-color:var(--su-accent)}
+.dd-msel option{background:var(--su-panel);color:var(--su-text)}
+.dd-chips{display:flex;gap:6px;overflow-x:auto;padding-top:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.dd-chips::-webkit-scrollbar{display:none}
+.dd-chips:empty{display:none}
+.dd-pchip{flex-shrink:0;display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;background:var(--su-panel);border:1px solid var(--su-border);border-radius:16px;color:var(--su-muted);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.dd-pchip i{width:8px;height:8px;border-radius:4px;border:1.5px solid var(--su-border2)}
+.dd-pchip span{color:var(--su-text);font-variant-numeric:tabular-nums}
+.dd-pchip.part i{border-color:var(--su-accent);background:linear-gradient(90deg,var(--su-accent) 50%,transparent 50%)}
+.dd-pchip.done{color:var(--su-text)}
+.dd-pchip.done i{border-color:var(--su-pos);background:var(--su-pos)}
+.dd-future{margin-top:8px;padding:8px 12px;border-radius:10px;background:var(--su-accent-soft);color:var(--su-accent-text);font-size:12.5px;font-weight:600;text-align:center}
+.dd-list{display:flex;flex-direction:column;gap:14px;padding:14px 16px max(env(safe-area-inset-bottom,0px),40px)}
+.dd-sec{background:var(--su-panel);border:1px solid var(--su-border);border-radius:14px;overflow:hidden;scroll-margin-top:150px;transition:border-color .15s}
+.dd-sec.dd-dirty{border-color:var(--su-accent)}
+.dd-head{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--su-line)}
+.dd-head .su-tag{width:40px;height:36px;font-size:10.5px}
+.dd-htext{flex:1;min-width:0;display:flex;flex-direction:column}
+.dd-title{font-size:16.5px;font-weight:700;color:var(--su-strong)}
+.dd-sub{font-size:12.5px;color:var(--su-muted);font-variant-numeric:tabular-nums}
+.dd-unsaved{display:none;flex-shrink:0;padding:4px 9px;border-radius:10px;background:var(--su-accent-soft);color:var(--su-accent-text);font-size:11px;font-weight:700;letter-spacing:.3px}
+.dd-dirty .dd-unsaved{display:inline-block}
+.dd-body{padding:2px 14px}
+.dd-entry-row,.dd-row{display:flex;align-items:center;gap:10px;min-height:56px;padding:6px 0;border-bottom:1px solid var(--su-line)}
+.dd-body > div > .dd-entry-row:last-child,.dd-pcpanel > .dd-row:last-child{border-bottom:none}
+.dd-row.sm{min-height:50px}
+.dd-lbl{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.dd-name{font-size:15px;font-weight:600;color:var(--su-text);overflow-wrap:anywhere;line-height:1.3}
+.dd-name.muted{color:var(--su-muted);font-weight:500}
+.dd-row.sm .dd-name{font-size:14px;font-weight:500}
+.dd-hint{font-size:12px;color:var(--su-muted);line-height:1.35;overflow-wrap:anywhere}
+.dd-money{position:relative;flex-shrink:0;width:136px}
+.dd-money::before{content:'$';position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--su-muted);font-size:15px;pointer-events:none}
+.dd-money.oz::before{content:'oz';font-size:12px}
+.dd-money.oz .dd-in{padding-left:30px}
+.dd-in{width:100%;height:44px;padding:0 12px 0 24px;background:var(--su-bg);border:1px solid var(--su-border2);border-radius:10px;color:var(--su-strong);font-size:16px;text-align:right;outline:none;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.dd-in::-webkit-outer-spin-button,.dd-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.dd-in:focus{border-color:var(--su-accent);box-shadow:0 0 0 3px var(--su-accent-soft)}
+.dd-in::placeholder{color:var(--su-muted);opacity:.5}
+.dd-money.net .dd-in{font-weight:700;border-color:var(--su-border2)}
+.dd-sel{flex:1;min-width:0;height:44px;padding:0 10px;background:var(--su-bg);border:1px solid var(--su-border2);border-radius:10px;color:var(--su-text);font-size:15px;outline:none}
+.dd-sel:focus{border-color:var(--su-accent)}
+.dd-sel.dd-ret-type-sel{flex:0 0 120px}
+.dd-x-btn{display:none;width:34px;height:34px;flex-shrink:0;align-items:center;justify-content:center;margin-left:-4px;padding:0;background:rgba(248,113,113,.12);border:none;border-radius:17px;color:var(--su-neg);cursor:pointer}
+.dd-rm .dd-x-btn,.dd-added .dd-x-btn{display:flex}
+.dd-rm .dd-np-row > span.dd-x-btn:empty{display:none}
+.dd-empty{padding:14px 0;font-size:13.5px;color:var(--su-muted);line-height:1.45}
+.dd-link{padding:0;background:none;border:none;color:var(--su-accent-text);font-size:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
+/* Precious metals row (v3.5.1) */
+.dd-metals-head{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.dd-metals-head .dd-name{display:inline-flex;align-items:center;gap:6px}
+.dd-metals.open .dd-chev{transform:rotate(180deg)}
+.dd-metals-val{display:flex;align-items:center;justify-content:flex-end;user-select:none}
+.dd-metals-ph{color:var(--su-muted);opacity:.5}
+.dd-metals-body{padding:12px 0 14px}
+.dd-metals-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.dd-metal{min-width:0;padding:0 12px}
+.dd-metal:first-child{padding-left:0}
+.dd-metal + .dd-metal{border-left:1px solid var(--su-line);padding-right:0}
+.dd-metal-t{font-size:15px;font-weight:700;color:var(--su-strong);margin-bottom:6px}
+.dd-metal-l{display:block;margin:8px 0 4px;font-size:12px;font-weight:600;color:var(--su-muted)}
+.dd-metal-l span{font-weight:500;opacity:.8}
+.dd-metal .dd-money{width:100%}
+/* Collapsible Data page sections (v3.5.1) */
+.dd-head-tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.dd-head-tap .dd-chev{transform:rotate(180deg)}
+.dd-sec.dd-collapsed .dd-head-tap .dd-chev{transform:none}
+.dd-sec.dd-collapsed .dd-head{border-bottom:none}
+.dd-sec.dd-collapsed > .dd-body,.dd-sec.dd-collapsed > .dd-foot,.dd-sec.dd-collapsed > .dd-msg{display:none !important}
+.dd-metals:last-child > .dd-metals-head{border-bottom:none}
+.dd-metals.open > .dd-metals-head{border-bottom:1px solid var(--su-line)}
+.dd-subhead{padding:14px 0 2px;font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--su-muted)}
+.dd-foot{display:flex;gap:8px;padding:10px 14px 14px;border-top:1px solid var(--su-line)}
+.dd-fbtn{height:42px;padding:0 14px;background:none;border:1px solid var(--su-border2);border-radius:11px;color:var(--su-text);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.dd-fbtn.on{background:var(--su-danger-bg);border-color:var(--su-danger-bg);color:#fff}
+.dd-fbtn.danger{height:34px;padding:0 10px;border-color:var(--su-neg);color:var(--su-neg);font-size:12.5px}
+.dd-save{margin-left:auto;min-width:112px;height:42px;padding:0 18px;background:var(--su-panel2);border:1px solid var(--su-border2);border-radius:11px;color:var(--su-text);font-size:15px;font-weight:700;cursor:pointer}
+.dd-dirty .dd-save{background:var(--su-accent);border-color:var(--su-accent);color:var(--su-on-accent)}
+.dd-msg{margin:0 14px 14px;padding:10px 12px;border-radius:10px;background:var(--su-accent-soft);color:var(--su-accent-text);font-size:13.5px;font-weight:600;line-height:1.4}
+.dd-msg.err{background:rgba(248,113,113,.12);border:1px solid var(--su-neg);color:var(--su-text)}
+.dd-pay{margin:10px 0;background:var(--su-panel2);border:1px solid var(--su-border);border-radius:12px;overflow:hidden}
+.dd-pay + .dd-pay{margin-top:0}
+.dd-payhead{width:100%;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px 8px 14px;background:none;border:none;color:inherit;text-align:left;cursor:pointer}
+.dd-payhead.static{cursor:default}
+.dd-chev{flex-shrink:0;color:var(--su-muted);transition:transform .15s}
+.dd-pay.open .dd-chev{transform:rotate(180deg)}
+.dd-paybody{padding:0 12px 6px 14px}
+.dd-pay.small .dd-paybody{padding-bottom:4px}
+.dd-tabs{display:flex;gap:4px;margin:2px 0 4px;padding:3px;background:var(--su-bg);border:1px solid var(--su-border);border-radius:12px}
+.dd-tab{position:relative;flex:1;min-width:0;height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0 2px;background:none;border:none;border-radius:9px;color:var(--su-muted);font-size:14px;line-height:1.1;cursor:pointer}
+.dd-tab b{font-weight:700}
+.dd-tab small{font-size:10.5px;font-weight:600;opacity:.85;white-space:nowrap}
+.dd-tab.has{color:var(--su-text)}
+.dd-tab.has::after{content:'';position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:3px;background:var(--su-pos)}
+.dd-tab.on{background:var(--su-accent);color:var(--su-on-accent)}
+.dd-tab.on::after{background:var(--su-on-accent)}
+.dd-tab.bonus b{font-size:12.5px}
+.dd-orphans{margin:10px 0;padding:12px;border:1px dashed var(--su-accent);border-radius:12px;background:var(--su-accent-soft)}
+.dd-orphans-t{font-size:13.5px;font-weight:700;color:var(--su-accent-text);margin-bottom:6px}
+.dd-orow{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13.5px;color:var(--su-text)}
+.dd-oname{flex:1;min-width:0;overflow-wrap:anywhere}
+.dd-oamt{font-weight:700;font-variant-numeric:tabular-nums}
+.dd-bulk-add{margin:6px 0 8px}
+.dd-bulk .dd-paybody > div > .dd-entry-row:last-child{border-bottom:none}
+.dd-ta{width:100%;min-height:96px;margin:12px 0;padding:12px;background:var(--su-bg);border:1px solid var(--su-border2);border-radius:10px;color:var(--su-strong);font-size:16px;line-height:1.5;resize:vertical;outline:none}
+.dd-ta:focus{border-color:var(--su-accent)}
+.dd-ta::placeholder{color:var(--su-muted);opacity:.6}
+@media (max-width:360px){.dd-money{width:118px}.dd-fbtn{padding:0 10px}.dd-save{min-width:90px}}
+.dd-paybody > .dd-entry-row:last-child{border-bottom:none}
+
+.su-wrap{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding-top:max(env(safe-area-inset-top,0px),10px)}
+.su-top{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 4px 6px}
+.su-back{height:44px;display:flex;align-items:center;gap:2px;padding:0 8px 0 2px;background:none;border:none;color:var(--su-muted);font-size:15px;cursor:pointer}
+.su-add{height:40px;display:flex;align-items:center;gap:6px;padding:0 16px;background:var(--su-accent);border:none;border-radius:12px;color:var(--su-on-accent);font-size:15px;font-weight:700;cursor:pointer}
+.su-h1{margin:0;padding:0 20px;font-size:28px;font-weight:700;letter-spacing:-0.3px;color:var(--su-strong)}
+.su-lede{margin:4px 0 0;padding:0 20px;font-size:13px;color:var(--su-muted)}
+.su-toast{margin:12px 16px 0;padding:10px 14px;border-radius:12px;background:var(--su-accent-soft);color:var(--su-accent-text);font-size:14px;font-weight:600}
+.su-group{padding:16px 16px 0}
+.su-glabel{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 6px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--su-muted)}
+.su-card{background:var(--su-panel);border:1px solid var(--su-border);border-radius:12px;overflow:hidden}
+.su-row{width:100%;display:flex;align-items:center;gap:12px;min-height:54px;padding:8px 12px 8px 14px;background:none;border:none;border-bottom:1px solid var(--su-line);color:var(--su-text);text-align:left;cursor:pointer}
+.su-row:last-child{border-bottom:none}
+.su-row:active{background:var(--su-panel2)}
+.su-row.closed{opacity:0.55}
+.su-rtext{display:flex;flex-direction:column;flex:1;min-width:0}
+.su-rname{font-size:15px;font-weight:600;color:var(--su-text)}
+.su-rsub{font-size:12.5px;color:var(--su-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.su-rval{font-size:14px;font-weight:600;color:var(--su-strong);white-space:nowrap}
+
+.su-link{height:44px;background:none;border:none;color:var(--su-muted);font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.su-sheetbg{position:fixed;inset:0;z-index:160;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center}
+.su-sheet{width:100%;max-width:560px;display:flex;flex-direction:column;gap:10px;padding:10px 16px max(env(safe-area-inset-bottom,0px),24px);background:var(--su-panel);border-top:1px solid var(--su-border2);border-radius:22px 22px 0 0;animation:suUp .2s ease-out}
+@keyframes suUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.su-grab{width:40px;height:4px;border-radius:2px;background:var(--su-border2);align-self:center}
+.su-sheethead{display:flex;align-items:center;justify-content:space-between;padding:2px 0 2px 4px}
+.su-sheethead h2{margin:0;font-size:21px;color:var(--su-strong)}
+.su-x{width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--su-muted);cursor:pointer}
+.su-opt{display:flex;align-items:center;gap:14px;min-height:62px;padding:10px 14px;background:var(--su-panel2);border:1px solid var(--su-border);border-radius:14px;color:var(--su-text);text-align:left;cursor:pointer}
+.su-tag{width:42px;height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--su-accent-soft);color:var(--su-accent-text);font-size:11px;font-weight:800;letter-spacing:0.5px}
+.su-form{display:flex;flex-direction:column;gap:18px;padding:18px 16px 24px;flex:1}
+.su-field{display:flex;flex-direction:column;gap:7px}
+.su-label{font-size:12.5px;font-weight:600;color:var(--su-muted)}
+.su-label em{font-style:normal;font-weight:400;opacity:0.85}
+.su-input{height:50px;width:100%;padding:0 14px;background:var(--su-panel);border:1px solid var(--su-border2);border-radius:12px;color:var(--su-strong);font-size:16px;outline:none}
+.su-input:focus{border-color:var(--su-accent)}
+.su-input.money{text-align:right}
+.su-2col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.su-chips{display:flex;flex-wrap:wrap;gap:8px}
+.su-chip{min-height:42px;padding:0 15px;border-radius:21px;background:var(--su-panel);border:1px solid var(--su-border2);color:var(--su-text);font-size:14px;font-weight:600;cursor:pointer}
+.su-chip.on{background:var(--su-accent);border-color:var(--su-accent);color:var(--su-on-accent)}
+.su-chip.sm{min-height:36px;padding:0 12px;font-size:13px}
+.su-chip.tick.on{background:var(--su-accent-soft);border-color:var(--su-accent);color:var(--su-accent-text)}
+.su-note{display:flex;gap:10px;padding:12px 14px;background:var(--su-panel);border:1px solid var(--su-border);border-radius:12px;font-size:13px;line-height:1.45;color:var(--su-text)}
+.su-note.warn{background:var(--su-accent-soft);border-color:var(--su-accent)}
+.su-hint{font-size:12px;color:var(--su-muted);line-height:1.4}
+.su-plan{display:flex;flex-direction:column;gap:10px;padding:12px 14px;background:var(--su-panel);border:1px solid var(--su-border);border-radius:12px}
+.su-planhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.su-planhead span{font-size:15px;font-weight:600;color:var(--su-text)}
+.su-mini{height:36px;padding:0 10px;background:none;border:1px solid var(--su-border2);border-radius:8px;color:var(--su-muted);font-size:12.5px;font-weight:600;cursor:pointer}
+.su-dashed{min-height:46px;display:flex;align-items:center;gap:8px;padding:0 14px;background:none;border:1px dashed var(--su-border2);border-radius:12px;color:var(--su-accent-text);font-size:14px;font-weight:600;cursor:pointer}
+.su-switchrow{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 14px;background:var(--su-panel);border:1px solid var(--su-border);border-radius:12px;cursor:pointer}
+.su-switch{position:relative;width:50px;height:30px;flex-shrink:0;border-radius:15px;background:var(--su-border2);transition:background .15s}
+.su-switch::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:12px;background:var(--su-text);transition:left .15s}
+.su-switchrow input:checked + .su-switch{background:var(--su-accent)}
+.su-switchrow input:checked + .su-switch::after{left:23px;background:var(--su-on-accent)}
+.su-switchrow input{position:absolute;opacity:0;width:1px;height:1px}
+.su-switchrow input:disabled + .su-switch{opacity:0.5}
+.su-err{padding:10px 14px;border-radius:12px;background:rgba(248,113,113,0.12);border:1px solid var(--su-neg);color:var(--su-text);font-size:14px}
+.su-foot{position:sticky;bottom:0;display:flex;gap:10px;padding:12px 16px max(env(safe-area-inset-bottom,0px),20px);background:var(--su-bg);border-top:1px solid var(--su-border)}
+.su-btn{height:52px;padding:0 18px;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer}
+.su-btn.pri{flex:1;background:var(--su-accent);border:none;color:var(--su-on-accent)}
+.su-btn.sec{background:none;border:1px solid var(--su-border2);color:var(--su-text);font-weight:600}
+.su-danger{display:flex;flex-direction:column;gap:8px;padding-top:6px;border-top:1px solid var(--su-border)}
+.su-dbtn{height:46px;background:none;border:none;color:var(--su-neg);font-size:14px;font-weight:600;cursor:pointer}
+.su-dbtn.solid{background:var(--su-danger-bg);color:#fff;border-radius:12px}
+
+/* ── Home screen (was the <style> inside #homePage) ── */
+
+
+/* ── HOME SCREEN: fills viewport exactly ─────────────── */
+#homePage{position:fixed !important;top:0;left:0;right:0;bottom:0;border-radius:0 !important;max-width:none !important;margin:0 !important;overflow:hidden;z-index:100;padding:0 !important}
+#homeScreen{display:flex;flex-direction:column;height:100%;height:100dvh;position:relative;overflow:hidden}
+#homeScreen::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.055) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;z-index:0}
+
+/* ── Slider: holds both pages side by side ──────────── */
+#homeSlider{flex:1;overflow:hidden;position:relative;z-index:1;width:100%}
+#homeSliderTrack{display:flex;width:200%;height:100%;transition:transform 0.38s cubic-bezier(0.4,0,0.2,1);will-change:transform}
+.home-slide{width:50%;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box}
+/* 4.0: the backup reminder floats over the top of the screen; push page 2's first row below it (page 1 starts with the banner image) */
+body.bk-banner-on #homeSlide2{padding-top:var(--bk-banner-h,64px)}
+
+/* ── Balance widget ──────────────────────────────────── */
+#homeWidget{margin:env(safe-area-inset-top,20px) 4px 4px;margin-top:max(env(safe-area-inset-top,0px) - 6px,2px);padding:0 2px 4px;border-radius:0;background:transparent;border:none;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;cursor:pointer;flex-shrink:0;overflow:visible}
+#homeTitle{font-size:28px;font-weight:700;color:#fff;letter-spacing:-0.5px;line-height:1.15;font-family:-apple-system,sans-serif;margin-bottom:2px}
+#homeTitle img{width:100%;max-width:310px;height:auto;display:block;}
+body.alaskan-theme #homeTitle{color:#D4AF37}
+body.sunset-theme #homeTitle{color:#F5C030}
+
+/* ── Page 2 header ───────────────────────────────────── */
+
+/* ── App grids ───────────────────────────────────────── */
+.home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:24px 0px;padding:12px 12px 4px;flex:1;align-content:start;justify-items:center}
+
+/* ── Each app button ─────────────────────────────────── */
+.home-app{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px 10px;cursor:pointer;border-radius:16px;-webkit-tap-highlight-color:transparent;border:none;background:transparent;width:fit-content;margin:0 auto;position:relative;user-select:none;-webkit-user-select:none;touch-action:none}
+
+.home-app.pressed{transform:scale(0.86);opacity:0.75}
+.home-app.jiggling{animation:jiggle 0.55s ease-in-out infinite}
+@keyframes jiggle{0%,100%{transform:rotate(-2deg) scale(1)}
+50%{transform:rotate(2.5deg) scale(1.02)}
+}
+.home-app.drag-over
+/* ── Icon ────────────────────────────────────────────── */
+.home-icon{outline:2px dashed rgba(255,255,255,0.5);outline-offset:2px}
+
+.home-app.edge-pending{animation:edgePulse 0.5s ease-in-out infinite!important}
+@keyframes edgePulse{0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0.7)}50%{box-shadow:0 0 0 8px rgba(212,175,55,0)}}
+.home-icon{width:88px;height:88px;border-radius:15px;display:flex;align-items:center;justify-content:center;background:transparent;position:relative;overflow:visible;flex-shrink:0;pointer-events:none}
+.home-icon::after{display:none}
+
+/* ── Dots ────────────────────────────────────────────── */
+#homeDots{display:flex;justify-content:center;gap:7px;padding:8px 0 6px;position:relative;z-index:1;flex-shrink:0}
+.home-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.28);transition:all 0.3s ease}
+.home-dot.active{background:rgba(255,255,255,0.88);width:20px;border-radius:4px}
+body.alaskan-theme .home-dot.active{background:#D4AF37}
+body.sunset-theme .home-dot.active{background:#F5C030}
+
+/* ── Dock ────────────────────────────────────────────── */
+#homeDock{display:flex;justify-content:space-around;margin:0 18px;margin-bottom:max(env(safe-area-inset-bottom,0px) + 12px,20px);padding:12px 10px;border-radius:26px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.13);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);position:relative;z-index:1;flex-shrink:0}
+#homeDock .home-app{touch-action:manipulation}
+#homeDock .home-icon{width:88px;height:88px}
+
+/* ── Icon colours ────────────────────────────────────── */
+.icon-income{background:transparent}
+.icon-invest{background:transparent}
+.icon-expenses{background:transparent}
+.icon-networth{background:transparent}
+.icon-fire{background:transparent}
+.icon-summary{background:transparent}
+.icon-retirement{background:transparent}
+.icon-debt{background:transparent}
+.icon-homevalue{background:transparent}
+.icon-compound{background:transparent}
+.icon-budget{background:transparent}
+.icon-loans{background:transparent}
+.icon-data{background:transparent}
+.icon-log{background:transparent}
+.icon-settings{background:transparent}
+
+/* ── Entry animations ────────────────────────────────── */
+@keyframes iconPop{0%{opacity:0;transform:scale(0.55) translateY(14px)}
+70%{transform:scale(1.07) translateY(-2px)}
+100%{opacity:1;transform:scale(1) translateY(0)}
+}
+.home-grid .home-app{animation:iconPop 0.32s cubic-bezier(0.34,1.56,0.64,1) both}
+.home-grid .home-app:nth-child(1){animation-delay:0.03s}
+.home-grid .home-app:nth-child(2){animation-delay:0.07s}
+.home-grid .home-app:nth-child(3){animation-delay:0.11s}
+.home-grid .home-app:nth-child(4){animation-delay:0.15s}
+.home-grid .home-app:nth-child(5){animation-delay:0.19s}
+.home-grid .home-app:nth-child(6){animation-delay:0.23s}
+.home-grid .home-app:nth-child(7){animation-delay:0.27s}
+.home-grid .home-app:nth-child(8){animation-delay:0.31s}
+.home-grid .home-app:nth-child(9){animation-delay:0.35s}
+.home-grid .home-app:nth-child(10){animation-delay:0.39s}
+.home-grid .home-app:nth-child(11){animation-delay:0.43s}
+.home-grid .home-app:nth-child(12){animation-delay:0.47s}
+@keyframes iconSwap{0%{transform:scale(1.15)}
+100%{transform:scale(1)}
+}
+.home-app.just-swapped{animation:iconSwap 0.22s cubic-bezier(0.34,1.56,0.64,1) both !important}
+#homeDock .home-app{animation:iconPop 0.36s cubic-bezier(0.34,1.56,0.64,1) 0.36s both}

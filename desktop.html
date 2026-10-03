@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sommerville Ledger 4 — Planner</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<script src="vendor/chart-4.4.1.umd.js"></script>
+<script src="js/ledger-core.js"></script>   <!-- 3.7: shared money math (same file as the phone) -->
+<style>
+/* ═══ Themes (match the mobile app) ═══════════════════════════════════════ */
+:root, .alaskan-theme {
+  --bg:#04090F; --panel:#0C1828; --panel2:#0F1E33; --border:#1A2A42; --hover:#162030;
+  --text:#E2E8F0; --muted:#8A94A8; --accent:#D4AF37; --pos:#4ADE80; --neg:#F87171;
+  --grid:rgba(255,255,255,0.06); --surface:#0C1828;
+}
+.sunset-theme {
+  --bg:#0A0206; --panel:#180608; --panel2:#200A0C; --border:#4A1810; --hover:#28100A;
+  --text:#F0D8C0; --muted:#B08A78; --accent:#F5C030; --pos:#F5A020; --neg:#E05040;
+  --grid:rgba(255,200,100,0.07); --surface:#180608;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+.num{font-variant-numeric:tabular-nums}
+
+/* ═══ Load screen ═══ */
+#loader{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.drop{max-width:520px;width:100%;text-align:center;border:2px dashed var(--border);border-radius:18px;padding:44px 32px;background:var(--panel);transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--accent);background:var(--panel2)}
+.drop img{width:260px;max-width:80%;margin-bottom:18px}
+.drop h1{font-size:20px;margin-bottom:6px}
+.drop p{color:var(--muted);font-size:13px;margin-bottom:18px}
+.btn{display:inline-block;padding:10px 20px;border-radius:10px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-weight:700}
+.btn:hover{background:var(--accent);color:#0A1018}
+.privacy{margin-top:18px;font-size:12px;color:var(--muted)}
+#unlockPw{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font:inherit;width:240px}
+#loadErr{color:var(--neg);margin-top:12px;font-size:13px;min-height:18px}
+
+/* ═══ App shell ═══ */
+#app{display:none;min-height:100vh}
+#app.on{display:flex}
+aside{width:210px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:20px 18px 14px;border-bottom:1px solid var(--border)}
+.brand b{display:block;color:var(--accent);font-size:15px;letter-spacing:1px}
+.brand span{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+nav{flex:1;padding:10px 0;overflow-y:auto}
+.nwm-row{border-bottom:1px solid var(--border)}
+.nwm-row summary{display:flex;align-items:baseline;gap:12px;padding:10px 4px;cursor:pointer;list-style:none}
+.nwm-row summary::-webkit-details-marker{display:none}
+.nwm-row[data-empty] summary{cursor:default}
+.nwm-op{width:14px;flex-shrink:0;color:var(--muted);font-weight:700;text-align:center}
+.nwm-l{flex:1;display:flex;flex-direction:column;gap:2px}
+.nwm-l small,.nwm-item small{color:var(--muted);font-size:12px}
+.nwm-v{font-weight:600}
+.nwm-item{display:flex;justify-content:space-between;gap:12px;padding:5px 4px 5px 30px;font-size:13px;color:var(--text)}
+.nwm-item:last-child{padding-bottom:10px}
+.nwm-sum summary{font-weight:700}
+.nwm-sum{border-top:2px solid var(--border)}
+.nwm-total .nwm-v,.nwm-total .nwm-l{color:var(--accent);font-size:16px}
+.nwm-row:last-child{border-bottom:none}
+nav button{display:flex;gap:10px;align-items:center;width:100%;padding:10px 18px;border:0;border-left:3px solid transparent;background:none;color:var(--muted);font-size:13.5px;text-align:left}
+nav button:hover{background:var(--hover);color:var(--text)}
+nav button.active{color:var(--accent);border-left-color:var(--accent);background:var(--hover)}
+.side-foot{padding:14px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.side-foot button{padding:8px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px}
+.side-foot button:hover{border-color:var(--accent);color:var(--accent)}
+main{flex:1;min-width:0;padding:24px 28px 48px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+.topbar h2{font-size:22px}
+.asof{font-size:12px;color:var(--muted)}
+.banner{background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.35);color:var(--text);border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+
+/* ═══ Grid / cards ═══ */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;position:relative}
+.kpi .l{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-size:24px;font-weight:800;margin-top:6px}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:4px}
+.grid{display:grid;gap:14px;margin-bottom:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g21{grid-template-columns:2fr 1fr}
+@media (max-width:1100px){.g2,.g3,.g21{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;min-width:0}
+.card-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.card-h h3{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.chip{padding:3px 10px;border-radius:14px;border:1px solid var(--border);background:none;color:var(--muted);font-size:11px}
+.chip:hover,.chip.on{border-color:var(--accent);color:var(--accent)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chart{position:relative;height:280px}
+.chart.tall{height:340px}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+.info{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;border:1.5px solid currentColor;background:none;color:var(--muted);font:italic 700 10px Georgia,serif;margin-left:6px;vertical-align:middle;opacity:.8}
+.info:hover{color:var(--accent);opacity:1}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:700}
+td{padding:7px 8px;border-bottom:1px solid var(--grid)}
+td.r,th.r{text-align:right}
+tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
+.tbl-wrap{max-height:340px;overflow:auto}
+.pos{color:var(--pos)} .neg{color:var(--neg)}
+
+/* Meters (magnitude, one series) */
+.meter{margin-bottom:14px}
+.meter-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.meter-top span:last-child{font-weight:700}
+.track{height:8px;border-radius:4px;background:var(--border);overflow:hidden}
+.fill{height:100%;border-radius:4px;background:var(--accent)}
+.fill.over{background:var(--neg)}
+.muted-s{color:var(--muted);font-size:11px}
+.meter-sub{font-size:11.5px;color:var(--muted);margin-top:4px}
+
+/* Info modal */
+#infoWrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:center;justify-content:center;padding:20px}
+#infoWrap.on{display:flex}
+#infoBox{background:var(--panel2);border:1px solid var(--border);border-radius:16px;max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:20px 22px}
+#infoBox h3{font-size:17px;color:var(--accent);margin-bottom:12px;display:flex;justify-content:space-between}
+#infoBox h3 button{border:0;background:none;color:var(--muted);font-size:22px;line-height:1}
+#infoBox pre{font:12.5px/1.6 ui-monospace,Menlo,Consolas,monospace;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:10px 12px;white-space:pre-wrap;margin-bottom:12px}
+#infoBox ul{padding-left:18px;font-size:13px;color:var(--muted)}
+#infoBox li{margin-bottom:5px}
+
+
+/* ═══ Paycheck planner ═══ */
+.pp-mode{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.pp-group{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--accent);margin:14px 0 6px}
+.pp-group:first-of-type{margin-top:0}
+.pp-row{display:grid;grid-template-columns:170px 1fr 92px;gap:12px;align-items:center;padding:5px 0}
+.pp-row label{font-size:13px}
+.pp-row label span{display:block;font-size:11px;color:var(--muted)}
+.pp-row input[type=range]{width:100%;accent-color:var(--accent)}
+.pp-num{display:flex;align-items:center;gap:3px;font-size:13px;color:var(--muted);justify-content:flex-end}
+.pp-num input,.pp-f input,.pp-f select,.pp-bonus input{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 7px;font:inherit;font-size:13px;font-variant-numeric:tabular-nums}
+.pp-num input{width:66px;text-align:right}
+.pp-solve{display:flex;gap:14px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:13px}
+.pp-solve .btn{white-space:nowrap;padding:8px 16px}
+.pp-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+.pp-f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.pp-f input,.pp-f select{width:100%}
+.pp-bonus{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.pp-bonus input[type=number]{width:90px}
+.pp-track{display:flex}
+.pp-track .fill{border-radius:0}
+.fill.pp-proj{background:repeating-linear-gradient(135deg,var(--accent) 0 3px,transparent 3px 6px);opacity:.8}
+.pp-alert{font-size:13px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);margin:6px 0 10px}
+.pp-alert.neg{color:var(--text);border-color:var(--neg)}
+.pp-alert.pos{color:var(--text);border-color:var(--pos)}
+.pp-legend{display:flex;gap:16px;font-size:11.5px;color:var(--muted)}
+.pp-legend i{display:inline-block;width:18px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.pp-wf td:first-child{color:var(--muted)}
+.pp-wf tr.tot td:first-child{color:var(--text)}
+/* Financial pulse + retirement plan */
+.pulse-sum{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+.pulse-sum div{display:flex;flex-direction:column;align-items:center;gap:2px}
+.pulse-sum b{font-size:16px;color:var(--text)}
+.rp-phase{margin-bottom:14px}
+.rp-row{grid-template-columns:170px 1fr 60px}
+.rp-row b{text-align:right;color:var(--accent)}
+.rp-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.rp-tile{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.rp-tile .l{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+.rp-tile .v{font-size:20px;font-weight:800;margin-top:4px;color:var(--accent)}
+.rp-tile .s{font-size:11.5px;color:var(--muted);margin-top:2px}
+.pp-f small{margin-top:1px}
+.view{display:none}.view.on{display:block}
+</style>
+</head>
+<body class="alaskan-theme">
+
+<!-- ═══ LOAD SCREEN ═══ -->
+<div id="loader">
+  <div class="drop" id="drop">
+    <img src="images/banner.webp" alt="Sommerville Ledger" onerror="this.style.display='none'">
+    <h1>Desktop Planner</h1>
+    <p>Open a backup exported from the phone app<br>(Settings → Data Management → Save to OneDrive).</p>
+    <div id="dirRow" style="margin-bottom:12px"></div>
+    <label class="btn" id="fileBtn">Choose backup file<input type="file" id="file" accept=".json,.txt,application/json,text/plain" hidden></label>
+    <div id="unlock" style="display:none;margin-top:16px">
+      <p style="margin-bottom:8px">🔒 <b id="unlockName"></b> is locked. <span id="unlockHow">Enter its backup password.</span></p>
+      <input type="password" id="unlockPw" placeholder="Backup password" autocomplete="current-password" onkeydown="if(event.key==='Enter')unlockFile()">
+      <button class="btn" onclick="unlockFile()" style="margin-left:6px">Unlock</button>
+    </div>
+    <div class="privacy">…or drag the .json (or .txt) backup here. Your data is read in this browser only: nothing is uploaded, and your financial data is never saved here.</div>
+    <div id="loadErr"></div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <aside>
+    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.0</span></div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <button onclick="toggleTheme()">🎨 Switch theme</button>
+      <button onclick="reopen()">📂 Open another file</button>
+      <button onclick="resetSettings()">↺ Reset planner settings</button>
+    </div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <h2 id="viewTitle">Overview</h2>
+      <div class="asof" id="asof"></div>
+    </div>
+    <div id="banners"></div>
+    <div id="views"></div>
+  </main>
+</div>
+
+<div id="infoWrap" onclick="if(event.target===this)closeInfo()"><div id="infoBox"></div></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   SOMMERVILLE LEDGER — DESKTOP PLANNER
+   Loads a backup JSON exported by the mobile app (index.html), plain or
+   password-locked (v3.0). Never saves financial data. Only planner settings
+   (sliders, goals, elections) are remembered, in this browser (v3.0).
+   Never writes localStorage, never saves. Formulas mirror mobile v15.3
+   planning helpers (getAnnualSpending, getT12Savings, getSavingsRate, …).
+   ═══════════════════════════════════════════════════════════════════════════ */
+const VIEWER_SCHEMA = 1;                    // highest export schemaVersion this viewer understands
+const PLAN_RETURN = LC.PLAN_RETURN;         // 7%, js/ledger-core.js (3.7.1)
+const BIRTHDAY = new Date(1985, 3, 29);     // same as mobile
+const DEF_LIVING = 16800, DEF_HEALTH = 13200;
+// Categorical palette — validated (dataviz validator) on both theme surfaces:
+// adjacent CVD ΔE ≥ 8.4, normal-vision ΔE ≥ 19.3, all ≥ 3:1 contrast. Fixed order, never cycled.
+const SERIES = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
+const OTHER = '#6b7280';
+
+let D = null;          // loaded backup
+let ASOF = new Date(); // "today" for all calculations = export date
+let VIEW = 'overview';
+let THEME = 'alaskan';
+const charts = {};
+
+/* ─── Formatting ─────────────────────────────────────────────────────────── */
+const $ = n => (n < 0 ? '−' : '') + '$' + Math.round(Math.abs(n)).toLocaleString('en-US');
+const $k = n => { const a = Math.abs(n), s = n < 0 ? '−' : '';
+  return a >= 1e6 ? s + '$' + (a / 1e6).toFixed(a >= 1e7 ? 1 : 2).replace(/\.?0+$/, '') + 'M'
+       : a >= 1e3 ? s + '$' + Math.round(a / 1e3) + 'K' : s + '$' + Math.round(a); };
+const pct = (x, d = 1) => (x * 100).toFixed(d) + '%';
+const mk = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+const mkLabel = k => { const [y, m] = k.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short' }) + ' \u2019' + String(y).slice(2); };
+const addM = (k, n) => { const [y, m] = k.split('-').map(Number); return mk(new Date(y, m - 1 + n, 1)); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const cssv = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+
+/* ─── Loading ────────────────────────────────────────────────────────────── */
+const drop = document.getElementById('drop');
+['dragenter', 'dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', ev => { const f = ev.dataTransfer.files[0]; if (f) readFile(f); });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => e.preventDefault());
+document.getElementById('file').addEventListener('change', e => { const f = e.target.files[0]; if (f) readFile(f); e.target.value = ''; });
+
+function readFile(f) {
+  const r = new FileReader();
+  document.getElementById('loadErr').textContent = '';
+  r.onload = () => {
+    try {
+      const b = JSON.parse(r.result);
+      if (b && b.format === 'ledger-enc-1') {   // password-locked backup from the phone (v3.0+)
+        LOCKED = b;
+        document.getElementById('unlockName').textContent = f.name;
+        const pin = b.keyType === 'pin';   // v3.1: phone locks backups with the app PIN
+        document.getElementById('unlockHow').textContent = pin ? 'Enter your 4-digit Ledger PIN.' : 'Enter its backup password.';
+        const pwEl = document.getElementById('unlockPw');
+        pwEl.placeholder = pin ? 'PIN' : 'Backup password';
+        pwEl.inputMode = pin ? 'numeric' : 'text';
+        pwEl.maxLength = pin ? 4 : 256;
+        document.getElementById('unlock').style.display = '';
+        document.getElementById('unlockPw').value = '';
+        document.getElementById('unlockPw').focus();
+        return;
+      }
+      load(b);
+    }
+    catch (err) { document.getElementById('loadErr').textContent = "Couldn't read that file: " + err.message; }
+  };
+  r.readAsText(f);
+}
+// ─── Locked backups: AES-256-GCM, key = PBKDF2-SHA256(password, salt, iter). Same as the phone's decryptBackup(). ───
+let LOCKED = null;
+const unb64 = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+async function decryptBackup(env, password) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: unb64(env.salt), iterations: env.iter || 250000, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  try { return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(env.iv) }, key, unb64(env.data)))); }
+  catch (e) { throw new Error('Wrong PIN or password (or the file is damaged).'); }
+}
+async function unlockFile() {
+  const err = document.getElementById('loadErr'), pw = document.getElementById('unlockPw');
+  if (!LOCKED) return;
+  err.textContent = 'Unlocking…';
+  try {
+    const b = await decryptBackup(LOCKED, pw.value);
+    LOCKED = null; pw.value = ''; err.textContent = '';
+    document.getElementById('unlock').style.display = 'none';
+    load(b);
+  } catch (e) { err.textContent = e.message; pw.select(); }
+}
+
+function load(b) {
+  if (!Array.isArray(b.entries) || !Array.isArray(b.accounts)) throw new Error("it doesn't look like a Ledger backup (no entries/accounts).");
+  // Normalize — every list defaults to empty so older backups still render
+  ['entries','accounts','expenses','companies','debtAccounts','debtEntries','bulkDebtPayments','incomeEntries','payers',
+   'retirementContribs','retirementSources','coastContribs','coastAccounts','homeValues','logbook',
+   'loanPeople','loanEvents','properties'].forEach(k => { if (!Array.isArray(b[k])) b[k] = []; });   // v3.4: loans · v3.5: properties
+  if (!b.properties.some(p => p && p.id === 'home')) b.properties.unshift({ id: 'home', name: 'Home' });
+  ['yearlyGoals','metalsData','retirementLimits','monthNotes'].forEach(k => { if (!b[k] || typeof b[k] !== 'object') b[k] = {}; });
+  if (typeof b.taxRatePct !== 'number') b.taxRatePct = 25;
+  if (typeof b.untrackedLiving !== 'number') b.untrackedLiving = DEF_LIVING;
+  if (typeof b.healthInsurance !== 'number') b.healthInsurance = DEF_HEALTH;
+  D = b; PS = null; RP = null;
+  const ex = new Date(b.exportedAt || Date.now());
+  ASOF = isNaN(ex) ? new Date() : ex;
+  const st = loadSettings();
+  EXTRAS_ON = st.extrasOn !== false;   // v3.1: estimated yearly costs switch (planner setting, default on)
+  TAX_PCT = typeof st.taxRate === 'number' ? st.taxRate : b.taxRatePct;   // v3.1: tax rate lives here; first run uses the phone's
+  MC_LAST = null;
+  THEME = st.theme || (b.theme === 'sunset' ? 'sunset' : 'alaskan');
+  if (st.pulseRange != null) PULSE_RANGE = st.pulseRange;
+  if (st.fireRet != null) window._fireRet = st.fireRet;
+  if (st.fireStop != null) window._fireStop = st.fireStop;
+  applyTheme();
+
+  const banners = [];
+  const sv = b.schemaVersion;
+  if (sv === undefined) banners.push('This backup came from an older phone app (before v15). Everything that exists in it is shown.');
+  else if (sv > VIEWER_SCHEMA) banners.push(`This backup is schema v${sv}, newer than this viewer (v${VIEWER_SCHEMA}). Most things will show, but newer fields are ignored. Update desktop.html.`);
+  document.getElementById('banners').innerHTML = banners.map(t => `<div class="banner">${esc(t)}</div>`).join('');
+  document.getElementById('asof').textContent = 'Data as of ' + ASOF.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' · ' + b.entries.length + ' balance entries';
+
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('app').classList.add('on');
+  buildNav();
+  show(VIEW);
+}
+function reopen() {
+  document.getElementById('app').classList.remove('on');
+  document.getElementById('loader').style.display = '';
+  document.getElementById('loadErr').textContent = '';
+  renderDirRow();
+}
+
+/* ═══ BACKUP FOLDER (v3.1) ═════════════════════════════════════════════════
+   Chrome/Edge only (File System Access API). Pick the OneDrive backup folder
+   once; the planner remembers the folder *handle* (not any file contents) in
+   IndexedDB 'ldp_handles' and loads the newest ledger-*.json / .txt from it.
+   The browser asks for read permission once per visit (a security rule).
+   ═══════════════════════════════════════════════════════════════════════════ */
+const HAS_DIR = typeof window.showDirectoryPicker === 'function';
+function _idb() {
+  return new Promise((res, rej) => { const r = indexedDB.open('ldp_handles', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+async function _idbGet(k) { const db = await _idb(); return new Promise(res => { const q = db.transaction('h').objectStore('h').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); }
+async function _idbSet(k, v) { const db = await _idb(); return new Promise(res => { const t = db.transaction('h', 'readwrite'); v == null ? t.objectStore('h').delete(k) : t.objectStore('h').put(v, k); t.oncomplete = () => res(); t.onerror = () => res(); }); }
+let DIR = null;
+async function renderDirRow() {
+  const row = document.getElementById('dirRow'); if (!row) return;
+  if (!HAS_DIR) { row.innerHTML = ''; return; }
+  try { DIR = DIR || await _idbGet('backupDir'); } catch (e) { DIR = null; }
+  row.innerHTML = DIR
+    ? `<button class="btn" onclick="loadNewest()">⚡ Load newest backup</button>
+       <div class="privacy" style="margin-top:8px">from <b>${esc(DIR.name)}</b> · <a href="#" onclick="pickDir();return false" style="color:var(--accent)">change folder</a> · <a href="#" onclick="forgetDir();return false" style="color:var(--muted)">forget</a></div>`
+    : `<button class="btn" onclick="pickDir()">📁 Choose backup folder</button>
+       <div class="privacy" style="margin-top:8px">Pick your OneDrive backup folder once; after that one click loads the newest backup.</div>`;
+}
+async function pickDir() {
+  try {
+    const h = await window.showDirectoryPicker({ id: 'ledger-backups', mode: 'read' });
+    DIR = h; await _idbSet('backupDir', h); await renderDirRow(); await loadNewest();
+  } catch (e) { if (e.name !== 'AbortError') document.getElementById('loadErr').textContent = "Couldn't open that folder: " + e.message; }
+}
+async function forgetDir() { DIR = null; await _idbSet('backupDir', null); renderDirRow(); }
+async function loadNewest() {
+  const err = document.getElementById('loadErr');
+  if (!DIR) return pickDir();
+  try {
+    let perm = await DIR.queryPermission({ mode: 'read' });
+    if (perm !== 'granted') perm = await DIR.requestPermission({ mode: 'read' });
+    if (perm !== 'granted') { err.textContent = 'The browser needs permission to read the folder. Click again and choose Allow.'; return; }
+    err.textContent = 'Looking for the newest backup…';
+    let best = null;
+    for await (const h of DIR.values()) {
+      if (h.kind !== 'file' || !/^ledger-.*\.(json|txt)$/i.test(h.name)) continue;
+      const f = await h.getFile();
+      if (!best || f.lastModified > best.lastModified || (f.lastModified === best.lastModified && f.name > best.name)) best = f;
+    }
+    if (!best) { err.textContent = `No ledger-… backups in "${DIR.name}". Save one from the phone first, or pick another folder.`; return; }
+    err.textContent = '';
+    readFile(best);
+  } catch (e) { err.textContent = "Couldn't read the folder: " + e.message + (/NotFound/i.test(e.name) ? ' (was it moved? Pick it again.)' : ''); }
+}
+renderDirRow();
+function toggleTheme() { THEME = THEME === 'sunset' ? 'alaskan' : 'sunset'; saveSettings({ theme: THEME }); applyTheme(); show(VIEW); }
+function applyTheme() { document.body.className = THEME + '-theme'; }
+
+/* ═══ PLANNER SETTINGS (v3.0) ════════════════════════════════════════════════
+   The only thing this page stores: your planning knobs (goal, retirement age,
+   rates, 401(k)/savings elections, pay-stub deductions, chart ranges, theme).
+   Never balances, entries or anything else from the backup file.
+   Key: ldp_settings (this browser only). Reset from the sidebar.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const SETTINGS_KEY = 'ldp_settings';
+function loadSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function saveSettings(patch) {
+  try { const s = loadSettings(); Object.assign(s, patch, { savedAt: new Date().toISOString() }); localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) {}
+}
+function resetSettings() {
+  if (!confirm('Reset all planner settings (goal, retirement age, rates, elections) to the defaults from your backup?')) return;
+  try { localStorage.removeItem(SETTINGS_KEY); } catch (e) {}
+  RP = null; PS = null; PULSE_RANGE = 12; window._fireRet = undefined; window._fireStop = undefined; EXTRAS_ON = true; MC = null; MC_LAST = null; if (D) TAX_PCT = D.taxRatePct;
+  if (D) show(VIEW);
+}
+const RP_KEYS = ['goal', 'r1', 'retireAge', 'r2', 'freed', 'r3', 'tax3', 'exp3', 'wr4', 'tax4', 'r4'];
+
+/* ═══ MODEL — same formulas as the phone app ════════════════════════════════ */
+const asOfMk = () => mk(ASOF);
+// 3.7.1: last 12 complete months before the export month — LC in js/ledger-core.js
+function t12Range() { return LC.t12Range(asOfMk()); }
+function inT12(e) { return LC.inT12(e, asOfMk()); }
+function t12Label() { const r = t12Range(); return mkLabel(r.start) + ' – ' + mkLabel(addM(r.end, -1)); }
+
+/* 3.7: the money math lives in js/ledger-core.js (LC), shared with the phone. These are thin wrappers that pass
+   the backup's lists and the export month (ASOF). Change a formula in ledger-core.js, never here. */
+function latestBal(list, id, uptoMk) { return LC.balance(list, id, uptoMk || null); }
+function investTotal(uptoMk, filter) { return LC.investTotal(D.accounts, D.entries, uptoMk || null, filter); }
+// No month: capped at the month before the export (same as the phone). With a month: through that month (charts).
+function debtTotal(uptoMk) { return uptoMk ? LC.debtThrough(D.debtAccounts, D.debtEntries, uptoMk) : LC.debtTotal(D.debtAccounts, D.debtEntries, asOfMk()); }
+/* v3.5: REAL ESTATE — homeValues[].propertyId points at D.properties (missing = 'home'). Each property counts at its
+   latest value through uptoMk. Net worth only: never liquid net worth, FIRE or the Retirement Plan. */
+const rePid = LC.propId;
+function propValue(pid, uptoMk) { return LC.propertyValue(D.homeValues, pid, uptoMk || null); }
+function realEstateItems(uptoMk) { return LC.realEstateItems(D.properties, D.homeValues, uptoMk || null); }
+function realEstate(uptoMk) { return LC.realEstate(D.properties, D.homeValues, uptoMk || null); }
+/* v3.4: LOANS OWED TO YOU — LC.loanCalc (one rate per person with dated marks, interest monthly from the month after
+   each loan, payments oldest loan first). Net worth only: never investments, FIRE or the Retirement Plan. */
+const lnR2 = LC.r2;   // cents
+function loanRateAt(p, m) { return LC.loanRateAt(p, m); }
+function loanEventsFor(pid) { return LC.loanEventsFor(D.loanEvents, pid); }
+function loanCalc(p, throughMk) { return LC.loanCalc(p, D.loanEvents, throughMk || asOfMk()); }
+// The whole net worth sum, line by line, with what's inside each line (Net Worth & Debt page)
+function nwMathCard() {
+  const cap = addM(asOfMk(), -1), re = realEstateItems();
+  const accts = D.accounts.map(a => ({ n: a.name || a.institution || 'Account', v: latestBal(D.entries, a.id) })).filter(x => x.v).sort((a, b) => b.v - a.v);
+  const debts = D.debtAccounts.map(a => ({ n: a.name, v: latestBal(D.debtEntries, a.id, cap) })).filter(x => x.v);
+  const loans = D.loanPeople.map(p => { const c = loanCalc(p); return { n: p.name, v: c.owed, sub: $(c.lent) + ' lent + ' + $(c.interest) + ' interest' + (c.paid ? ' − ' + $(c.paid) + ' paid back' : '') }; });
+  const inv = investTotal(), debt = debtTotal(), lo = loansOwed(), home = realEstate();
+  const row = (op, label, v, sub, items, cls) => `<details class="nwm-row ${cls || ''}"${items && items.length ? '' : ' data-empty'}><summary><span class="nwm-op">${op}</span><span class="nwm-l">${label}${sub ? `<small>${sub}</small>` : ''}</span><span class="nwm-v num">${$(v)}</span></summary>
+      ${(items || []).map(i => `<div class="nwm-item"><span>${esc(i.n)}${i.sub ? ` <small>${i.sub}</small>` : ''}</span><span class="num">${$(i.v)}</span></div>`).join('')}</details>`;
+  return `<div class="card nwm" style="margin-bottom:14px"><div class="card-h"><h3>How net worth adds up</h3><span class="muted-s">as of ${ASOF.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · tap a line for the details</span></div>
+    ${row('', 'Investments', inv, accts.length + ' accounts · latest balance each', accts)}
+    ${row('+', 'Loans owed to you', lo, D.loanPeople.length ? 'with interest through ' + mkLabel(asOfMk()) : 'none in this backup', loans)}
+    ${row('−', 'Debt', debt, 'latest through ' + mkLabel(cap) + ' (same cap as the phone)', debts)}
+    ${row('=', 'Liquid net worth', inv + lo - debt, '', null, 'nwm-sum')}
+    ${row('+', 'Real estate', home, re.length ? re.length + ' propert' + (re.length === 1 ? 'y' : 'ies') + ' · latest value each' : 'none logged', re.map(x => ({ n: x.p.name, v: x.e.value, sub: 'logged ' + x.e.date })))}
+    ${row('=', 'Net worth', inv + lo - debt + home, '', null, 'nwm-sum nwm-total')}
+  </div>`;
+}
+function loansOwed(uptoMk) { return LC.loansOwed(D.loanPeople, D.loanEvents, uptoMk || asOfMk()); }
+
+const trackedExp = () => LC.trackedSpending(D.expenses, asOfMk());     // 3.7.1
+const mortgageExp = () => LC.mortgageSpending(D.expenses, asOfMk());
+/* v3.1: ESTIMATED YEARLY COSTS — groceries/fuel/dining + health insurance, which the phone
+   doesn't log as bills. One on/off switch on the Retirement Plan page, remembered as a planner
+   setting (ldp_settings.extrasOn). Amounts come from the backup if an older phone exported them,
+   otherwise the defaults (DEF_LIVING / DEF_HEALTH). The phone itself uses logged bills only (3.1). */
+let EXTRAS_ON = true;
+const livingAmt = () => EXTRAS_ON ? D.untrackedLiving : 0;
+const healthAmt = () => EXTRAS_ON ? D.healthInsurance : 0;
+const annualSpending = () => trackedExp() + livingAmt() + healthAmt();
+const spendSub = () => EXTRAS_ON ? 'bills + living + health' : 'logged bills only';
+function setExtras(on) {
+  EXTRAS_ON = !!on; saveSettings({ extrasOn: EXTRAS_ON });
+  if (RP) RP.autoGoal = rpAutoGoal();
+  MC_LAST = null;   // a run with the old spending no longer applies
+  show(VIEW);
+}
+// 3.7.1: { ret, coast, match, retMo, coastMo, matchMo, totalMo } — LC.t12Savings
+function t12Savings() { return LC.t12Savings(D.retirementContribs, D.coastContribs, asOfMk()); }
+function takeHomeT12() { return LC.takeHome(D.incomeEntries, asOfMk()); }
+function savingsRate() { return LC.savingsRate(t12Savings(), takeHomeT12()); }
+/* v3.1: TAX RATE on withdrawals — a planner setting (ldp_settings.taxRate), set on the Retirement Plan
+   page. Starts from the phone's saved rate in the backup. Used by Full/Coast FIRE, the Full FIRE goal
+   button and Monte Carlo. (Phases 3 and 4 of the Retirement Plan keep their own tax sliders.) */
+let TAX_PCT = 25;
+const taxDiv = () => LC.taxDivisor(TAX_PCT);
+// Full / Coast FIRE with this planner's spending (estimates on or off) and tax rate — LC.fullFire / LC.coastFire (3.7.1)
+const fullFireT = () => LC.fullFire(annualSpending(), TAX_PCT, WR);
+const coastFireT = () => LC.coastFire(annualSpending(), mortgageExp(), TAX_PCT, WR);
+function setTax(v) {
+  v = Math.min(60, Math.max(0, +v || 0));
+  TAX_PCT = v; saveSettings({ taxRate: v });
+  if (RP) RP.autoGoal = rpAutoGoal();
+  show(VIEW);
+}
+const WR = LC.WR;
+function monthsToGoal(pv, goal, pmt) { return LC.monthsToGoal(pv, goal, pmt); }   // 3.7.1: 7% + monthly savings
+const monthsLabel = n => n === 0 ? 'Reached' : !isFinite(n) ? '50+ yrs' : new Date(ASOF.getFullYear(), ASOF.getMonth() + n, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+function ageAt(d) { let a = d.getFullYear() - BIRTHDAY.getFullYear(); if (d.getMonth() < BIRTHDAY.getMonth() || (d.getMonth() === BIRTHDAY.getMonth() && d.getDate() < BIRTHDAY.getDate())) a--; return a; }
+
+// Month axis from the first data month through the as-of month
+function monthAxis(fromMk) {
+  const first = fromMk || [...D.entries, ...D.debtEntries].map(e => e.date.slice(0, 7)).sort()[0] || asOfMk();
+  const out = []; for (let k = first; k <= asOfMk(); k = addM(k, 1)) out.push(k); return out;
+}
+
+// Retirement plans (same rules as the phone's Retirement page)
+const CT = { '401k_pretax': 'Pre-tax 401k', '401k_roth': 'Roth 401k', after_tax: 'After-tax', employer_match: 'Employer match', hsa_employee: 'HSA (you)', hsa_employer: 'HSA (employer)' };
+function retYTD(ids, yr) {
+  const t = {}; Object.keys(CT).forEach(k => t[k] = 0);
+  D.retirementContribs.filter(e => e.date.startsWith(String(yr)) && (!ids || ids.includes(e.sourceId)))
+    .forEach(e => Object.entries(e.amounts || {}).forEach(([k, v]) => { if (k in t) t[k] += v || 0; }));
+  const emp = t['401k_pretax'] + t['401k_roth'];
+  return { t, emp, total: emp + t.after_tax + t.employer_match, hsa: t.hsa_employee + t.hsa_employer };
+}
+function planSources() {
+  const bonusPayers = new Set(D.payers.filter(p => p.defaultType === 'bonus').map(p => p.name));
+  return D.retirementSources.filter(s => !bonusPayers.has(s.sponsor) && (s.contribTypes || []).some(k => k === '401k_pretax' || k === '401k_roth'))
+    .map(s => { const bon = D.retirementSources.filter(b => b.sponsor === (s.sponsor || s.label) + ' — Bonus');
+                return { src: s, ids: [s.id, ...bon.map(b => b.id)], name: s.sponsor || s.label }; });
+}
+
+/* ═══ CHART HELPERS ════════════════════════════════════════════════════════ */
+function destroyCharts() { Object.keys(charts).forEach(k => { charts[k].destroy(); delete charts[k]; }); }
+function baseOpts(extra = {}) {
+  const text = cssv('--muted'), grid = cssv('--grid');
+  return Object.assign({
+    responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { labels: { color: text, usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 10, boxHeight: 10, padding: 14, font: { size: 12 } } },
+      tooltip: { backgroundColor: cssv('--panel2'), borderColor: cssv('--border'), borderWidth: 1, titleColor: cssv('--text'), bodyColor: cssv('--text'),
+                 padding: 10, boxPadding: 4, usePointStyle: true,
+                 callbacks: { label: c => ' ' + c.dataset.label + ': ' + $(c.parsed.y ?? c.parsed) } }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { color: grid }, ticks: { color: text, maxRotation: 0, autoSkipPadding: 14, font: { size: 11 } } },
+      y: { grid: { color: grid }, border: { display: false }, ticks: { color: text, callback: v => $k(v), font: { size: 11 } } }
+    }
+  }, extra);
+}
+function lineDs(label, data, color, extra = {}) {
+  return Object.assign({ label, data, borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5,
+    pointHoverBorderWidth: 2, pointHoverBorderColor: cssv('--surface'), tension: 0.25, spanGaps: true }, extra);
+}
+function barDs(label, data, color) {
+  return { label, data, backgroundColor: color, borderColor: cssv('--surface'), borderWidth: { top: 2 }, borderRadius: 3, borderSkipped: 'bottom', categoryPercentage: 0.8, barPercentage: 0.9 };
+}
+function mkChart(id, cfg) {
+  const el = document.getElementById(id); if (!el || typeof Chart === 'undefined') return;
+  charts[id] = new Chart(el, cfg);
+}
+// Table view for any chart (accessibility + exact numbers)
+function tableFor(labels, sets) {
+  return `<div class="tbl-wrap"><table><thead><tr><th>Month</th>${sets.map(s => `<th class="r">${esc(s.label)}</th>`).join('')}</tr></thead><tbody>` +
+    labels.map((l, i) => `<tr><td>${esc(l)}</td>${sets.map(s => `<td class="r num">${s.data[i] == null ? '—' : $(s.data[i])}</td>`).join('')}</tr>`).reverse().join('') +
+    `</tbody></table></div>`;
+}
+function card(id, title, body, { chips = '', table = true, cls = '' } = {}) {
+  return `<div class="card ${cls}"><div class="card-h"><h3>${title}</h3><div class="chips">${chips}${table ? `<button class="chip" onclick="toggleTable('${id}',this)">Table</button>` : ''}</div></div>
+    <div id="${id}-chartwrap">${body}</div><div id="${id}-table" style="display:none"></div></div>`;
+}
+const TABLES = {};
+function toggleTable(id, btn) {
+  const t = document.getElementById(id + '-table'), c = document.getElementById(id + '-chartwrap');
+  const on = t.style.display === 'none';
+  t.style.display = on ? '' : 'none'; c.style.display = on ? 'none' : ''; btn.classList.toggle('on', on);
+  if (on && TABLES[id]) t.innerHTML = TABLES[id]();
+}
+function kpi(label, value, sub = '', info = '') {
+  return `<div class="kpi"><div class="l">${label}${info ? `<button class="info" onclick="openInfo('${info}')">i</button>` : ''}</div><div class="v num">${value}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
+}
+function meter(label, cur, lim, sub = '', overGood = false) {
+  const p = lim > 0 ? cur / lim : 0;
+  return `<div class="meter"><div class="meter-top"><span>${esc(label)}</span><span class="num">${$(cur)} / ${$(lim)}</span></div>
+    <div class="track"><div class="fill ${p > 1 && !overGood ? 'over' : ''}" style="width:${Math.min(100, p * 100)}%"></div></div>
+    <div class="meter-sub">${sub || (p >= 1 ? 'Maxed' : $(lim - cur) + ' left · ' + pct(p, 0))}</div></div>`;
+}
+
+/* ═══ PAYCHECK PLANNER — engine ═════════════════════════════════════════════
+   Rebuilds a Hilcorp check from gross pay (payroll order confirmed on the
+   9/13/2026 stub) and projects the rest of the year's 401(k) against limits.
+   Pure math; nothing here saves anything.
+   Verification (must pass): little check $5,987.44 at 12% / 15% → deposit $2,575.49.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const PAY_DEFAULTS = {
+  // From the 9/13/2026 stub. Update when benefits, W-4 or other deductions change.
+  fixed: { ltd: 39.40, gtl: 14.91, benefits: 539.23, post: 142.28 },
+  w4: 'single',
+  // Elections as of Sep 2026 (regular 7/1 for the rest of 2026, bonus 7/15, 40% of deposit to savings)
+  elect: { pre: 7, after: 1, bPre: 7, bAfter: 15, coast: 40 },
+  living: 1900,          // $ needed from each check
+  matchCap: 7,           // Hilcorp matches pretax up to 7% of eligible pay
+  supplemental: 0.22,    // flat federal rate on bonus checks (assumed; confirm with a bonus stub)
+  bigGross: 8000,        // regular checks with gross above this are "big" (rotation weeks)
+  addlMedicareAt: 200000,
+  ssBase: { 2025: 176100, 2026: 184500 },
+  // IRS Pub 15-T percentage method, annualized. Biweekly = ÷26. Update every December.
+  tax: {
+    2026: {
+      single: { adj: 8600, b: [[7500, 0], [19900, .10], [57900, .12], [113200, .22], [209275, .24], [263725, .32], [648100, .35], [Infinity, .37]] },
+      joint:  { adj: 12900, b: [[19300, 0], [44100, .10], [120100, .12], [230700, .22], [422850, .24], [531750, .32], [788000, .35], [Infinity, .37]] }
+    }
+  }
+};
+const r2 = x => Math.round(x * 100) / 100;
+function payTaxYear(y) { const ys = Object.keys(PAY_DEFAULTS.tax).map(Number).sort(); return ys.includes(y) ? y : ys.filter(v => v <= y).pop() || ys[0]; }
+function payFed(perCheck, status, year) {
+  const T = PAY_DEFAULTS.tax[payTaxYear(year)][status === 'joint' ? 'joint' : 'single'];
+  const annual = Math.max(0, perCheck * 26 - T.adj);
+  let tax = 0, lo = 0;
+  for (const [hi, rate] of T.b) { if (annual > lo) tax += (Math.min(annual, hi) - lo) * rate; lo = hi; }
+  return r2(tax / 26);
+}
+function paySSBase(y) { const b = PAY_DEFAULTS.ssBase; return b[y] || b[Math.max(...Object.keys(b).map(Number))]; }
+
+/* One check.
+   o   = { pre, after (percent), bonus (bool), fixed, w4, year, matchCap }
+   ctx = { ssYTD, medYTD, empRoom, totalRoom }  — room left under the 401(k) limits */
+function payCheck(gross, o, ctx = {}) {
+  const f = o.bonus ? { ltd: 0, gtl: 0, benefits: 0, post: 0 } : o.fixed;
+  const elig = gross - f.ltd;
+  const preWant = r2(o.pre / 100 * elig), afterWant = r2(o.after / 100 * elig);
+  const matchWant = r2(Math.min(o.pre, o.matchCap) / 100 * elig);   // true-up keeps match going after the employee limit
+  let room = ctx.totalRoom ?? Infinity;
+  const pre = Math.max(0, Math.min(preWant, ctx.empRoom ?? Infinity, room)); room -= pre;
+  const match = Math.max(0, Math.min(matchWant, room)); room -= match;
+  const after = Math.max(0, Math.min(afterWant, room));
+  const fica = gross - f.benefits + f.gtl;
+  const ssLeft = Math.max(0, paySSBase(o.year) - (ctx.ssYTD || 0));
+  const ss = r2(0.062 * Math.min(fica, ssLeft));
+  const medYTD = ctx.medYTD || 0, over = PAY_DEFAULTS.addlMedicareAt;
+  const medAddl = Math.max(0, medYTD + fica - over) - Math.max(0, medYTD - over);
+  const med = r2(0.0145 * fica + 0.009 * medAddl);
+  const fedOf = p => o.bonus ? r2(PAY_DEFAULTS.supplemental * (fica - p)) : payFed(fica - p, o.w4, o.year);
+  const fed = fedOf(pre);
+  const deposit = r2(gross - pre - f.benefits - ss - med - fed - after - f.post);
+  return { gross, elig, pre, after, match, preWant, afterWant, matchWant, matchLost: r2(matchWant - match),
+           benefits: f.benefits, post: f.post, fica, ss, med, fed, taxSaved: r2(fedOf(0) - fed), deposit };
+}
+
+/* Build the check list for the rest of the plan year.
+   s = { year, start (Date: first day counted), nextDate (Date), nextKind 'big'|'little', bigGross, littleGross, bonuses:[{date:'YYYY-MM-DD', gross}] } */
+function payScheduleChecks(s) {
+  const out = [], end = new Date(s.year, 11, 31);
+  let d = new Date(s.nextDate), kind = s.nextKind;
+  while (d < s.start) { d.setDate(d.getDate() + 14); kind = kind === 'big' ? 'little' : 'big'; }
+  for (; d <= end; d.setDate(d.getDate() + 14)) {
+    if (d.getFullYear() === s.year) out.push({ date: new Date(d), kind, gross: kind === 'big' ? s.bigGross : s.littleGross });
+    kind = kind === 'big' ? 'little' : 'big';
+  }
+  s.bonuses.forEach(b => { const d = new Date(b.date + 'T12:00'); if (!isNaN(d) && d.getFullYear() === s.year && d >= s.start && b.gross > 0) out.push({ date: d, kind: 'bonus', gross: +b.gross }); });
+  return out.sort((a, b) => a.date - b.date);
+}
+
+/* Project the year.
+   p = { year, checks, e:{pre,after,bPre,bAfter,coast}, living, fixed, w4, matchCap,
+         limits:{emp,total}, ytd:{emp,total,match,after}, ssYTD, medYTD } */
+function payProject(p) {
+  let emp = p.ytd.emp, tot = p.ytd.total, ss = p.ssYTD, med = p.medYTD;
+  const rows = [], sum = { pre: 0, after: 0, match: 0, matchLost: 0, deposit: 0, coast: 0, personal: 0, taxSaved: 0 };
+  let empHit = null, totHit = null, shortest = null;
+  for (const c of p.checks) {
+    const bonus = c.kind === 'bonus';
+    const r = payCheck(c.gross, { pre: bonus ? p.e.bPre : p.e.pre, after: bonus ? p.e.bAfter : p.e.after, bonus, fixed: p.fixed, w4: p.w4, year: p.year, matchCap: p.matchCap },
+      { ssYTD: ss, medYTD: med, empRoom: p.limits.emp - emp, totalRoom: p.limits.total - tot });
+    emp += r.pre; tot += r.pre + r.after + r.match;
+    ss += r.fica; med += r.fica;
+    r.coast = r2(r.deposit * p.e.coast / 100); r.personal = r2(r.deposit - r.coast);
+    r.short = !bonus && r.personal < p.living;
+    if (!empHit && r.pre < r.preWant - 0.005) empHit = c.date;
+    if (!totHit && (r.after < r.afterWant - 0.005 || r.matchLost > 0.005)) totHit = c.date;
+    if (!bonus && (!shortest || r.personal < shortest.personal)) shortest = { ...r, date: c.date, kind: c.kind };
+    Object.keys(sum).forEach(k => sum[k] += r[k] || 0);
+    rows.push({ ...c, ...r, empCum: emp, totCum: tot });
+  }
+  return { rows, sum, emp, tot, empHit, totHit, shortest };
+}
+
+/* ═══ PAYCHECK PLANNER — data from the backup ══════════════════════════════
+   Everything is recomputed from the loaded file; slider changes live in PS
+   (memory only) and are never saved.
+   ═══════════════════════════════════════════════════════════════════════════ */
+let PS = null;   // planner state for the loaded file
+const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const shortDate = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+// v3.2: the planner follows your main employer — the company whose paychecks brought in the most over the
+// last 12 months — found by payer id, not by name, so renaming a company in the phone's Setup can't break it.
+function ppPayers(plan) {
+  const n = plan ? plan.name : '';
+  const pay = D.payers.find(p => p.name === n && p.defaultType !== 'bonus') || null;
+  const bonus = D.payers.find(b => b.defaultType === 'bonus' && ((pay && String(b.parentId) === String(pay.id)) || b.name === n + ' — Bonus')) || null;
+  const is = who => e => who ? (e.payerId ? String(e.payerId) === String(who.id) : e.payerName === who.name) : false;
+  return { pay, bonus, isPay: is(pay), isBonus: is(bonus) };
+}
+function ppPlan() {
+  const plans = planSources();
+  if (plans.length < 2) return plans[0] || null;
+  const since = new Date(ASOF); since.setFullYear(since.getFullYear() - 1);
+  const s = ymd(since), a = ymd(ASOF);
+  const earned = plan => { const w = ppPayers(plan); return D.incomeEntries.filter(e => e.date > s && e.date <= a && w.isPay(e)).reduce((t, e) => t + (e.amount || 0), 0); };
+  return plans.map(p => ({ p, v: earned(p) })).sort((x, y) => y.v - x.v)[0].p;
+}
+function ppIncome(year, kind) {   // kind: 'payroll' | 'bonus'
+  const w = ppPayers(ppPlan());
+  const match = kind === 'bonus' ? w.isBonus : w.isPay;
+  return D.incomeEntries.filter(e => match(e) && e.date.startsWith(String(year)) && e.grossPay > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+// Social Security / Medicare wages so far this year (gross − pre-tax benefits + imputed life insurance)
+function ppFicaYTD(year) {
+  const f = PAY_DEFAULTS.fixed;
+  return ppIncome(year, 'payroll').reduce((s, e) => s + e.grossPay - f.benefits + f.gtl, 0) + ppIncome(year, 'bonus').reduce((s, e) => s + e.grossPay, 0);
+}
+// Compare logged deposits with what the math predicts, using the % implied by the logged 401(k) contributions
+function ppSelfCheck(year) {
+  const plan = ppPlan(); if (!plan) return [];
+  const f = PAY_DEFAULTS.fixed, out = [];
+  let fica = 0;
+  const inc = [...ppIncome(year, 'payroll').map(e => ({ e, bonus: false })), ...ppIncome(year, 'bonus').map(e => ({ e, bonus: true }))]
+    .sort((a, b) => a.e.date.localeCompare(b.e.date) || (a.bonus - b.bonus));
+  const bonusIds = new Set(D.retirementSources.filter(s => s.sponsor === plan.name + ' — Bonus').map(s => s.id));
+  for (const { e, bonus } of inc) {
+    const c = D.retirementContribs.find(r => r.date === e.date && plan.ids.includes(r.sourceId) && bonusIds.has(r.sourceId) === bonus);
+    if (c) {
+      const elig = e.grossPay - (bonus ? 0 : f.ltd), a = c.amounts || {};
+      const pre = ((a['401k_pretax'] || 0) + (a['401k_roth'] || 0)) / elig * 100, after = (a.after_tax || 0) / elig * 100;
+      const r = payCheck(e.grossPay, { pre, after, bonus, fixed: f, w4: PAY_DEFAULTS.w4, year, matchCap: PAY_DEFAULTS.matchCap }, { ssYTD: fica, medYTD: fica });
+      out.push({ date: e.date, kind: bonus ? 'bonus' : e.grossPay > PAY_DEFAULTS.bigGross ? 'big' : 'little', gross: e.grossPay, pre, after,
+                 predicted: r.deposit, logged: e.amount, diff: e.amount - r.deposit });
+    }
+    fica += e.grossPay - (bonus ? 0 : f.benefits - f.gtl);
+  }
+  return out;
+}
+const median = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+
+function ppInit() {
+  const Y = ASOF.getFullYear(), plan = ppPlan();
+  const isPay = ppPayers(plan).isPay;
+  const pay = D.incomeEntries.filter(e => isPay(e) && e.grossPay > 0 && new Date(e.date + 'T12:00') <= ASOF)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const isBig = e => e.grossPay > PAY_DEFAULTS.bigGross;
+  const last = pay[pay.length - 1];
+  const lastBig = [...pay].reverse().find(isBig), lastLittle = [...pay].reverse().find(e => !isBig(e));
+  const next = last ? new Date(last.date + 'T12:00') : new Date(ASOF); next.setDate(next.getDate() + 14);
+  // Bonus checks: same dates as last year, shifted forward a year
+  const shift = (e, n) => { const d = new Date(e.date + 'T12:00'); d.setFullYear(d.getFullYear() + n); return { date: ymd(d), gross: Math.round(e.grossPay) }; };
+  const bonusNow = ppIncome(Y - 1, 'bonus').map(e => shift(e, 1)).filter(b => new Date(b.date + 'T12:00') > ASOF);
+  const bonusNext = [...ppIncome(Y, 'bonus').filter(e => new Date(e.date + 'T12:00') <= ASOF).map(e => shift(e, 1)), ...bonusNow.map(b => shift(b, 1))];
+  const lim = D.retirementLimits || {}, pp = plan && lim.perPlan && lim.perPlan[plan.src.id] || {};
+  const limits = { emp: pp.limit401k || lim.limit401k || 24500, total: pp.limitTotal401k || lim.limitTotal401k || 72000 };
+  // Calibrate: how far logged deposits run from the math (big checks usually carry a few extra deductions)
+  const sc = ppSelfCheck(Y).filter(r => Math.abs(r.diff) < 100).slice(-8);
+  PS = {
+    mode: 'now', Y, plan,
+    e: { ...PAY_DEFAULTS.elect }, living: PAY_DEFAULTS.living, w4: PAY_DEFAULTS.w4,
+    fixed: { ...PAY_DEFAULTS.fixed, bigAdj: Math.round(median(sc.filter(r => r.kind === 'big').map(r => r.diff))) },
+    bigGross: lastBig ? lastBig.grossPay : 10000, littleGross: lastLittle ? lastLittle.grossPay : 5000,
+    nextDate: ymd(next), nextKind: last ? (isBig(last) ? 'little' : 'big') : 'big',
+    bonusNow, bonusNext,
+    limits: { now: { ...limits }, next: { ...limits } },
+    ficaYTD: Math.round(ppFicaYTD(Y)),
+    solve: null
+  };
+  // Saved elections / stub deductions / next-year limits (not the data-derived pay dates or YTD)
+  const s = loadSettings().pp;
+  if (s) {
+    if (s.e) Object.assign(PS.e, s.e);
+    if (s.living != null) PS.living = s.living;
+    if (s.w4) PS.w4 = s.w4;
+    if (s.fixed) ['ltd', 'gtl', 'benefits', 'post'].forEach(k => { if (s.fixed[k] != null) PS.fixed[k] = s.fixed[k]; });
+    if (s.limitsNext) Object.assign(PS.limits.next, s.limitsNext);
+  }
+}
+
+// Inputs for payProject() for the current mode
+function ppParams() {
+  const now = PS.mode === 'now', year = now ? PS.Y : PS.Y + 1;
+  const start = now ? new Date(ASOF.getFullYear(), ASOF.getMonth(), ASOF.getDate() + 1) : new Date(year, 0, 1);
+  const checks = payScheduleChecks({ year, start, nextDate: new Date(PS.nextDate + 'T12:00'), nextKind: PS.nextKind,
+    bigGross: +PS.bigGross, littleGross: +PS.littleGross, bonuses: now ? PS.bonusNow : PS.bonusNext });
+  let ytd = { emp: 0, total: 0, match: 0, after: 0 };
+  if (now && PS.plan) { const y = retYTD(PS.plan.ids, year); ytd = { emp: y.emp, total: y.total, match: y.t.employer_match, after: y.t.after_tax }; }
+  return { year, checks, e: PS.e, living: +PS.living, fixed: PS.fixed, w4: PS.w4, matchCap: PAY_DEFAULTS.matchCap,
+           limits: now ? PS.limits.now : PS.limits.next, ytd, ssYTD: now ? +PS.ficaYTD : 0, medYTD: now ? +PS.ficaYTD : 0 };
+}
+// payProject + the big-check calibration applied to deposits
+function ppRun(p) {
+  const r = payProject(p);
+  if (p.fixed.bigAdj) {
+    r.rows.forEach(x => { if (x.kind === 'big') { x.deposit = r2(x.deposit + p.fixed.bigAdj); x.coast = r2(x.deposit * p.e.coast / 100); x.personal = r2(x.deposit - x.coast); x.short = x.personal < p.living; } });
+    const reg = r.rows.filter(x => x.kind !== 'bonus');
+    r.shortest = reg.reduce((m, x) => !m || x.personal < m.personal ? x : m, null);
+    ['deposit', 'coast', 'personal'].forEach(k => r.sum[k] = r.rows.reduce((s, x) => s + x[k], 0));
+  }
+  return r;
+}
+
+/* ═══ PAYCHECK PLANNER — view ═════════════════════════════════════════════ */
+function ppSlider(key, label, max, step = 1, unit = '%', sub = '') {
+  const v = key === 'living' ? PS.living : PS.e[key];
+  return `<div class="pp-row"><label for="pp-${key}">${label}${sub ? `<span>${sub}</span>` : ''}</label>
+    <input type="range" id="pp-${key}" min="0" max="${max}" step="${step}" value="${v}" oninput="ppSet('${key}',this.value,true)">
+    <div class="pp-num">${unit === '$' ? '$' : ''}<input type="number" id="pp-${key}-n" min="0" max="${max}" step="${step}" value="${v}" onchange="ppSet('${key}',this.value,false)">${unit === '%' ? '%' : ''}</div></div>`;
+}
+function ppSet(key, v, fromRange) {
+  v = Math.max(0, +v || 0);
+  if (key === 'living') PS.living = v; else PS.e[key] = v;
+  document.getElementById('pp-' + key + (fromRange ? '-n' : '')).value = v;
+  PS.solve = null; ppUpdate();
+}
+function ppField(path, label, val, type = 'number', step = '1') {
+  return `<label class="pp-f"><span>${label}</span><input type="${type}" step="${step}" value="${esc(val)}" onchange="ppAssume('${path}',this.value)"></label>`;
+}
+function ppAssume(path, v) {
+  const parts = path.split('.'); let o = PS;
+  while (parts.length > 1) o = o[parts.shift()];
+  o[parts[0]] = (typeof o[parts[0]] === 'number') ? +v : v;
+  PS.solve = null; ppUpdate();
+}
+function ppBonusEdit(i, field, v) { const L = PS.mode === 'now' ? PS.bonusNow : PS.bonusNext; L[i][field] = field === 'gross' ? +v : v; ppUpdate(); }
+function ppBonusAdd() { const L = PS.mode === 'now' ? PS.bonusNow : PS.bonusNext; L.push({ date: ymd(new Date((PS.mode === 'now' ? PS.Y : PS.Y + 1), 11, 15)), gross: 3000 }); show('paycheck'); }
+function ppBonusDel(i) { (PS.mode === 'now' ? PS.bonusNow : PS.bonusNext).splice(i, 1); show('paycheck'); }
+function ppMode(m) { PS.mode = m; PS.solve = null; show('paycheck'); }
+function ppFindMax() {
+  const p = ppParams();
+  const s = paySolveCal(p);
+  PS.solve = s;
+  if (s) { PS.e.after = s.after; PS.e.coast = s.coast; ['after', 'coast'].forEach(k => { document.getElementById('pp-' + k).value = PS.e[k]; document.getElementById('pp-' + k + '-n').value = PS.e[k]; }); }
+  ppUpdate(true);
+}
+/* "Find my max": highest whole-% regular after-tax that loses no match and leaves every
+   regular check able to cover living (at 0% to savings); then the highest savings %
+   that still leaves living money on every regular check. Bonus elections are held.
+   Uses ppRun, so the big-check calibration is applied. */
+function paySolveCal(p) {
+  let best = null;
+  for (let a = 0; a <= 80; a++) {
+    const r = ppRun({ ...p, e: { ...p.e, after: a } });
+    if (r.sum.matchLost > 0.5) break;
+    if (r.shortest && r.shortest.deposit < p.living) break;
+    best = { after: a, proj: r };
+  }
+  if (!best) return { none: true };
+  let coast = 0;
+  for (let c = 0; c <= 100; c++) {
+    const r = ppRun({ ...p, e: { ...p.e, after: best.after, coast: c } });
+    if (r.shortest && r.shortest.personal < p.living) break;
+    coast = c;
+  }
+  // Pre-tax room left unused? Find the pre-tax % that would fill the employee limit.
+  let preFill = null;
+  if (p.limits.emp - best.proj.emp > 500) for (let q = p.e.pre + 1; q <= 50; q++) { if (payProject({ ...p, e: { ...p.e, pre: q, after: 0 } }).emp >= p.limits.emp - 1) { preFill = q; break; } }
+  return { after: best.after, coast, unused: p.limits.total - best.proj.tot, empUnused: p.limits.emp - best.proj.emp, preFill };
+}
+
+function renderPaycheck() {
+  if (!PS) ppInit();
+  const now = PS.mode === 'now', year = now ? PS.Y : PS.Y + 1;
+  const L = now ? PS.limits.now : PS.limits.next, B = now ? PS.bonusNow : PS.bonusNext;
+  const sc = ppSelfCheck(PS.Y).slice(-8).reverse();
+  document.getElementById('views').innerHTML = `
+    <div class="pp-mode">
+      <div class="chips"><button class="chip ${now ? 'on' : ''}" onclick="ppMode('now')">Rest of ${PS.Y}</button><button class="chip ${now ? '' : 'on'}" onclick="ppMode('next')">Plan ${PS.Y + 1}</button></div>
+      <div class="asof">${now ? `Uses what's logged through ${ASOF.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} plus the checks left this year.` : `A full year from January. Limits and tax tables are ${PS.Y}'s until you change them below.`} Your elections are remembered in this browser; make the real change in Workday.</div>
+    </div>
+    ${PS.plan ? '' : '<div class="banner">No 401(k) plan with pre-tax contributions found in this backup.</div>'}
+    <div class="kpis" id="pp-kpis"></div>
+    <div class="grid g2">
+      <div class="card"><div class="card-h"><h3>Your elections</h3><button class="info" onclick="openInfo('paycheck')">i</button></div>
+        <div class="pp-group">Regular checks</div>
+        ${ppSlider('pre', 'Pre-tax 401(k)', 50, 1, '%', 'match on the first ' + PAY_DEFAULTS.matchCap + '%')}
+        ${ppSlider('after', 'After-tax 401(k)', 60)}
+        <div class="pp-group">Bonus checks</div>
+        ${ppSlider('bPre', 'Pre-tax 401(k)', 50)}
+        ${ppSlider('bAfter', 'After-tax 401(k)', 60)}
+        <div class="pp-group">Take-home</div>
+        ${ppSlider('coast', 'To savings (Sofi)', 100, 1, '%', '% of each deposit')}
+        ${ppSlider('living', 'Needed per check', 5000, 50, '$', 'living money')}
+        <div class="pp-solve"><button class="btn" onclick="ppFindMax()">Find my max</button><div id="pp-solve"></div></div>
+      </div>
+      <div class="card"><div class="card-h"><h3>${year} 401(k) limits — ${esc(PS.plan ? PS.plan.name : '')}</h3></div><div id="pp-status"></div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px"><div class="card-h"><h3>Next check of each kind</h3></div><div id="pp-checks"></div></div>
+    ${card('pp', `${year} 401(k) running total`, '<div class="chart"><canvas id="c-pp"></canvas></div><div class="note">Solid = logged so far · dashed = projected at these elections · dotted gray = limits.</div>')}
+    <div class="card" style="margin:14px 0"><div class="card-h"><h3>Checks left in ${year}</h3></div><div class="tbl-wrap" style="max-height:420px" id="pp-rows"></div></div>
+    <div class="grid g2">
+      <div class="card"><div class="card-h"><h3>Pay and assumptions</h3></div>
+        <div class="pp-group">Pay schedule (every 2 weeks, alternating)</div>
+        <div class="pp-fields">
+          ${ppField('nextDate', 'Next regular check', PS.nextDate, 'date')}
+          <label class="pp-f"><span>That check is</span><select onchange="ppAssume('nextKind',this.value)"><option value="big" ${PS.nextKind === 'big' ? 'selected' : ''}>Big (work weeks)</option><option value="little" ${PS.nextKind === 'little' ? 'selected' : ''}>Little</option></select></label>
+          ${ppField('bigGross', 'Big check gross', PS.bigGross, 'number', '0.01')}
+          ${ppField('littleGross', 'Little check gross', PS.littleGross, 'number', '0.01')}
+        </div>
+        <div class="pp-group">Bonus checks ${now ? 'left this year' : 'in ' + year} <span class="muted-s">(from ${now ? 'last' : 'this'} year's pattern — edit to match)</span></div>
+        <div class="pp-bonus">${B.map((b, i) => `<div><input type="date" value="${b.date}" onchange="ppBonusEdit(${i},'date',this.value)"> <span class="muted-s">gross $</span><input type="number" step="1" value="${b.gross}" onchange="ppBonusEdit(${i},'gross',this.value)"> <button class="chip" onclick="ppBonusDel(${i})">Remove</button></div>`).join('') || '<div class="muted-s">None.</div>'}
+          <button class="chip" onclick="ppBonusAdd()">+ Add bonus check</button></div>
+        <div class="pp-group">Limits for ${year}</div>
+        <div class="pp-fields">
+          ${ppField(`limits.${PS.mode}.emp`, 'Employee (pre-tax + Roth)', L.emp)}
+          ${ppField(`limits.${PS.mode}.total`, 'Total incl. match + after-tax', L.total)}
+          ${now ? ppField('ficaYTD', 'Social Security wages so far', PS.ficaYTD) : ''}
+        </div>
+        <div class="pp-group">Deductions per regular check (from your 9/13 stub)</div>
+        <div class="pp-fields">
+          ${ppField('fixed.benefits', 'Pre-tax benefits', PS.fixed.benefits, 'number', '0.01')}
+          ${ppField('fixed.post', 'Other after-tax deductions', PS.fixed.post, 'number', '0.01')}
+          ${ppField('fixed.ltd', 'LTD gross-up', PS.fixed.ltd, 'number', '0.01')}
+          ${ppField('fixed.gtl', 'Imputed life insurance', PS.fixed.gtl, 'number', '0.01')}
+          ${ppField('fixed.bigAdj', 'Big-check adjustment', PS.fixed.bigAdj, 'number', '1')}
+          <label class="pp-f"><span>W-4 filing status</span><select onchange="ppAssume('w4',this.value)"><option value="single" ${PS.w4 === 'single' ? 'selected' : ''}>Single / married filing separately</option><option value="joint" ${PS.w4 === 'joint' ? 'selected' : ''}>Married filing jointly</option></select></label>
+        </div>
+        <div class="note">Big-check adjustment = how far your logged big checks usually land from the math (set automatically from your last few). Bonus checks use the flat ${PAY_DEFAULTS.supplemental * 100}% federal rate.</div>
+      </div>
+      <div class="card"><div class="card-h"><h3>Check the math — logged vs predicted</h3></div>
+        ${sc.length ? `<table><thead><tr><th>Date</th><th>Check</th><th class="r">Gross</th><th class="r">401(k) %</th><th class="r">Predicted</th><th class="r">Logged</th><th class="r">Off by</th></tr></thead><tbody>
+        ${sc.map(r => `<tr><td>${r.date}</td><td>${r.kind}</td><td class="r num">${$(r.gross)}</td><td class="r num">${r.pre.toFixed(1)} / ${r.after.toFixed(1)}</td><td class="r num">${$(r.predicted)}</td><td class="r num">${$(r.logged)}</td>
+          <td class="r num ${Math.abs(r.diff) > 100 ? 'neg' : ''}">${Math.abs(r.diff) > 100 ? '⚠ ' : ''}${$(r.diff)}</td></tr>`).join('')}</tbody></table>
+        <div class="note">"401(k) %" is pre-tax / after-tax, worked out from the contributions you logged for that check. ${sc.some(r => Math.abs(r.diff) > 100) ? '<b>⚠ More than $100 off</b> usually means a logged 401(k) amount or deposit is wrong, or a deduction changed. Fix it on the phone and export again.' : 'All within $100.'}</div>`
+        : '<div class="note">No logged checks this year with both gross pay and 401(k) contributions.</div>'}
+      </div>
+    </div>`;
+  ppUpdate();
+}
+
+function ppUpdate(solved) {
+  saveSettings({ pp: { e: { ...PS.e }, living: PS.living, w4: PS.w4,
+    fixed: { ltd: PS.fixed.ltd, gtl: PS.fixed.gtl, benefits: PS.fixed.benefits, post: PS.fixed.post }, limitsNext: { ...PS.limits.next } } });
+  const p = ppParams(), r = ppRun(p), now = PS.mode === 'now';
+  const L = p.limits, empEnd = r.emp, totEnd = r.tot;
+  const reg = r.rows.filter(x => x.kind !== 'bonus');
+  const coastYTD = now ? D.coastContribs.filter(c => c.date.startsWith(String(p.year))).reduce((s, c) => s + (c.amount || 0), 0) : 0;
+  const lostTxt = r.sum.matchLost > 0.5 ? `<span class="neg">${$(r.sum.matchLost)}</span>` : $(0);
+  document.getElementById('pp-kpis').innerHTML =
+    kpi('401(k) total by Dec 31', $(totEnd), `of ${$(L.total)} · ${totEnd >= L.total - 0.5 ? 'maxed ' + shortDate(r.totHit) : $(L.total - totEnd) + ' unused'}`) +
+    kpi('Employer match lost', lostTxt, r.sum.matchLost > 0.5 ? 'total limit hit ' + shortDate(r.totHit) + ', contributions stop' : 'full match all year') +
+    kpi('Pre-tax + Roth by Dec 31', $(empEnd), `of ${$(L.emp)}${r.empHit ? ' · capped ' + shortDate(r.empHit) : ''}`) +
+    kpi(now ? 'Saved rest of year' : 'Saved in ' + p.year, $(r.sum.pre + r.sum.after + r.sum.match + r.sum.coast), `401(k) ${$(r.sum.pre + r.sum.after + r.sum.match)} + savings ${$(r.sum.coast)}`) +
+    kpi('Tightest check for living', r.shortest ? $(r.shortest.personal) : '—', r.shortest ? `${shortDate(r.shortest.date)} (${r.shortest.kind}) · need ${$(p.living)}${r.shortest.short ? ' — <span class="neg">short ' + $(p.living - r.shortest.personal) + '</span>' : ''}` : '');
+
+  // Limits status
+  const ytd = p.ytd;
+  const bar = (label, done, proj, lim, sub) => {
+    const a = Math.min(100, done / lim * 100), b = Math.min(100 - a, Math.max(0, (proj - done) / lim * 100));
+    return `<div class="meter"><div class="meter-top"><span>${label}</span><span class="num">${$(proj)} / ${$(lim)}</span></div>
+      <div class="track pp-track"><div class="fill" style="width:${a}%"></div><div class="fill pp-proj" style="width:${b}%"></div></div><div class="meter-sub">${sub}</div></div>`;
+  };
+  const statusLine = r.sum.matchLost > 0.5
+    ? `<div class="pp-alert neg">⚠ Hits the ${$(L.total)} limit on ${shortDate(r.totHit)}. Contributions stop for the rest of the year and <b>${$(r.sum.matchLost)} of match is lost</b>. Lower after-tax %, or press Find my max.</div>`
+    : totEnd >= L.total - 50 ? `<div class="pp-alert pos">✓ Lands right at the limit with full match.</div>`
+    : `<div class="pp-alert">${$(L.total - totEnd)} of room left at year end. Raise after-tax % to use it, or press Find my max.</div>`;
+  document.getElementById('pp-status').innerHTML =
+    bar('Total (you + match + after-tax)', ytd.total, totEnd, L.total, now ? `${$(ytd.total)} so far + ${$(totEnd - ytd.total)} from ${r.rows.length} checks left` : `${r.rows.length} checks`) +
+    bar('Employee (pre-tax + Roth)', ytd.emp, empEnd, L.emp, r.empHit ? `Capped ${shortDate(r.empHit)}. Fine: Hilcorp's true-up keeps the match coming.` : `${$(L.emp - empEnd)} unused`) +
+    statusLine +
+    `<div class="pp-legend"><span><i class="fill"></i>so far</span><span><i class="fill pp-proj"></i>projected</span></div>` +
+    (now ? `<div class="note">Savings: ${$(coastYTD)} logged so far + ${$(r.sum.coast)} from checks left = <b>${$(coastYTD + r.sum.coast)}</b> for ${p.year}.</div>` : '');
+
+  // Solver result
+  const sv = document.getElementById('pp-solve');
+  if (PS.solve && PS.solve.none) sv.innerHTML = `<span class="neg">No after-tax % works: even at 0% the pre-tax election loses match or a check can't cover living money.</span>`;
+  else if (PS.solve) sv.innerHTML = `Set <b>after-tax ${PS.solve.after}%</b> and <b>${PS.solve.coast}% to savings</b>. Full match, ${$(PS.solve.unused)} of limit left over, and every regular check leaves at least ${$(p.living)} to live on.${PS.solve.preFill ? `<div class="muted-s" style="margin-top:4px">${$(PS.solve.empUnused)} of pre-tax room is unused. Pre-tax ${PS.solve.preFill}% would fill it and cut your taxes; set that, then press Find my max again.</div>` : ''}`;
+  else sv.innerHTML = `<span class="muted-s">Finds the highest whole-% after-tax that keeps the full match, then the most you can send to savings and still have ${$(p.living)} per check.</span>`;
+
+  // Next check of each kind — waterfall
+  const firsts = ['big', 'little', 'bonus'].map(k => r.rows.find(x => x.kind === k)).filter(Boolean);
+  const line = (l, k, neg = true, cls = '') => `<tr class="${cls}"><td>${l}</td>${firsts.map(x => `<td class="r num">${x[k] ? (neg ? '−' : '') + $(x[k]).replace('−', '') : '—'}</td>`).join('')}</tr>`;
+  document.getElementById('pp-checks').innerHTML = firsts.length ? `<table class="pp-wf"><thead><tr><th></th>${firsts.map(x => `<th class="r">${x.kind === 'big' ? 'Big' : x.kind === 'little' ? 'Little' : 'Bonus'} · ${shortDate(x.date)}</th>`).join('')}</tr></thead><tbody>
+    ${line('Gross pay', 'gross', false)}
+    <tr><td>Pre-tax 401(k)</td>${firsts.map(x => `<td class="r num">−${$(x.pre)}<div class="muted-s">saves ${$(x.taxSaved)} tax</div></td>`).join('')}</tr>
+    ${line('Pre-tax benefits', 'benefits')}${line('Social Security', 'ss')}${line('Medicare', 'med')}${line('Federal withholding', 'fed')}
+    ${line('After-tax 401(k)', 'after')}${line('Other deductions', 'post')}
+    <tr class="tot"><td>Deposit</td>${firsts.map(x => `<td class="r num">${$(x.deposit)}</td>`).join('')}</tr>
+    <tr><td>→ To savings (${PS.e.coast}%)</td>${firsts.map(x => `<td class="r num">${$(x.coast)}</td>`).join('')}</tr>
+    <tr><td>→ Left to live on</td>${firsts.map(x => `<td class="r num ${x.kind !== 'bonus' && x.short ? 'neg' : ''}">${$(x.personal)}${x.kind !== 'bonus' && x.short ? ' ⚠' : ''}</td>`).join('')}</tr>
+    <tr><td class="muted-s">Employer match (not in deposit)</td>${firsts.map(x => `<td class="r num muted-s">+${$(x.match)}</td>`).join('')}</tr>
+    </tbody></table><div class="note">Social Security stops once your wages pass ${$(paySSBase(p.year))} for the year${now && +PS.ficaYTD > 0 ? ` (you're at about ${$(+PS.ficaYTD)})` : ''}, so checks after that are bigger. Big checks include the ${$(PS.fixed.bigAdj)} adjustment.</div>`
+    : '<div class="note">No checks left in this year.</div>';
+
+  // Rows
+  document.getElementById('pp-rows').innerHTML = `<table><thead><tr><th>Date</th><th>Check</th><th class="r">Gross</th><th class="r">Pre-tax</th><th class="r">After-tax</th><th class="r">Match</th><th class="r">Deposit</th><th class="r">Savings</th><th class="r">Live on</th><th class="r">401(k) total</th></tr></thead><tbody>
+    ${r.rows.map(x => `<tr><td>${shortDate(x.date)}</td><td>${x.kind}</td><td class="r num">${$(x.gross)}</td><td class="r num">${$(x.pre)}</td><td class="r num">${$(x.after)}</td>
+      <td class="r num ${x.matchLost > 0.5 ? 'neg' : ''}">${$(x.match)}${x.matchLost > 0.5 ? ' (lost ' + $(x.matchLost) + ')' : ''}</td><td class="r num">${$(x.deposit)}</td><td class="r num">${$(x.coast)}</td>
+      <td class="r num ${x.kind !== 'bonus' && x.short ? 'neg' : ''}">${$(x.personal)}</td><td class="r num">${$(x.totCum)}</td></tr>`).join('')}
+    <tr class="tot"><td>Total</td><td></td><td class="r num">${$(r.rows.reduce((s, x) => s + x.gross, 0))}</td><td class="r num">${$(r.sum.pre)}</td><td class="r num">${$(r.sum.after)}</td><td class="r num">${$(r.sum.match)}</td><td class="r num">${$(r.sum.deposit)}</td><td class="r num">${$(r.sum.coast)}</td><td class="r num">${$(r.sum.personal)}</td><td class="r num">${$(totEnd)}</td></tr></tbody></table>`;
+
+  // Chart: running total by month — logged months solid, projected dashed
+  const months = Array.from({ length: 12 }, (_, i) => p.year + '-' + String(i + 1).padStart(2, '0'));
+  const cut = now ? asOfMk() : null;
+  const cum = (sel) => { let s = 0; return months.map(m => {
+    if (now && m <= cut) { s = D.retirementContribs.filter(e => PS.plan && PS.plan.ids.includes(e.sourceId) && e.date.slice(0, 7) <= m && e.date.startsWith(String(p.year)))
+        .reduce((t, e) => { const a = e.amounts || {}; return t + (sel === 'emp' ? (a['401k_pretax'] || 0) + (a['401k_roth'] || 0) : (a['401k_pretax'] || 0) + (a['401k_roth'] || 0) + (a.after_tax || 0) + (a.employer_match || 0)); }, 0); return s; }
+    const last = r.rows.filter(x => mk(x.date) <= m).pop();
+    return last ? (sel === 'emp' ? last.empCum : last.totCum) : (now ? s : 0); }); };
+  const tot = cum('tot'), emp = cum('emp'), cutIdx = now ? months.indexOf(cut) : -1;
+  const dash = { borderDash: c => c.p0DataIndex >= cutIdx ? [6, 4] : undefined };
+  TABLES.pp = () => tableFor(months.map(mkLabel), [{ label: 'Total', data: tot }, { label: 'Employee', data: emp }]);
+  const cfg = { type: 'line', data: { labels: months.map(mkLabel), datasets: [
+      lineDs('Total (you + match + after-tax)', tot, SERIES[0], { segment: dash, tension: 0 }),
+      lineDs('Employee (pre-tax + Roth)', emp, SERIES[1], { segment: dash, tension: 0 }),
+      lineDs('Total limit', months.map(() => L.total), cssv('--muted'), { borderDash: [2, 3], borderWidth: 1.5, pointHoverRadius: 0 }),
+      lineDs('Employee limit', months.map(() => L.emp), cssv('--muted'), { borderDash: [2, 3], borderWidth: 1, pointHoverRadius: 0 })
+    ] }, options: baseOpts({ scales: { ...baseOpts().scales, y: { ...baseOpts().scales.y, beginAtZero: true } } }) };
+  if (charts['c-pp']) { charts['c-pp'].data = cfg.data; charts['c-pp'].update('none'); } else mkChart('c-pp', cfg);
+  if (solved) document.getElementById('pp-solve').scrollIntoView({ block: 'nearest' });
+}
+
+/* ═══ FINANCIAL PULSE (Overview) ═══════════════════════════════════════════
+   Ported from the old ledger-desktop dtBuildFinancialPulse(): monthly income
+   and bills with the portfolio underneath. Drawn as two panels on the same
+   month axis instead of one chart with two y-scales, so neither scale distorts
+   the other. Complete months only (the as-of month is still in progress).
+   ═══════════════════════════════════════════════════════════════════════════ */
+let PULSE_RANGE = 12;
+function pulseMonths() {
+  const end = addM(asOfMk(), -1);
+  if (PULSE_RANGE > 0) return Array.from({ length: PULSE_RANGE }, (_, i) => addM(end, i - PULSE_RANGE + 1));
+  const first = [...D.entries, ...D.incomeEntries, ...D.expenses].map(e => e.date && e.date.slice(0, 7)).filter(Boolean).sort()[0] || end;
+  const out = []; for (let k = first; k <= end; k = addM(k, 1)) out.push(k); return out;
+}
+function pulseCard() {
+  const chip = (n, l) => `<button class="chip ${PULSE_RANGE === n ? 'on' : ''}" onclick="PULSE_RANGE=${n};saveSettings({pulseRange:${n}});show(VIEW)">${l}</button>`;
+  return card('pulse', 'Financial pulse — income, expenses &amp; portfolio',
+    `<div class="chart" style="height:300px"><canvas id="c-pulse"></canvas></div>
+     <div class="pulse-sum" id="pulse-sum"></div>`, { chips: chip(12, '12M') + chip(24, '24M') + chip(0, 'All') });
+}
+// Original layout from the old desktop dashboard: bars on the left axis, portfolio on the right axis
+function buildPulse() {
+  const months = pulseMonths(), labels = months.map(mkLabel);
+  const inc = months.map(m => D.incomeEntries.filter(e => e.date && e.date.startsWith(m)).reduce((s, e) => s + (e.amount || 0), 0) || null);
+  const exp = months.map(m => D.expenses.filter(e => e.date && e.date.startsWith(m)).reduce((s, e) => s + (e.amount || 0), 0) || null);
+  const port = months.map(m => investTotal(m) || null);
+  const tI = inc.reduce((a, b) => a + (b || 0), 0), tE = exp.reduce((a, b) => a + (b || 0), 0);
+  const p0 = port.find(v => v), p1 = port.filter(v => v).pop() || 0;
+  document.getElementById('pulse-sum').innerHTML =
+    `<div><span>Income</span><b class="num">${$(tI)}</b></div><div><span>Expenses</span><b class="num">${$(tE)}</b></div>` +
+    `<div><span>Income − expenses</span><b class="num">${$(tI - tE)}</b></div><div><span>Portfolio change</span><b class="num ${p1 - (p0 || 0) >= 0 ? 'pos' : 'neg'}">${p0 ? (p1 - p0 >= 0 ? '+' : '') + $(p1 - p0) : '—'}</b></div>`;
+  TABLES.pulse = () => tableFor(labels, [{ label: 'Income', data: inc }, { label: 'Expenses', data: exp }, { label: 'Portfolio', data: port }]);
+  const G = '#4ADE80', R = '#F87171', Au = cssv('--accent'), base = baseOpts();
+  mkChart('c-pulse', { data: { labels, datasets: [
+      { type: 'bar', label: 'Income', data: inc, backgroundColor: G + '55', borderColor: G, borderWidth: 1.5, borderRadius: 4, yAxisID: 'yFlow', order: 3 },
+      { type: 'bar', label: 'Expenses', data: exp, backgroundColor: R + '55', borderColor: R, borderWidth: 1.5, borderRadius: 4, yAxisID: 'yFlow', order: 4 },
+      { type: 'line', label: 'Portfolio', data: port, borderColor: Au, borderWidth: 2.5, backgroundColor: Au + '15', fill: true, tension: 0.4,
+        pointRadius: months.length > 18 ? 0 : 3, pointBackgroundColor: Au, yAxisID: 'yPort', order: 1 } ] },
+    options: { ...base, scales: {
+      x: base.scales.x,
+      yFlow: { position: 'left', beginAtZero: true, grid: { color: cssv('--grid') }, border: { display: false }, ticks: { color: cssv('--muted'), font: { size: 11 }, callback: v => $k(v) } },
+      yPort: { position: 'right', grid: { display: false }, border: { display: false }, ticks: { color: Au, font: { size: 11 }, callback: v => $k(v) } } } } });
+}
+
+/* ═══ RETIREMENT PLAN (4 phases) ═══════════════════════════════════════════
+   Moved here from the phone in Ledger 3.0 (was erCalcP1…erCalcP4 in
+   index.html ≤ v15.4). This is now the only copy of the phase math.
+   Inputs live in RP; the planning knobs are remembered via saveSettings().
+   ═══════════════════════════════════════════════════════════════════════════ */
+let RP = null;
+function erFV(pv, r, n, pmt) { return r === 0 ? pv + pmt * n : pv * Math.pow(1 + r, n) + pmt * (Math.pow(1 + r, n) - 1) / r; }
+function erMonths(pv, goal, r, pmt) {
+  if (pv >= goal) return 0;
+  if (r <= 0) return pmt > 0 ? Math.ceil((goal - pv) / pmt) : Infinity;
+  let b = pv; for (let n = 1; n <= 600; n++) { b = b * (1 + r) + pmt; if (b >= goal) return n; } return Infinity;
+}
+const erYr = y => { if (!isFinite(y) || y <= 0) return '—'; const a = Math.floor(y), m = Math.round((y - a) * 12); let s = ''; if (a > 0) s += a + ' yr' + (a !== 1 ? 's' : ''); if (m > 0) s += (s ? ' ' : '') + m + ' mo'; return s || '< 1 mo'; };
+const erDate = m => { const d = new Date(ASOF); d.setMonth(d.getMonth() + Math.round(m)); return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); };
+function erMortgage() {   // 3.7.2: LC.mortgageInfo — one rule for the Retirement Plan and the Net Worth page
+  const m = LC.mortgageInfo(D.debtAccounts, D.debtEntries, D.expenses, asOfMk());
+  return { balance: Math.round(m.balance), principal: Math.round(m.principal), payment: Math.round(m.payment) };
+}
+function rpAutoGoal() { return Math.round(fullFireT() / 10000) * 10000; }
+function rpInit() {
+  const m = erMortgage();
+  const auto = rpAutoGoal();
+  RP = { goal: +D.erGoal || auto, autoGoal: auto, r1: 7, retireAge: 48, r2: 7,
+         mBal: m.balance, mPrin: m.principal, mPay: m.payment, freed: null,
+         r3: 7, tax3: 22, exp3: null, wr4: 4, tax4: 22, r4: 6 };
+  // Saved knobs win; the goal now lives here (the phone no longer has the Retirement Plan)
+  const s = loadSettings().rp || {};
+  RP_KEYS.forEach(k => { if (k in s) RP[k] = s[k]; });
+}
+function rpCompute() {
+  const s = RP, sv = t12Savings(), age = ageAt(ASOF);
+  const current = investTotal(), taxableNow = investTotal(null, a => a.type === 'taxable');
+  const retMo = sv.ret / 12, coastMo = sv.coastMo, matchMo = sv.match / 12, totMo = retMo + coastMo;
+  const o = { age, current, taxableNow, retMo, coastMo, matchMo, totMo };
+  // Phase 1 — accumulate to goal with all savings
+  const r1 = s.r1 / 100 / 12;
+  if (!s.goal || current >= s.goal) { o.p1Months = 0; o.p1Value = current; o.p1Done = current >= s.goal && s.goal > 0; }
+  else { o.p1Months = erMonths(current, s.goal, r1, totMo); o.p1Value = s.goal; }
+  // Phase 2A — coast on employer match only until early retirement
+  const r2 = s.r2 / 100 / 12, p1M = isFinite(o.p1Months) ? o.p1Months : 0;
+  const ageP1 = age + p1M / 12;
+  o.p2aYears = Math.max(0, s.retireAge - ageP1); o.p2aMonths = Math.round(o.p2aYears * 12);
+  o.p2aEndMonths = p1M + o.p2aMonths;
+  o.p2aEnd = erFV(o.p1Value, r2, o.p2aMonths, matchMo);
+  // v15.4 / D4: coast contributions go into taxable during Phase 1, then no deposits in Phase 2A
+  o.taxableAtP2 = erFV(erFV(taxableNow, r1, p1M, coastMo), r2, o.p2aMonths, 0);
+  o.p2aRows = []; { let b = o.p1Value; for (let y = 1; y <= Math.ceil(o.p2aYears); y++) { const mo = Math.min(12, Math.round((o.p2aYears - (y - 1)) * 12)); if (mo <= 0) break; const p = b; b = erFV(b, r2, mo, matchMo); o.p2aRows.push({ age: Math.floor(ageP1 + y), bal: b, gain: b - p }); } }
+  // Phase 2B — freed cash pays off the mortgage, then the full payment is invested
+  o.autoFreed = Math.max(0, totMo - matchMo);
+  o.freed = s.freed == null || s.freed === '' ? o.autoFreed : +s.freed;
+  o.paydown = s.mPrin + o.freed;
+  o.payoffMonths = s.mBal && s.mPrin ? (o.paydown > 0 ? Math.ceil(s.mBal / o.paydown) : Infinity) : null;
+  o.baseOnlyMonths = s.mPrin > 0 ? Math.ceil(s.mBal / s.mPrin) : Infinity;
+  o.surplusMo = s.mPay > 0 ? s.mPay : o.paydown;
+  o.surplusMonths = o.payoffMonths && isFinite(o.payoffMonths) ? Math.max(0, o.p2aEndMonths - (p1M + o.payoffMonths)) : 0;
+  o.surplusEnd = o.payoffMonths && isFinite(o.payoffMonths) ? erFV(0, r2, o.surplusMonths, o.surplusMo) : 0;
+  // Phase 3 — taxable bridge from early retirement to 59½
+  const r3 = s.r3 / 100 / 12, bridgeYrs = Math.max(0, 59.5 - s.retireAge), bridgeMos = bridgeYrs * 12;
+  const annExp = s.exp3 == null || s.exp3 === '' ? annualSpending() : +s.exp3;
+  o.bridgeYrs = bridgeYrs; o.spend3 = s.tax3 > 0 ? annExp / (1 - s.tax3 / 100) : annExp;
+  const mSpend = o.spend3 / 12;
+  let b = o.taxableAtP2; o.depleted = false;
+  for (let m = 0; m < Math.round(bridgeMos); m++) { b = b * (1 + r3) - mSpend; if (b <= 0) { b = 0; o.depleted = true; break; } }
+  o.p3End = b;
+  o.bridgeNeed = r3 > 0 ? mSpend * (1 - Math.pow(1 + r3, -Math.round(bridgeMos))) / r3 : mSpend * Math.round(bridgeMos);
+  o.shortBy = Math.max(0, o.bridgeNeed - o.taxableAtP2);
+  o.bufferYrs = o.spend3 > 0 ? o.surplusEnd / o.spend3 : 0;   // surplus pot = 2-year buffer, not used for the bridge
+  o.p3Rows = []; { let x = o.taxableAtP2; for (let y = 1; y <= Math.ceil(bridgeMos / 12); y++) { const mo = Math.min(12, Math.round(bridgeMos - (y - 1) * 12)); if (mo <= 0) break; x = Math.max(0, erFV(x, r3, mo, -mSpend)); o.p3Rows.push({ age: s.retireAge + y, bal: x, spent: mSpend * mo }); if (x <= 0) break; } }
+  // Phase 4 — everything unlocked at 59½ (phone uses the P4 tax + P3 growth for the taxable remainder)
+  const r4 = s.r4 / 100, moTo595 = Math.max(0, (59.5 - age) * 12);
+  const nonTax = Math.max(0, o.p2aEnd - o.taxableAtP2);
+  o.retAt595 = erFV(nonTax, r4 / 12, Math.max(0, moTo595 - o.p2aEndMonths), 0);
+  const spend4 = s.tax4 > 0 ? annualSpending() / (1 - s.tax4 / 100) : annualSpending();
+  let t4 = o.taxableAtP2; for (let m = 0; m < Math.round(bridgeMos); m++) { t4 = t4 * (1 + r3) - spend4 / 12; if (t4 < 0) { t4 = 0; break; } }
+  o.taxAt595 = t4;
+  o.totalAt595 = o.retAt595 + t4 + o.surplusEnd;
+  o.withdraw = o.totalAt595 * s.wr4 / 100; o.net4 = o.withdraw * (1 - s.tax4 / 100);
+  o.p4Rows = []; { let x = o.totalAt595; for (let y = 0; y <= 10; y++) { if (y > 0) x = Math.max(0, x * (1 + r4) - o.withdraw); o.p4Rows.push({ age: 59.5 + y, bal: x, income: x * s.wr4 / 100 * (1 - s.tax4 / 100) }); } }
+  return o;
+}
+
+function rpSlider(key, label, min, max, step, fmt = v => (+v).toFixed(1) + '%') {
+  return `<div class="pp-row rp-row"><label>${label}</label><input type="range" min="${min}" max="${max}" step="${step}" value="${RP[key]}" oninput="RP['${key}']=+this.value;this.parentElement.querySelector('b').textContent=(${fmt.toString()})(this.value);rpUpdate()"><b class="num">${fmt(RP[key])}</b></div>`;
+}
+function rpNum(key, label, hint = '', ph = '') {
+  return `<label class="pp-f"><span>${label}</span><input type="number" value="${RP[key] ?? ''}" placeholder="${ph}" onchange="RP['${key}']=this.value===''?null:+this.value;rpUpdate()">${hint ? `<small class="muted-s" id="rp-h-${key}">${hint}</small>` : ''}</label>`;
+}
+function renderRetPlan() {
+  if (!RP) rpInit();
+  const tile = (id, l, sub = '') => `<div class="rp-tile"><div class="l">${l}</div><div class="v num" id="rp-${id}">—</div><div class="s" id="rp-${id}-s">${sub}</div></div>`;
+  document.getElementById('views').innerHTML = `
+    <div class="asof" style="margin-bottom:12px">Your four-phase early-retirement plan. Your goal, ages and rates are remembered in this browser; mortgage figures refresh from each backup.</div>
+    ${extrasCard()}
+    <div class="kpis" id="rp-kpis"></div>
+    ${card('rp', 'The plan by age', '<div class="chart tall"><canvas id="c-rp"></canvas></div><div class="note">Shaded bands are the phases. Nominal dollars; steady returns.</div>')}
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card rp-phase"><div class="card-h"><h3>🎯 Phase 1 — Accumulation goal</h3><button class="info" onclick="openInfo('rp1')">i</button></div>
+        <div class="pp-fields">${rpNum('goal', 'Goal (portfolio value)')}<label class="pp-f"><span>&nbsp;</span><button class="chip" style="padding:7px 10px" onclick="RP.goal=RP.autoGoal;show('retplan')">⚡ Use Full FIRE number (${$(RP.autoGoal)})</button></label></div>
+        ${rpSlider('r1', 'Growth rate', 4, 14, 0.5)}
+        <div class="rp-tiles">${tile('p1time', 'Time to goal')}${tile('p1age', 'Age at goal', 'Phase 2 begins')}${tile('p1save', 'Saving per month', 'retirement + coast, last 12 mo')}${tile('p1match', 'Employer match / mo')}</div>
+      </div>
+      <div class="card rp-phase"><div class="card-h"><h3>🏗️ Phase 2A — Coast to early retirement</h3><button class="info" onclick="openInfo('rp2a')">i</button></div>
+        <div class="pp-fields">${rpNum('retireAge', 'Early retirement age')}</div>
+        ${rpSlider('r2', 'Growth rate', 4, 14, 0.5)}
+        <div class="rp-tiles">${tile('p2dur', 'Phase 2A length')}${tile('p2end', 'Portfolio at retirement')}</div>
+        <div class="note" id="rp-p2path"></div>
+        <div class="tbl-wrap" id="rp-p2rows" style="max-height:220px;margin-top:8px"></div>
+      </div>
+      <div class="card rp-phase"><div class="card-h"><h3>🏠 Phase 2B — Mortgage payoff</h3><button class="info" onclick="openInfo('rp2b')">i</button></div>
+        <div class="pp-fields">
+          ${rpNum('mBal', 'Mortgage balance', 'From your mortgage debt account')}
+          ${rpNum('mPrin', 'Principal paid per month', 'Average of the last 6 months')}
+          ${rpNum('mPay', 'Full monthly payment', 'Average mortgage bill, last 12 months')}
+          ${rpNum('freed', 'Freed cash per month', '', 'auto')}
+        </div>
+        <div class="rp-tiles">${tile('p2bTime', 'Payoff time')}${tile('p2bExtra', 'Total paydown / mo')}${tile('p2bSurMo', 'Invested after payoff')}${tile('p2bSurEnd', 'Surplus pot at retirement')}</div>
+        <div class="note">Known gap: escrow (property tax + insurance) is part of the payment, so the invested surplus after payoff is overstated. The surplus pot is your 2-year buffer and isn't spent in the bridge.</div>
+      </div>
+      <div class="card rp-phase"><div class="card-h"><h3>🌉 Phase 3 — Taxable bridge to 59½</h3><button class="info" onclick="openInfo('rp3')">i</button></div>
+        ${rpSlider('r3', 'Growth rate (taxable)', 3, 12, 0.5)}
+        ${rpSlider('tax3', 'Tax gross-up', 0, 40, 1, v => v + '%')}
+        <div class="pp-fields">${rpNum('exp3', 'Annual spending override', '', 'auto: ' + $(annualSpending()))}</div>
+        <div class="rp-tiles">${tile('p3start', 'Taxable at retirement')}${tile('p3spend', 'Spending (grossed up)')}${tile('p3covers', 'Covers the bridge?')}${tile('p3end', 'Taxable left at 59½')}</div>
+        <div class="tbl-wrap" id="rp-p3rows" style="max-height:220px;margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="card rp-phase"><div class="card-h"><h3>🏆 Phase 4 — Full retirement at 59½</h3><button class="info" onclick="openInfo('rp4')">i</button></div>
+      <div class="grid g2" style="margin:0">
+        <div>${rpSlider('wr4', 'Withdrawal rate', 2, 6, 0.1)}${rpSlider('tax4', 'Tax gross-up', 0, 40, 1, v => v + '%')}${rpSlider('r4', 'Growth in retirement', 3, 10, 0.5)}
+          <div class="rp-tiles">${tile('p4total', 'Total at 59½')}${tile('p4annual', 'Spendable per year', 'after tax')}${tile('p4monthly', 'Per month')}</div></div>
+        <div class="tbl-wrap" id="rp-p4rows" style="max-height:330px"></div>
+      </div>
+    </div>
+    ${mcCard()}`;
+  rpUpdate();
+}
+// v3.1: planning assumptions for the whole planner — estimated yearly costs switch + tax rate
+function extrasCard() {
+  const chip = (on, l) => `<button class="chip ${EXTRAS_ON === on ? 'on' : ''}" onclick="setExtras(${on})">${l}</button>`;
+  const est = D.untrackedLiving + D.healthInsurance;
+  return `<div class="card" style="margin-bottom:14px"><div class="card-h"><h3>Planning assumptions <button class="info" onclick="openInfo('spending')">i</button></h3></div>
+    <div class="grid g2" style="margin:0">
+      <div><div class="pp-row" style="grid-template-columns:1fr auto"><label>Estimated yearly costs<span>groceries, fuel, dining ${$(D.untrackedLiving)} + health insurance ${$(D.healthInsurance)}</span></label><div class="chips">${chip(true, 'On')}${chip(false, 'Off')}</div></div>
+        <div class="note" style="margin-top:2px">${EXTRAS_ON ? `On: added to spending everywhere in the planner.` : `Off: logged bills only, like the phone.`}
+        Annual spending used: <b class="num">${$(annualSpending())}</b> (${$(trackedExp())} bills${EXTRAS_ON ? ' + ' + $(est) + ' estimates' : ''}).</div></div>
+      <div><div class="pp-row" style="grid-template-columns:1fr auto"><label>Tax rate on withdrawals<span>grosses up spending so withdrawals cover the tax</span></label>
+          <div class="pp-num"><input type="number" min="0" max="60" step="1" value="${TAX_PCT}" onchange="setTax(this.value)">%</div></div>
+        <div class="note" style="margin-top:2px">Used for Full FIRE, Coast FIRE, the Full FIRE goal button and Monte Carlo. Phases 3 and 4 have their own tax sliders. The phone keeps its own saved rate.</div></div>
+    </div></div>`;
+}
+function rpUpdate() {
+  saveSettings({ rp: Object.fromEntries(RP_KEYS.map(k => [k, RP[k]])) });
+  mcRender();
+  const o = rpCompute(), s = RP;
+  const set = (id, v, sub) => { const e = document.getElementById('rp-' + id); if (e) e.innerHTML = v; if (sub != null) { const x = document.getElementById('rp-' + id + '-s'); if (x) x.innerHTML = sub; } };
+  const p1Done = o.p1Months === 0, p1Inf = !isFinite(o.p1Months);
+  set('p1time', p1Done ? (o.p1Done ? 'Reached 🎉' : '—') : p1Inf ? '50+ yrs' : erYr(o.p1Months / 12), p1Done ? '' : p1Inf ? 'need more savings' : erDate(o.p1Months));
+  set('p1age', p1Inf ? '—' : String(Math.floor(o.age + (o.p1Months || 0) / 12)));
+  set('p1save', $(o.totMo)); set('p1match', $(o.matchMo));
+  set('p2dur', o.p2aYears > 0 ? erYr(o.p2aYears) : '< 1 yr', o.matchMo > 0 ? $(o.matchMo) + '/mo match keeps coming' : '');
+  set('p2end', $k(o.p2aEnd), erDate(o.p2aEndMonths) + ' · age ' + s.retireAge);
+  document.getElementById('rp-p2path').innerHTML = `Phase 1 ends ${erDate(o.p1Months || 0)} at ${$k(o.p1Value)} → grows on match only for ${erYr(o.p2aYears)} → ${$k(o.p2aEnd)} at ${erDate(o.p2aEndMonths)}.`;
+  document.getElementById('rp-p2rows').innerHTML = o.p2aRows.length ? `<table><thead><tr><th>Age</th><th class="r">Portfolio</th><th class="r">Gain</th></tr></thead><tbody>${o.p2aRows.map(r => `<tr><td>${r.age}</td><td class="r num">${$(r.bal)}</td><td class="r num muted-s">+${$(r.gain)}</td></tr>`).join('')}</tbody></table>` : '';
+  const hasM = o.payoffMonths != null;
+  set('p2bTime', !hasM ? '—' : isFinite(o.payoffMonths) ? erYr(o.payoffMonths / 12) : 'Never', !hasM ? 'enter balance + principal' : isFinite(o.payoffMonths) ? 'paid off ' + erDate((isFinite(o.p1Months) ? o.p1Months : 0) + o.payoffMonths) + ' · ' + erYr(o.baseOnlyMonths / 12) + ' without extra' : '');
+  set('p2bExtra', $(o.paydown), `${$(s.mPrin || 0)} principal + ${$(o.freed)} freed${s.freed == null ? ' (auto: savings − match)' : ''}`);
+  set('p2bSurMo', $(o.surplusMo) + '/mo', o.surplusMonths > 0 ? 'for ' + erYr(o.surplusMonths / 12) : 'no window before retirement');
+  set('p2bSurEnd', $k(o.surplusEnd), `buffer ≈ ${o.bufferYrs.toFixed(1)} yrs of spending` + (o.bufferYrs < 2 ? ` · <span class="neg">2 yrs needs ${$k(o.spend3 * 2)}</span>` : ' · <span class="pos">2-yr target met</span>'));
+  set('p3start', $k(o.taxableAtP2)); set('p3spend', $(o.spend3) + '/yr');
+  set('p3covers', o.depleted ? `<span class="neg">⚠ Short ${$k(o.shortBy)}</span>` : '<span class="pos">✓ Yes</span>', erYr(o.bridgeYrs) + ` · age ${s.retireAge} → 59½`);
+  set('p3end', $k(o.p3End), o.p3End > 0 ? 'rolls into Phase 4' : 'taxable runs out before 59½');
+  document.getElementById('rp-p3rows').innerHTML = o.p3Rows.length ? `<table><thead><tr><th>Age</th><th class="r">Taxable balance</th><th class="r">Spent</th></tr></thead><tbody>${o.p3Rows.map(r => `<tr><td>${r.age <= 59.5 ? r.age : '59½'}</td><td class="r num ${r.bal <= 0 ? 'neg' : ''}">${r.bal <= 0 ? 'Depleted' : $(r.bal)}</td><td class="r num muted-s">${$(r.spent)}</td></tr>`).join('')}</tbody></table>` : '';
+  set('p4total', $k(o.totalAt595), `401(k)/IRA ${$k(o.retAt595)} + taxable ${$k(o.taxAt595)} + surplus ${$k(o.surplusEnd)}`);
+  set('p4annual', $(o.net4)); set('p4monthly', $(o.net4 / 12));
+  document.getElementById('rp-p4rows').innerHTML = `<table><thead><tr><th>Age</th><th class="r">Portfolio</th><th class="r">Spendable / yr</th></tr></thead><tbody>${o.p4Rows.map(r => `<tr><td>${r.age % 1 === 0 ? r.age : r.age.toFixed(1)}</td><td class="r num">${$(r.bal)}</td><td class="r num">${$(r.income)}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('rp-kpis').innerHTML =
+    kpi('Phase 1 goal', p1Done && o.p1Done ? 'Reached' : isFinite(o.p1Months) ? erDate(o.p1Months) : '50+ yrs', `${$k(s.goal)} · age ${isFinite(o.p1Months) ? Math.floor(o.age + o.p1Months / 12) : '—'}`, 'rp1') +
+    kpi('Early retirement', 'Age ' + s.retireAge, `${erDate(o.p2aEndMonths)} · ${$k(o.p2aEnd)}`, 'rp2a') +
+    kpi('Mortgage paid off', hasM && isFinite(o.payoffMonths) ? erDate((isFinite(o.p1Months) ? o.p1Months : 0) + o.payoffMonths) : '—', hasM ? $(o.paydown) + '/mo paydown' : '', 'rp2b') +
+    kpi('Bridge to 59½', o.depleted ? `<span class="neg">Short ${$k(o.shortBy)}</span>` : 'Covered', o.depleted ? `need ${$k(o.bridgeNeed)} taxable at ${RP.retireAge}, have ${$k(o.taxableAtP2)}` : `${$k(o.p3End)} taxable left at 59½`, 'rp3') +
+    kpi('Income at 59½', $(o.net4 / 12) + '/mo', `${$k(o.totalAt595)} at ${s.wr4}% · after ${s.tax4}% tax`, 'rp4');
+  rpChart(o);
+}
+// Portfolio by age across the phases, sampled monthly then shown yearly
+function rpChart(o) {
+  const s = RP, pts = [], r1 = s.r1 / 1200, r2 = s.r2 / 1200, r3 = s.r3 / 1200, r4 = s.r4 / 1200;
+  const p1 = isFinite(o.p1Months) ? o.p1Months : 0, p2 = o.p2aEndMonths, m595 = Math.max(p2, Math.round((59.5 - o.age) * 12)), end = m595 + 120;
+  const payoff = o.payoffMonths && isFinite(o.payoffMonths) ? p1 + o.payoffMonths : Infinity;
+  let tot = o.current, surplus = 0, ret = 0, tax = 0, taxable = o.taxableNow;
+  const spend = o.spend3 / 12;
+  for (let m = 0; m <= end; m++) {
+    if (m > 0) {
+      if (m <= p1) tot = tot * (1 + r1) + o.totMo;
+      else if (m <= p2) { tot = tot * (1 + r2) + o.matchMo; if (m > payoff) surplus = surplus * (1 + r2) + o.surplusMo; }
+      else if (m <= m595) { ret = ret * (1 + r4); tax = Math.max(0, tax * (1 + r3) - spend); }
+      else { tot = Math.max(0, tot * (1 + s.r4 / 100) ** (1 / 12) - o.withdraw / 12); }
+    }
+    if (m === p2) { ret = Math.max(0, tot - o.taxableAtP2); tax = o.taxableAtP2; }
+    const val = m <= p2 ? tot + surplus : m <= m595 ? ret + tax + surplus : tot;
+    if (m === m595) tot = val;
+    if (m % 12 === 0 || m === p1 || m === p2 || m === m595 || m === end) pts.push({ age: o.age + m / 12, v: val, m });
+  }
+  const labels = pts.map(p => p.age.toFixed(p.age % 1 ? 1 : 0)), data = pts.map(p => Math.round(p.v));
+  const bands = [[0, p1, '1'], [p1, p2, '2'], [p2, m595, '3'], [m595, end, '4']].map(([a, b, n]) => ({ a: pts.findIndex(p => p.m >= a), b: pts.findIndex(p => p.m >= b), n }));
+  const bandPlugin = { id: 'rpBands', beforeDatasetsDraw(c) {
+    const { ctx, chartArea: A, scales: { x } } = c; ctx.save();
+    bands.forEach((bd, i) => { if (bd.a < 0 || bd.b < 0 || bd.b <= bd.a) return;
+      const x0 = x.getPixelForValue(bd.a), x1 = x.getPixelForValue(bd.b);
+      ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.035)' : 'rgba(255,255,255,0)'; ctx.fillRect(x0, A.top, x1 - x0, A.bottom - A.top);
+      if (x1 - x0 > 56) { ctx.fillStyle = cssv('--muted'); ctx.font = '600 11px sans-serif'; ctx.fillText('Phase ' + bd.n, x0 + 6, A.top + 14); } });
+    ctx.restore(); } };
+  TABLES.rp = () => `<div class="tbl-wrap"><table><thead><tr><th>Age</th><th class="r">Portfolio</th></tr></thead><tbody>${pts.map(p => `<tr><td>${p.age.toFixed(1)}</td><td class="r num">${$(p.v)}</td></tr>`).join('')}</tbody></table></div>`;
+  const cfg = { type: 'line', data: { labels, datasets: [lineDs('Projected portfolio', data, SERIES[0], { tension: 0.15 })] },
+    options: baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false } },
+      scales: { ...baseOpts().scales, x: { ...baseOpts().scales.x, title: { display: true, text: 'Age', color: cssv('--muted') } }, y: { ...baseOpts().scales.y, beginAtZero: true } } }),
+    plugins: [bandPlugin] };
+  if (charts['c-rp']) { charts['c-rp'].destroy(); delete charts['c-rp']; }
+  mkChart('c-rp', cfg);
+}
+
+/* ═══ MONTE CARLO (v3.1, moved here from the phone) ═══════════════════════
+   Same simulation as the phone's old runMonteCarlo(): 10,000 runs, yearly
+   return and inflation drawn from a normal distribution. Working years:
+   grow + contribute; retired years: withdraw first, then grow.
+   Seeds come from the backup and the Retirement Plan (retirement age).
+   Assumptions are remembered (ldp_settings.mc); results are not saved.
+   ═══════════════════════════════════════════════════════════════════════════ */
+let MC = null, MC_LAST = null;
+const MC_DEFAULTS = { life: 95, ret: 7, vol: 15, infl: 3, inflVol: 1 };
+function mcState() { if (!MC) MC = Object.assign({}, MC_DEFAULTS, loadSettings().mc || {}); return MC; }
+function mcSeeds() {
+  const sv = t12Savings();
+  return { age: ageAt(ASOF), port: investTotal(), retire: RP ? +RP.retireAge : 48,
+           contrib: sv.ret + sv.coast, spend: annualSpending() / taxDiv() };
+}
+function mcRandN(mean, sd) { const u1 = Math.random() || 1e-12, u2 = Math.random(); return mean + Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * sd; }
+function mcSimulate(seed, a, n = 10000) {
+  const ret = a.ret / 100, vol = a.vol / 100, inf = a.infl / 100, infV = a.inflVol / 100, ends = [];
+  let ok = 0;
+  for (let i = 0; i < n; i++) {
+    let port = seed.port, age = seed.age, exp = seed.spend, alive = true;
+    while (age < seed.retire) { port = port * (1 + mcRandN(ret, vol)) + seed.contrib; exp *= 1 + mcRandN(inf, infV); age++; }
+    while (age < a.life) {
+      const r = mcRandN(ret, vol), f = mcRandN(inf, infV);
+      port -= exp;                                   // withdraw at the start of the year
+      if (port <= 0) { port = 0; alive = false; break; }
+      port *= 1 + r; exp *= 1 + f; age++;
+    }
+    if (alive) ok++; ends.push(port);
+  }
+  ends.sort((x, y) => x - y);
+  return { rate: ok / n * 100, median: ends[Math.floor(n / 2)], p10: ends[Math.floor(n * 0.1)], p90: ends[Math.floor(n * 0.9)] };
+}
+function mcNum(key, label, step = 0.5) {
+  return `<label class="pp-f"><span>${label}</span><input type="number" step="${step}" value="${mcState()[key]}" onchange="MC['${key}']=+this.value;saveSettings({mc:{...MC}});mcRender()"></label>`;
+}
+function mcCard() {
+  mcState();
+  return `<div class="card rp-phase"><div class="card-h"><h3>🎲 Monte Carlo — does the money last?</h3><button class="info" onclick="openInfo('mc')">i</button></div>
+    <div class="grid g2" style="margin:0">
+      <div>
+        <div class="pp-group">From your backup and this plan</div>
+        <div id="mc-seeds"></div>
+        <div class="pp-group">Assumptions</div>
+        <div class="pp-fields">${mcNum('life', 'Life expectancy', 1)}${mcNum('ret', 'Average return %')}${mcNum('vol', 'Return volatility %')}${mcNum('infl', 'Inflation %', 0.1)}${mcNum('inflVol', 'Inflation volatility %', 0.1)}</div>
+        <div class="pp-solve"><button class="btn" onclick="mcRun()">Run 10,000 simulations</button><span class="muted-s">Run again after changing the plan or the switch.</span></div>
+      </div>
+      <div id="mc-result"></div>
+    </div></div>`;
+}
+function mcRun() {
+  const seed = mcSeeds(), a = { ...mcState() };
+  MC_LAST = { ...mcSimulate(seed, a), seed, a, runAt: new Date() };
+  mcRender();
+}
+function mcRender() {
+  const el = document.getElementById('mc-seeds'); if (!el) return;
+  const s = mcSeeds();
+  el.innerHTML = `<table><tbody>
+    <tr><td>Age now → retire → life expectancy</td><td class="r num">${s.age} → ${s.retire} → ${mcState().life}</td></tr>
+    <tr><td>Portfolio today</td><td class="r num">${$(s.port)}</td></tr>
+    <tr><td>Saving per year until retirement</td><td class="r num">${$(s.contrib)}</td></tr>
+    <tr><td>Spending per year in retirement</td><td class="r num">${$(s.spend)}</td></tr></tbody></table>
+    <div class="note">Spending = annual spending ${$(annualSpending())} (${spendSub()}) ÷ (1 − ${TAX_PCT}% tax). Retirement age comes from Phase 2A. Saving = last 12 months of retirement + coast.</div>`;
+  const r = MC_LAST, box = document.getElementById('mc-result');
+  if (!r) { box.innerHTML = `<div class="note" style="margin-top:28px">Not run yet for this backup. Press <b>Run 10,000 simulations</b>.</div>`; return; }
+  const stale = r.seed.retire !== s.retire || Math.round(r.seed.spend) !== Math.round(s.spend) || ['life', 'ret', 'vol', 'infl', 'inflVol'].some(k => r.a[k] !== mcState()[k]);
+  const cls = r.rate >= 75 ? 'pos' : r.rate < 50 ? 'neg' : '';
+  box.innerHTML = `<div class="rp-tiles" style="margin-top:0">
+      <div class="rp-tile" style="grid-column:1/-1"><div class="l">Success rate</div><div class="v num ${cls}" style="font-size:34px">${r.rate.toFixed(1)}%</div>
+        <div class="s">In ${r.rate.toFixed(1)}% of 10,000 runs the money lasted to age ${r.a.life}.</div></div>
+      <div class="rp-tile"><div class="l">Median at ${r.a.life}</div><div class="v num">${$k(r.median)}</div></div>
+      <div class="rp-tile"><div class="l">Bad luck (10th pct)</div><div class="v num">${$k(r.p10)}</div></div>
+      <div class="rp-tile"><div class="l">Good luck (90th pct)</div><div class="v num">${$k(r.p90)}</div></div></div>
+    <div class="note">${stale ? '<b>⚠ The plan or assumptions changed since this run.</b> Run it again. ' : ''}Run ${r.runAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}. Results aren't saved; ending balances are in future (inflated) dollars.</div>`;
+}
+
+/* ═══ NAV ═══════════════════════════════════════════════════════════════════ */
+const VIEWS = [
+  ['overview', '⬡', 'Overview'], ['investments', '📈', 'Investments'], ['networth', '⚖️', 'Net Worth & Debt'],
+  ['income', '💵', 'Income'], ['expenses', '🧾', 'Expenses'], ['retirement', '🏦', 'Retirement'], ['paycheck', '💰', 'Paycheck Planner'],
+  ['fire', '🔥', 'FIRE & Projections'], ['retplan', '🎯', 'Retirement Plan'], ['coast', '🌴', 'Coast Contributions'], ['notes', '📓', 'Notes & Logbook']
+];
+function buildNav() {
+  document.getElementById('nav').innerHTML = VIEWS.map(([k, i, t]) => `<button data-v="${k}" onclick="show('${k}')"><span>${i}</span>${t}</button>`).join('');
+}
+function show(v) {
+  VIEW = v; destroyCharts();
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  document.getElementById('viewTitle').textContent = VIEWS.find(x => x[0] === v)[2];
+  document.getElementById('views').innerHTML = '';
+  RENDER[v]();
+  window.scrollTo(0, 0);
+}
+
+/* ═══ VIEWS ═════════════════════════════════════════════════════════════════ */
+const RENDER = {
+overview() {
+  const inv = investTotal(), debt = debtTotal(), home = realEstate(), loans = loansOwed();
+  const S = annualSpending(), full = fullFireT(), sr = savingsRate(), sv = t12Savings();
+  const T = investTotal(null, a => a.type === 'taxable'), coastT = coastFireT();
+  const months = monthAxis();
+  const nwLiquid = months.map(m => investTotal(m) - debtTotal(m) + loansOwed(m));   // v3.4: + loans owed to you
+  const nwHome = months.map((m, i) => nwLiquid[i] + realEstate(m));   // v3.5: every property
+  TABLES.ovnw = () => tableFor(months.map(mkLabel), [{ label: 'Liquid', data: nwLiquid }, { label: 'Incl. real estate', data: nwHome }]);
+
+  // Allocation by type (one series → one color; bars, not a donut, since values are close)
+  const TYPES = [['taxable', 'Taxable brokerage'], ['401k', '401(k)'], ['ira', 'IRA'], ['hsa', 'HSA'], ['metals', 'Precious metals'], ['receivable', 'Loans receivable']];
+  const alloc = TYPES.map(([t, l]) => [l, investTotal(null, a => a.type === t)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+  const allocMax = Math.max(...alloc.map(a => a[1]));
+
+  document.getElementById('views').innerHTML = `
+    <div class="kpis">
+      ${kpi('Net worth', $(inv - debt + loans + home), home ? 'incl. real estate' : '', 'networth')}
+      ${kpi('Liquid net worth', $(inv - debt + loans), loans ? 'investments − debt + loans' : 'investments − debt', 'networth')}
+      ${kpi('Invested', $(inv), D.accounts.length + ' accounts')}
+      ${kpi('Debt', $(debt), 'through ' + mkLabel(addM(asOfMk(), -1)))}
+      ${kpi('Savings rate', sr == null ? '—' : pct(sr), $(sv.totalMo) + '/mo · last 12 mo', 'savings')}
+      ${kpi('Full FIRE', pct(inv / full, 0), 'of ' + $k(full) + ' · ' + monthsLabel(monthsToGoal(inv, full, sv.totalMo)), 'fullfire')}
+    </div>
+    <div style="margin-bottom:14px">${pulseCard()}</div>
+    <div class="grid g21">
+      ${card('ovnw', 'Net worth over time', '<div class="chart tall"><canvas id="c-ovnw"></canvas></div>')}
+      <div class="card"><div class="card-h"><h3>Allocation by type</h3></div>
+        ${alloc.map(([l, v]) => `<div class="meter"><div class="meter-top"><span>${l}</span><span class="num">${$(v)} · ${pct(v / inv)}</span></div>
+          <div class="track"><div class="fill" style="width:${v / allocMax * 100}%"></div></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card"><div class="card-h"><h3>FIRE progress <button class="info" onclick="openInfo('fullfire')">i</button></h3></div>
+        ${meter('Full FIRE — all accounts', inv, full, pct(inv / full, 1) + ' · projected ' + monthsLabel(monthsToGoal(inv, full, sv.totalMo)))}
+        ${meter('Coast FIRE — taxable only', T, coastT, pct(T / coastT, 1) + ' · projected ' + monthsLabel(monthsToGoal(T, coastT, sv.coastMo)))}
+        ${meter('$1M milestone', inv, 1e6, inv >= 1e6 ? 'Reached' : pct(inv / 1e6, 1) + ' · projected ' + monthsLabel(monthsToGoal(inv, 1e6, sv.totalMo)))}
+        <div class="note">Spending used: ${$(S)}/yr · tax ${TAX_PCT}% · 4% withdrawal · 7% return + ${$(sv.totalMo)}/mo savings.</div>
+      </div>
+      ${goalsCard(inv, sv.totalMo)}
+    </div>`;
+  mkChart('c-ovnw', { type: 'line', data: { labels: months.map(mkLabel), datasets: [
+      lineDs('Net worth incl. real estate', nwHome, SERIES[0]), lineDs('Liquid net worth', nwLiquid, SERIES[1]) ] }, options: baseOpts() });
+  buildPulse();
+},
+
+investments() {
+  const months = monthAxis(D.entries.map(e => e.date.slice(0, 7)).sort()[0]);
+  const range = window._invRange || 0;
+  const shown = range ? months.slice(-range) : months;
+  const sets = D.accounts.map((a, i) => ({ a, color: SERIES[i] || OTHER, data: shown.map(m => latestBal(D.entries, a.id, m) || null) }));
+  TABLES.inv = () => tableFor(shown.map(mkLabel), sets.map(s => ({ label: s.a.name, data: s.data })));
+  const prevMk = addM(asOfMk(), -1), yrMk = addM(asOfMk(), -12);
+  const rows = D.accounts.filter(a => !(a.closed && !latestBal(D.entries, a.id))).map(a => { const now = latestBal(D.entries, a.id), m1 = latestBal(D.entries, a.id, prevMk), y1 = latestBal(D.entries, a.id, yrMk); return { a, now, d1: now - m1, d12: now - y1, p12: y1 >= now * 0.2 && y1 > 0 ? now / y1 - 1 : null }; });
+  const tot = rows.reduce((s, r) => s + r.now, 0);
+  const years = [...new Set(D.entries.map(e => e.date.slice(0, 4)))].sort();
+  const chips = [[12, '1Y'], [24, '2Y'], [0, 'All']].map(([n, l]) => `<button class="chip ${range === n ? 'on' : ''}" onclick="window._invRange=${n};show('investments')">${l}</button>`).join('');
+  document.getElementById('views').innerHTML = `
+    <div class="kpis">${kpi('Total invested', $(tot))}${kpi('Change, last month', $(tot - investTotal(prevMk)))}${kpi('Change, 12 months', $(tot - investTotal(yrMk)), 'includes new contributions')}
+      ${kpi('Taxable', $(investTotal(null, a => a.type === 'taxable')))}${kpi('Retirement accounts', $(investTotal(null, a => ['401k', 'ira', 'hsa'].includes(a.type))))}</div>
+    ${card('inv', 'Balances by account — stacked', '<div class="chart tall"><canvas id="c-inv"></canvas></div>', { chips })}
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><div class="card-h"><h3>Accounts</h3></div><table><thead><tr><th>Account</th><th>Type</th><th class="r">Balance</th><th class="r">1 mo</th><th class="r">12 mo</th></tr></thead><tbody>
+        ${rows.map(r => `<tr><td>${esc(r.a.name)} <span style="color:var(--muted)">· ${esc(r.a.institution || '')}</span></td><td>${esc(r.a.type)}</td><td class="r num">${$(r.now)}</td>
+          <td class="r num ${r.d1 >= 0 ? 'pos' : 'neg'}">${$(r.d1)}</td><td class="r num ${r.d12 >= 0 ? 'pos' : 'neg'}">${$(r.d12)}${r.p12 == null ? '' : ` <span class="muted-s">${pct(r.p12, 0)}</span>`}</td></tr>`).join('')}
+        <tr class="tot"><td>Total</td><td></td><td class="r num">${$(tot)}</td><td></td><td></td></tr></tbody></table>
+        <div class="note">12-month change includes contributions, not just market growth.</div></div>
+      <div class="card"><div class="card-h"><h3>Year-end balances</h3></div><table><thead><tr><th>Year</th><th class="r">Balance</th><th class="r">Change</th></tr></thead><tbody>
+        ${years.map((y, i) => { const endMk = y === String(ASOF.getFullYear()) ? asOfMk() : y + '-12'; const v = investTotal(endMk); const pv = i ? investTotal(years[i - 1] + '-12') : null;
+          return `<tr><td>${y}${endMk === asOfMk() ? ' (so far)' : ''}</td><td class="r num">${$(v)}</td><td class="r num">${pv == null ? '—' : $(v - pv)}</td></tr>`; }).join('')}
+      </tbody></table></div>
+    </div>`;
+  mkChart('c-inv', { type: 'line', data: { labels: shown.map(mkLabel), datasets: sets.map(s => lineDs(s.a.name, s.data, s.color, { fill: true, backgroundColor: s.color + 'B3', borderWidth: 1.5, borderColor: s.color })) },
+    options: baseOpts({ scales: { ...baseOpts().scales, y: { ...baseOpts().scales.y, stacked: true, beginAtZero: true } }, plugins: { ...baseOpts().plugins,
+      tooltip: { ...baseOpts().plugins.tooltip, callbacks: { label: c => ' ' + c.dataset.label + ': ' + $(c.parsed.y || 0), footer: it => 'Total: ' + $(it.reduce((s, c) => s + (c.parsed.y || 0), 0)) } } } }) });
+},
+
+networth() {
+  const months = monthAxis();
+  const inv = months.map(m => investTotal(m)), debt = months.map(m => debtTotal(m));
+  const loans = months.map(m => loansOwed(m));   // v3.4
+  const hasLoans = D.loanPeople.length > 0 && loans.some(v => v > 0);
+  const liquid = months.map((m, i) => inv[i] - debt[i] + loans[i]);
+  const home = months.map(m => realEstate(m) || null);   // v3.5: all properties
+  TABLES.nw = () => tableFor(months.map(mkLabel), [{ label: 'Investments', data: inv }, { label: 'Debt', data: debt }].concat(hasLoans ? [{ label: 'Loans owed', data: loans }] : []).concat([{ label: 'Liquid NW', data: liquid }, { label: 'Real estate', data: home }]));
+  const loanRows = D.loanPeople.map(p => ({ p, c: loanCalc(p), rate: loanRateAt(p, asOfMk()) }));
+  const dsets = D.debtAccounts.map((a, i) => ({ a, color: SERIES[i], data: months.map(m => { const v = latestBal(D.debtEntries, a.id, m); return v || null; }) }));
+  TABLES.debt = () => tableFor(months.map(mkLabel), dsets.map(s => ({ label: s.a.name, data: s.data })));
+  const mi = erMortgage(), princ = mi.principal, bal = mi.balance;   // 3.7.2: same numbers as the Retirement Plan
+  document.getElementById('views').innerHTML = `
+    <div class="kpis">${kpi('Investments', $(investTotal()))}${kpi('Debt', $(debtTotal()), 'through ' + mkLabel(addM(asOfMk(), -1)))}${hasLoans ? kpi('Loans owed to you', $(loansOwed()), 'with interest') : ''}${kpi('Liquid net worth', $(investTotal() - debtTotal() + loansOwed()), '', 'networth')}
+      ${kpi('Real estate', realEstate() ? $(realEstate()) : '—', realEstateItems().map(x => x.p.name).join(' + '))}${kpi('Mortgage principal paid', $(princ) + '/mo', 'avg of last 6 months' + (princ > 0 ? ' · ~' + Math.ceil(bal / princ / 12) + ' yrs at this pace' : ''))}</div>
+    ${nwMathCard()}
+    ${card('nw', 'Investments, debt and liquid net worth', '<div class="chart tall"><canvas id="c-nw"></canvas></div>')}
+    ${loanRows.length ? `<div class="card" style="margin-top:14px"><div class="card-h"><h3>Loans owed to you</h3></div><table><thead><tr><th>Who</th><th>Status</th><th class="r">Rate</th><th class="r">Lent</th><th class="r">Interest</th><th class="r">Paid back</th><th class="r">Owed</th></tr></thead><tbody>
+      ${loanRows.map(({ p, c, rate }) => `<tr><td>${esc(p.name)}</td><td>${p.status === 'repaying' ? 'Repaying' : 'Deferred'}</td><td class="r num">${rate}%</td><td class="r num">${$(c.lent)}</td><td class="r num">${$(c.interest)}</td><td class="r num">${$(c.paid)}</td><td class="r num">${$(c.owed)}</td></tr>
+        ${c.tranches.map(t => `<tr><td colspan=3 style="color:var(--muted);padding-left:22px">${mkLabel(t.mk)}${t.note ? ' · ' + esc(t.note) : ''}</td><td class="r num" style="color:var(--muted)">${$(t.lent)}</td><td class="r num" style="color:var(--muted)">${$(t.interest)}</td><td class="r num" style="color:var(--muted)">${$(t.paid)}</td><td class="r num" style="color:var(--muted)">${$(t.owed)}</td></tr>`).join('')}`).join('')}
+      <tr class="tot"><td>Total</td><td></td><td></td><td></td><td></td><td></td><td class="r num">${$(loansOwed())}</td></tr></tbody></table>
+      <div class="note">Through ${mkLabel(asOfMk())}. Interest is added monthly at the rate in force that month, from the month after each loan. Counts in net worth, not in investments, FIRE or the Retirement Plan. Logged on the phone (Loans).</div></div>` : ''}
+    <div class="grid g2" style="margin-top:14px">
+      ${card('debt', 'Debt balances', '<div class="chart"><canvas id="c-debt"></canvas></div>')}
+      <div class="card"><div class="card-h"><h3>Real estate log</h3></div><table><thead><tr><th>Month</th><th>Property</th><th class="r">Value</th></tr></thead><tbody>
+        ${D.homeValues.slice().sort((a, b) => b.date.localeCompare(a.date) || rePid(a).localeCompare(rePid(b))).map(h => `<tr><td>${esc(h.date)}</td><td>${esc((D.properties.find(p => p.id === rePid(h)) || { name: 'Home' }).name)}${h.note ? ' · ' + esc(h.note) : ''}</td><td class="r num">${$(h.value)}</td></tr>`).join('') || '<tr><td colspan=3>No property values logged.</td></tr>'}
+      </tbody></table>
+      ${D.bulkDebtPayments.length ? `<div class="card-h" style="margin-top:16px"><h3>Extra debt payments</h3></div><table><tbody>${D.bulkDebtPayments.map(p => `<tr><td>${esc(p.date)}</td><td>${esc(p.accountName || '')}</td><td class="r num">${$(p.amount)}</td></tr>`).join('')}</tbody></table>` : ''}
+      </div>
+    </div>`;
+  mkChart('c-nw', { type: 'line', data: { labels: months.map(mkLabel), datasets: [lineDs('Investments', inv, SERIES[0]), lineDs('Debt', debt, SERIES[1]), lineDs('Liquid net worth', liquid, SERIES[2])].concat(hasLoans ? [lineDs('Loans owed to you', loans, SERIES[3])] : []) }, options: baseOpts() });
+  mkChart('c-debt', { type: 'line', data: { labels: months.map(mkLabel), datasets: dsets.map(s => lineDs(s.a.name, s.data, s.color)) }, options: baseOpts() });
+},
+
+income() {
+  const months = monthAxis(D.incomeEntries.map(e => e.date.slice(0, 7)).sort()[0]).filter(m => m < asOfMk() || D.incomeEntries.some(e => e.date.startsWith(m)));
+  const TY = [['payroll', 'Payroll'], ['bonus', 'Bonus'], ['tax_refund', 'Tax refund'], ['dividends', 'Dividends / PFD']];
+  const sets = TY.map(([t, l], i) => ({ label: l, color: SERIES[i], data: months.map(m => D.incomeEntries.filter(e => e.type === t && e.date.startsWith(m)).reduce((s, e) => s + e.amount, 0)) }));
+  TABLES.inc = () => tableFor(months.map(mkLabel), [...sets, { label: 'Total', data: months.map((_, i) => sets.reduce((s, x) => s + x.data[i], 0)) }]);
+  const I12 = D.incomeEntries.filter(inT12);
+  const net = I12.reduce((s, e) => s + e.amount, 0);
+  const gross = I12.reduce((s, e) => s + (e.type === 'payroll' && e.grossPay != null ? e.grossPay : e.amount), 0);
+  const byPayer = {}; I12.forEach(e => { const k = e.payerName || 'Other'; byPayer[k] = (byPayer[k] || 0) + e.amount; });
+  const years = [...new Set(D.incomeEntries.map(e => e.date.slice(0, 4)))].sort();
+  document.getElementById('views').innerHTML = `
+    <div class="kpis">${kpi('Take-home, last 12 mo', $(net), t12Label())}${kpi('Monthly average', $(net / 12))}${kpi('Gross (payroll) + other', $(gross), 'gross pay where logged')}
+      ${kpi(ASOF.getFullYear() + ' so far', $(D.incomeEntries.filter(e => e.date.startsWith(String(ASOF.getFullYear()))).reduce((s, e) => s + e.amount, 0)))}</div>
+    ${card('inc', 'Monthly take-home by type', '<div class="chart tall"><canvas id="c-inc"></canvas></div>')}
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><div class="card-h"><h3>By payer — last 12 months</h3></div><table><tbody>
+        ${Object.entries(byPayer).sort((a, b) => b[1] - a[1]).map(([p, v]) => `<tr><td>${esc(p)}</td><td class="r num">${$(v)}</td><td class="r num" style="color:var(--muted)">${pct(v / net, 0)}</td></tr>`).join('')}
+        <tr class="tot"><td>Total</td><td class="r num">${$(net)}</td><td></td></tr></tbody></table></div>
+      <div class="card"><div class="card-h"><h3>By year</h3></div><table><thead><tr><th>Year</th>${TY.map(t => `<th class="r">${t[1]}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>
+        ${years.map(y => { const v = TY.map(([t]) => D.incomeEntries.filter(e => e.type === t && e.date.startsWith(y)).reduce((s, e) => s + e.amount, 0));
+          return `<tr><td>${y}</td>${v.map(x => `<td class="r num">${x ? $(x) : '—'}</td>`).join('')}<td class="r num"><b>${$(v.reduce((a, b) => a + b, 0))}</b></td></tr>`; }).join('')}
+      </tbody></table></div>
+    </div>`;
+  mkChart('c-inc', { type: 'bar', data: { labels: months.map(mkLabel), datasets: sets.map(s => barDs(s.label, s.data, s.color)) },
+    options: baseOpts({ scales: { x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } },
+      plugins: { ...baseOpts().plugins, tooltip: { ...baseOpts().plugins.tooltip, filter: c => c.parsed.y > 0, callbacks: { label: c => ' ' + c.dataset.label + ': ' + $(c.parsed.y), footer: it => 'Total: ' + $(it.reduce((s, c) => s + c.parsed.y, 0)) } } } }) });
+},
+
+expenses() {
+  const months = monthAxis(D.expenses.map(e => e.date.slice(0, 7)).sort()[0]);
+  const names = D.companies.map(c => c.name);
+  const extra = [...new Set(D.expenses.map(e => e.companyName))].filter(n => !names.includes(n));
+  const sets = names.slice(0, 8).map((n, i) => ({ label: n, color: SERIES[i], match: e => e.companyName === n }));
+  if (names.length > 8 || extra.length) sets.push({ label: 'Other', color: OTHER, match: e => !names.slice(0, 8).includes(e.companyName) });
+  sets.forEach(s => s.data = months.map(m => D.expenses.filter(e => s.match(e) && e.date.startsWith(m)).reduce((a, e) => a + e.amount, 0)));
+  TABLES.exp = () => tableFor(months.map(mkLabel), [...sets, { label: 'Total', data: months.map((_, i) => sets.reduce((s, x) => s + x.data[i], 0)) }]);
+  const X12 = D.expenses.filter(inT12), tot = X12.reduce((s, e) => s + e.amount, 0);
+  const byCo = sets.map(s => [s.label, X12.filter(s.match).reduce((a, e) => a + e.amount, 0)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+  const cur = D.expenses.filter(e => e.date.startsWith(asOfMk())).reduce((s, e) => s + e.amount, 0);
+  document.getElementById('views').innerHTML = `
+    <div class="kpis">${kpi('Bills, last 12 mo', $(tot), t12Label())}${kpi('Monthly average', $(tot / 12))}${kpi('Mortgage share', pct(mortgageExp() / (tot || 1), 0), $(mortgageExp()) + '/yr')}
+      ${kpi('This month so far', $(cur), mkLabel(asOfMk()) + ' (partial)')}${kpi('Planning spending', $(annualSpending()), spendSub(), 'spending')}</div>
+    ${card('exp', 'Monthly bills by company', '<div class="chart tall"><canvas id="c-exp"></canvas></div>')}
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><div class="card-h"><h3>By company — last 12 months</h3></div><table><thead><tr><th>Company</th><th class="r">Total</th><th class="r">Avg / mo</th></tr></thead><tbody>
+        ${byCo.map(([c, v]) => `<tr><td>${esc(c)}</td><td class="r num">${$(v)}</td><td class="r num">${$(v / 12)}</td></tr>`).join('')}
+        <tr class="tot"><td>Total</td><td class="r num">${$(tot)}</td><td class="r num">${$(tot / 12)}</td></tr></tbody></table></div>
+      <div class="card"><div class="card-h"><h3>Estimated yearly costs · ${EXTRAS_ON ? 'on' : 'off'}</h3></div><table><tbody>
+        <tr><td>Tracked bills (last 12 mo)</td><td class="r num">${$(trackedExp())}</td></tr>
+        <tr><td>Groceries, fuel, dining &amp; other living</td><td class="r num">${EXTRAS_ON ? $(D.untrackedLiving) : '<span class="muted-s">Off — </span>' + $(0)}</td></tr>
+        <tr><td>Health insurance</td><td class="r num">${EXTRAS_ON ? $(D.healthInsurance) : '<span class="muted-s">Off — </span>' + $(0)}</td></tr>
+        <tr class="tot"><td>Annual spending used for FIRE</td><td class="r num">${$(annualSpending())}</td></tr></tbody></table>
+        <div class="note">Turn the estimates on or off on the Retirement Plan page. The phone uses logged bills only.</div></div>
+    </div>`;
+  mkChart('c-exp', { type: 'bar', data: { labels: months.map(mkLabel), datasets: sets.map(s => barDs(s.label, s.data, s.color)) },
+    options: baseOpts({ scales: { x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } },
+      plugins: { ...baseOpts().plugins, tooltip: { ...baseOpts().plugins.tooltip, filter: c => c.parsed.y > 0, callbacks: { label: c => ' ' + c.dataset.label + ': ' + $(c.parsed.y), footer: it => 'Total: ' + $(it.reduce((s, c) => s + c.parsed.y, 0)) } } } }) });
+},
+
+retirement() {
+  const yr = ASOF.getFullYear(), L = D.retirementLimits || {};
+  const l401 = +L.limit401k || 0, lTot = +L.limitTotal401k || 0, lHsa = +L.limitHSA || 0;
+  const plans = planSources();
+  const meters = plans.map(p => { const y = retYTD(p.ids, yr), pl = (L.perPlan || {})[p.src.id] || {};
+    return `<div style="margin-bottom:6px;font-weight:700">${esc(p.name)}</div>` + meter('Employee (pre-tax + Roth)', y.emp, +pl.limit401k || l401) + meter('Total incl. match + after-tax', y.total, +pl.limitTotal401k || lTot); }).join('');
+  const hsa = retYTD(null, yr).hsa;
+  const years = [...new Set(D.retirementContribs.map(e => e.date.slice(0, 4)))].sort();
+  const types = Object.keys(CT);
+  const ysets = types.map((k, i) => ({ label: CT[k], color: SERIES[i], data: years.map(y => retYTD(null, y).t[k]) }));
+  TABLES.ret = () => `<table><thead><tr><th>Year</th>${ysets.map(s => `<th class="r">${s.label}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>` +
+    years.map((y, i) => `<tr><td>${y}</td>${ysets.map(s => `<td class="r num">${$(s.data[i])}</td>`).join('')}<td class="r num"><b>${$(ysets.reduce((a, s) => a + s.data[i], 0))}</b></td></tr>`).join('') + '</tbody></table>';
+  const months = monthAxis(D.retirementContribs.map(e => e.date.slice(0, 7)).sort()[0]).filter(m => m < asOfMk() || D.retirementContribs.some(e => e.date.startsWith(m)));
+  const mset = [{ label: 'You (employee + HSA)', color: SERIES[0], keys: ['401k_pretax', '401k_roth', 'after_tax', 'hsa_employee'] }, { label: 'Employer (match + HSA)', color: SERIES[1], keys: ['employer_match', 'hsa_employer'] }];
+  mset.forEach(s => s.data = months.map(m => D.retirementContribs.filter(e => e.date.startsWith(m)).reduce((a, e) => a + s.keys.reduce((b, k) => b + ((e.amounts || {})[k] || 0), 0), 0)));
+  TABLES.retm = () => tableFor(months.map(mkLabel), mset);
+  const ytdAll = retYTD(null, yr), sv = t12Savings();
+  document.getElementById('views').innerHTML = `
+    <div class="kpis">${kpi(yr + ' contributions', $(ytdAll.total + ytdAll.hsa), 'year to date, all plans')}${kpi('Employer money ' + yr, $(ytdAll.t.employer_match + ytdAll.t.hsa_employer))}
+      ${kpi('Last 12 months', $(sv.ret), $(sv.ret / 12) + '/mo')}${kpi('Employer match / mo', $(sv.match / 12), 'last 12 months')}</div>
+    <div class="grid g2">
+      <div class="card"><div class="card-h"><h3>${yr} limits — per person <button class="info" onclick="openInfo('limits')">i</button></h3></div>${meters}
+        <div style="margin:6px 0;font-weight:700">Household HSA</div>${meter('Employee + employer', hsa, lHsa)}</div>
+      ${card('ret', 'Contributions by year and type', '<div class="chart"><canvas id="c-ret"></canvas></div>')}
+    </div>
+    ${card('retm', 'Monthly contributions — you vs employer', '<div class="chart"><canvas id="c-retm"></canvas></div>')}`;
+  mkChart('c-ret', { type: 'bar', data: { labels: years, datasets: ysets.map(s => barDs(s.label, s.data, s.color)) },
+    options: baseOpts({ scales: { x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } },
+      plugins: { ...baseOpts().plugins, tooltip: { ...baseOpts().plugins.tooltip, filter: c => c.parsed.y > 0, callbacks: { label: c => ' ' + c.dataset.label + ': ' + $(c.parsed.y), footer: it => 'Total: ' + $(it.reduce((s, c) => s + c.parsed.y, 0)) } } } }) });
+  mkChart('c-retm', { type: 'bar', data: { labels: months.map(mkLabel), datasets: mset.map(s => barDs(s.label, s.data, s.color)) },
+    options: baseOpts({ scales: { x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } } }) });
+},
+
+fire() {
+  const inv = investTotal(), T = investTotal(null, a => a.type === 'taxable'), S = annualSpending(), M = mortgageExp(), sv = t12Savings();
+  const full = fullFireT(), coast = coastFireT();
+  const age = ageAt(ASOF);
+  const ret = window._fireRet ?? 7, stop = window._fireStop ?? 48;
+  // Year-by-year projection to 65: contributions until the stop age, then growth only
+  const labels = [], bal = [], tgt = [];
+  let b = inv; const r = ret / 100 / 12;
+  for (let a = age; a <= 65; a++) {
+    labels.push(String(a)); bal.push(Math.round(b)); tgt.push(Math.round(full));
+    for (let m = 0; m < 12; m++) b = b * (1 + r) + (a < stop ? sv.totalMo : 0);
+  }
+  TABLES.proj = () => `<table><thead><tr><th>Age</th><th class="r">Projected portfolio</th><th class="r">vs Full FIRE</th></tr></thead><tbody>${labels.map((l, i) => `<tr><td>${l}</td><td class="r num">${$(bal[i])}</td><td class="r num ${bal[i] >= full ? 'pos' : ''}">${pct(bal[i] / full, 0)}</td></tr>`).join('')}</tbody></table>`;
+  const cross = labels[bal.findIndex(v => v >= full)];
+  const be = LC.breakEvenHourly(trackedExp(), livingAmt(), healthAmt());   // 3.7.1
+  const mcOld = D.monteCarloResult;   // only in backups from phones before 3.1
+  document.getElementById('views').innerHTML = `
+    <div class="kpis">${kpi('Full FIRE target', $(full), pct(inv / full, 1) + ' there · ' + monthsLabel(monthsToGoal(inv, full, sv.totalMo)), 'fullfire')}
+      ${kpi('Coast FIRE target', $(coast), pct(T / coast, 1) + ' (taxable) · ' + monthsLabel(monthsToGoal(T, coast, sv.coastMo)), 'coastfire')}
+      ${kpi('Annual spending', $(S), spendSub(), 'spending')}${kpi('Safe withdrawal today', $(inv * WR) + '/yr', '4% of portfolio')}
+      ${kpi('Break-even pay', '$' + be.toFixed(2) + '/hr', 'no contributions')}${MC_LAST ? kpi('Monte Carlo', MC_LAST.rate.toFixed(1) + '%', 'run on the Retirement Plan page', 'mc')
+        : kpi('Monte Carlo', mcOld ? mcOld.successRate + '%' : '—', (mcOld ? 'old phone run ' + new Date(mcOld.runAt).toLocaleDateString('en-US') + ' · ' : '') + 'run it on the Retirement Plan page', 'mc')}</div>
+    ${card('proj', 'Projection to age 65', '<div class="chart tall"><canvas id="c-proj"></canvas></div>',
+      { chips: `<span class="asof" style="margin-right:4px">what-if:</span>
+        <label class="asof">return <input type="number" value="${ret}" step="0.5" min="0" max="15" style="width:52px" onchange="window._fireRet=+this.value;saveSettings({fireRet:+this.value});show('fire')">%</label>
+        <label class="asof">stop saving at <input type="number" value="${stop}" min="${age}" max="65" style="width:52px" onchange="window._fireStop=+this.value;saveSettings({fireStop:+this.value});show('fire')"></label>` })}
+    <div class="note">Starts at ${$(inv)} (age ${age}), adds ${$(sv.totalMo)}/mo until age ${stop}, grows at ${ret}%/yr. ${cross ? 'Crosses Full FIRE at age ' + cross + '.' : "Doesn't reach Full FIRE by 65 with these inputs."} Nominal dollars. Social Security not included.</div>`;
+  mkChart('c-proj', { type: 'line', data: { labels, datasets: [lineDs('Projected portfolio', bal, SERIES[0]),
+      lineDs('Full FIRE target', tgt, cssv('--muted'), { borderDash: [6, 5], borderWidth: 1.5, pointHoverRadius: 0 })] },
+    options: baseOpts({ scales: { ...baseOpts().scales, x: { ...baseOpts().scales.x, title: { display: true, text: 'Age', color: cssv('--muted') } } } }) });
+  document.querySelectorAll('.chips input').forEach(i => { i.style.background = 'var(--panel2)'; i.style.color = 'var(--text)'; i.style.border = '1px solid var(--border)'; i.style.borderRadius = '6px'; i.style.padding = '2px 6px'; });
+},
+
+coast() {
+  const months = monthAxis(D.coastContribs.map(e => e.date.slice(0, 7)).sort()[0]);
+  const insts = [...new Set(D.coastContribs.map(e => e.institution || e.accountName))];
+  const sets = insts.map((n, i) => ({ label: n, color: SERIES[i], data: months.map(m => D.coastContribs.filter(e => (e.institution || e.accountName) === n && e.date.startsWith(m)).reduce((a, e) => a + e.amount, 0)) }));
+  TABLES.cc = () => tableFor(months.map(mkLabel), sets);
+  let run = 0; const cum = months.map(m => (run += D.coastContribs.filter(e => e.date.startsWith(m)).reduce((a, e) => a + e.amount, 0)));
+  TABLES.ccum = () => tableFor(months.map(mkLabel), [{ label: 'Cumulative', data: cum }]);
+  const yr = String(ASOF.getFullYear()), ytd = D.coastContribs.filter(e => e.date.startsWith(yr)).reduce((a, e) => a + e.amount, 0);
+  const years = [...new Set(D.coastContribs.map(e => e.date.slice(0, 4)))].sort();
+  document.getElementById('views').innerHTML = `
+    <div class="kpis">${kpi(yr + ' so far', $(ytd))}${kpi('Last 12 months', $(t12Savings().coast), $(t12Savings().coastMo) + '/mo')}${kpi('All time', $(run))}
+      ${kpi('Taxable balance', $(investTotal(null, a => a.type === 'taxable')))}</div>
+    <div class="grid g2">
+      ${card('cc', 'Monthly contributions by account', '<div class="chart"><canvas id="c-cc"></canvas></div>')}
+      ${card('ccum', 'Cumulative contributions', '<div class="chart"><canvas id="c-ccum"></canvas></div>')}
+    </div>
+    <div class="card"><div class="card-h"><h3>By year</h3></div><table><thead><tr><th>Year</th>${insts.map(i => `<th class="r">${esc(i)}</th>`).join('')}<th class="r">Total</th><th class="r">Avg / mo</th></tr></thead><tbody>
+      ${years.map(y => { const v = insts.map(n => D.coastContribs.filter(e => (e.institution || e.accountName) === n && e.date.startsWith(y)).reduce((a, e) => a + e.amount, 0)); const t = v.reduce((a, b) => a + b, 0);
+        const mo = y === yr ? ASOF.getMonth() + 1 : 12;
+        return `<tr><td>${y}</td>${v.map(x => `<td class="r num">${x ? $(x) : '—'}</td>`).join('')}<td class="r num"><b>${$(t)}</b></td><td class="r num">${$(t / mo)}</td></tr>`; }).join('')}
+    </tbody></table></div>`;
+  mkChart('c-cc', { type: 'bar', data: { labels: months.map(mkLabel), datasets: sets.map(s => barDs(s.label, s.data, s.color)) },
+    options: baseOpts({ scales: { x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } } }) });
+  mkChart('c-ccum', { type: 'line', data: { labels: months.map(mkLabel), datasets: [lineDs('Cumulative', cum, SERIES[0], { fill: true, backgroundColor: SERIES[0] + '33' })] },
+    options: baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false } } }) });
+},
+
+paycheck() { renderPaycheck(); },
+
+retplan() { renderRetPlan(); },
+
+notes() {
+  const notes = Object.entries(D.monthNotes).sort((a, b) => b[0].localeCompare(a[0]));
+  const logs = D.logbook.slice().sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+  document.getElementById('views').innerHTML = `<div class="grid g2">
+    <div class="card"><div class="card-h"><h3>Monthly notes</h3></div>${notes.map(([k, t]) => `<div style="margin-bottom:14px"><div style="color:var(--accent);font-weight:700;font-size:13px">${mkLabel(k)}</div><div style="white-space:pre-wrap">${esc(t)}</div></div>`).join('') || '<div class="note">No monthly notes.</div>'}</div>
+    <div class="card"><div class="card-h"><h3>Logbook</h3></div>${logs.map(l => `<div style="margin-bottom:14px"><div style="color:var(--accent);font-weight:700;font-size:13px">${l.timestamp ? new Date(l.timestamp).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : ''}</div><div style="white-space:pre-wrap">${esc(l.text || '')}</div></div>`).join('') || '<div class="note">No logbook entries.</div>'}</div>
+  </div>`;
+}
+};
+
+function goalsCard(inv, moSave) {
+  const years = Object.keys(D.yearlyGoals).sort();
+  return `<div class="card"><div class="card-h"><h3>Yearly goals</h3></div>` + (years.length ? years.map(y => { const g = D.yearlyGoals[y];
+    return meter(y + ' goal' + (g.completed ? ' ✅ ' + (g.completionDate || '') : ''), inv, g.amount, g.completed ? 'Completed ' + (g.completionDate || '') : pct(inv / g.amount, 1) + ' · projected ' + monthsLabel(monthsToGoal(inv, g.amount, moSave)), true); }).join('')
+    : '<div class="note">No yearly goals set on the phone yet.</div>') + '</div>';
+}
+
+/* ═══ INFO PANELS (same formulas as the phone's ⓘ panels) ══════════════════ */
+function openInfo(k) {
+  const S = annualSpending(), inv = investTotal(), T = investTotal(null, a => a.type === 'taxable'), sv = t12Savings(), M = mortgageExp();
+  const P = {
+    spending: ['Annual spending', `tracked bills (${t12Label()})  ${$(trackedExp())}
++ living (estimate)           ${EXTRAS_ON ? $(D.untrackedLiving) : 'off — ' + $(0)}
++ health insurance (estimate) ${EXTRAS_ON ? $(D.healthInsurance) : 'off — ' + $(0)}
+= annual spending             ${$(S)}`, ['Bills = expense entries in the last 12 complete months before the export date.', 'Living and health insurance are estimates the phone doesn\'t log. Turn them on or off on the Retirement Plan page (Estimated yearly costs).', 'The phone\'s own FIRE numbers use logged bills only.']],
+    mc: ['Monte Carlo', `10,000 runs. Each year, return and inflation are drawn at random\n(normal distribution: return ${mcState().ret}% ± ${mcState().vol}%, inflation ${mcState().infl}% ± ${mcState().inflVol}%).\n\nworking years (now → retirement age):\n  portfolio × (1 + return) + yearly saving\n  spending × (1 + inflation)\nretired years (→ life expectancy):\n  portfolio − spending   (withdraw first)\n  then × (1 + return); spending × (1 + inflation)\n\nsuccess = never hits $0 before life expectancy\nrate    = successes ÷ 10,000`, ['Spending = annual spending ÷ (1 − tax), so withdrawals cover the tax. It includes the estimated yearly costs only when they are on.', 'Retirement age comes from Phase 2A; saving = last 12 months of retirement + coast contributions, not raised with inflation.', 'No Social Security or pensions. Each year is independent (no streaks of bad years).', 'Same simulation the phone used before 3.1.']],
+    fullfire: ['Full FIRE', `Full FIRE = spending ÷ (1 − tax) ÷ 4%
+  = ${$(S)} ÷ (1 − ${TAX_PCT}%) ÷ 4%
+  = ${$(S / taxDiv() / WR)}
+progress  = ${$(inv)} ÷ ${$(S / taxDiv() / WR)} = ${pct(inv / (S / taxDiv() / WR))}
+
+date: balance × (1 + 7%/12) + ${$(sv.totalMo)} each month`, ['Monthly savings = last 12 months of retirement (incl. employer) + coast contributions.', 'Tax is applied to every dollar withdrawn, which is conservative.', "Today's dollars; no inflation."]],
+    coastfire: ['Coast FIRE (no mortgage)', `Coast FIRE = (spending − mortgage) ÷ (1 − tax) ÷ 4%
+  = (${$(S)} − ${$(M)}) ÷ (1 − ${TAX_PCT}%) ÷ 4%
+  = ${$((S - M) / taxDiv() / WR)}
+progress = taxable ${$(T)} ÷ target`, ['Only taxable accounts count, since they can be spent before 59½.', 'Known gap: escrow (property tax + insurance) continues after payoff but is removed with the mortgage.']],
+    savings: ['Savings rate', `(retirement + coast) ÷ (take-home + retirement)
+  = (${$(sv.ret)} + ${$(sv.coast)}) ÷ (${$(takeHomeT12())} + ${$(sv.ret)})
+  = ${savingsRate() == null ? '—' : pct(savingsRate())}`, ['Last 12 complete months: ' + t12Label() + '.', 'Retirement money leaves before payday, so it is added back to the income side.']],
+    networth: ['Net worth', `liquid    = investments ${$(inv)} − debt ${$(debtTotal())} + loans owed ${$(loansOwed())} = ${$(inv - debtTotal() + loansOwed())}
+net worth = liquid + real estate ${$(realEstate())} = ${$(inv - debtTotal() + loansOwed() + realEstate())}`, ['Latest balance per account. Debt is capped at last month, same as the phone.', 'Loans owed to you include interest added through ' + mkLabel(asOfMk()) + ' (same math as the phone).', 'Real estate = the most recent value logged for each property (' + (realEstateItems().map(x => x.p.name).join(', ') || 'none') + '). Not part of liquid net worth, FIRE or the plan.']],
+    paycheck: ['Paycheck planner', `eligible  = gross − LTD gross-up
+pre-tax   = pre-tax% × eligible
+match     = min(pre-tax%, 7%) × eligible
+after-tax = after-tax% × eligible
+FICA wage = gross − pre-tax benefits + imputed life
+SS        = 6.2% × FICA wage (stops at the yearly wage base)
+Medicare  = 1.45% × FICA wage (+0.9% above $200K)
+federal   = IRS table on (FICA wage − pre-tax), ×26 checks
+deposit   = gross − pre-tax − benefits − SS − Medicare
+            − federal − after-tax − other deductions
+savings   = savings% × deposit; the rest is living money`, ['Checked against your 9/13/2026 stub: $5,987.44 at 12% / 15% → $2,575.49 deposit.', 'Bonus checks: no benefits or LTD; federal is a flat 22% of (gross − pre-tax).', 'Once pre-tax + Roth hits the employee limit, pre-tax stops but match keeps coming (true-up).', 'Once the total limit is hit, all contributions stop and the rest of the match is lost.', "Year-to-date comes from the 401(k) contributions logged on the phone for this plan and its bonus plan.", 'Tax tables are 2026 (IRS Pub 15-T). Update them in desktop.html each December.']],
+    rp1: ['Phase 1 — Accumulation goal', `months to goal: balance × (1 + rate/12) + savings, each month
+  start   ${$(investTotal())}
+  savings ${$(t12Savings().ret / 12 + t12Savings().coastMo)}/mo (retirement + coast, last 12 mo)
+  goal    ${$(RP ? RP.goal : 0)}`, ['All accounts, all savings keep going until the goal.', 'Full FIRE button = annual spending ÷ (1 − tax) ÷ 4%, rounded to $10K.']],
+    rp2a: ['Phase 2A — Coast', `portfolio at retirement = FV(Phase 1 value, rate, months, employer match)
+months = (retirement age − age at Phase 1 end) × 12`, ['Only the employer match keeps coming; your own contributions stop.', 'Taxable at retirement = today\'s taxable + coast contributions (last-12-month average) until the Phase 1 goal, then grown with no new money until retirement.']],
+    rp2b: ['Phase 2B — Mortgage payoff', `paydown/mo = principal/mo + freed cash
+freed cash (auto) = (retirement + coast savings) − match
+payoff months = balance ÷ paydown
+surplus pot = FV(0, rate, months after payoff until retirement, full payment)`, ['Simple payoff: interest savings from paying early are not modeled.', 'The surplus pot is your 2-year cash buffer: it is not spent in the Phase 3 bridge and is added to the total at 59½.', 'Buffer years = surplus pot ÷ yearly spending incl. tax.', 'Known gap: the full payment includes escrow, which continues after payoff.']],
+    rp3: ['Phase 3 — Taxable bridge', `spending = annual spending ÷ (1 − tax gross-up)
+each month: taxable × (1 + rate/12) − spending/12
+from early retirement age to 59½
+short by = money needed at retirement (present value) − taxable at retirement`, ['The surplus pot (buffer) is not used for the bridge.', 'Annual spending = bills (last 12 mo) + untracked living + health insurance, unless overridden.', 'Retirement accounts are left alone until 59½.']],
+    rp4: ['Phase 4 — Full retirement', `total at 59½ = retirement accounts grown at the Phase 4 rate
+             + taxable left after the bridge + surplus pot
+spendable/yr = total × withdrawal rate × (1 − tax)`, ['The taxable remainder uses the Phase 4 tax gross-up for spending.', 'Table: each year, portfolio × (1 + growth) − first-year withdrawal.']],
+    limits: ['Contribution limits', `remaining = limit − year-to-date contributions, per plan`, ['Limits are per person; bonus-plan money counts toward the same person.', 'Employee limit = pre-tax + Roth. Total (415c) adds employer match + after-tax.', 'HSA family limit is shared by the household.', 'Limits come from the phone: Retirement → Annual Limits.']]
+  }[k];
+  if (!P) return;
+  document.getElementById('infoBox').innerHTML = `<h3>${esc(P[0])}<button onclick="closeInfo()">×</button></h3><pre>${esc(P[1])}</pre><ul>${P[2].map(n => `<li>${esc(n)}</li>`).join('')}</ul>`;
+  document.getElementById('infoWrap').classList.add('on');
+}
+function closeInfo() { document.getElementById('infoWrap').classList.remove('on'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInfo(); });
+window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
+</script>
+</body>
+</html>

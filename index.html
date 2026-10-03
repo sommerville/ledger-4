@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Sommerville Ledger 4</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/app/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/app/icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sommerville Ledger">
+    <meta name="theme-color" content="#1a3a5c">
+    <script>
+        // Apply theme immediately to prevent white flash on load
+        (function() {
+            var t = localStorage.getItem('pf_theme') || 'alaskan';
+            var cls = t === 'sunset' ? 'sunset-theme' : 'alaskan-theme';
+            document.documentElement.classList.add(cls);
+        })();
+    </script>
+    <!-- 3.6: libraries are bundled in vendor/ and cached by sw.js (were CDN links, never cached; Chart.js was unpinned) -->
+    <script src="vendor/chart-4.4.1.umd.js"></script>
+    <script src="vendor/hammer-2.0.8.min.js"></script>
+    <script src="vendor/chartjs-plugin-zoom-2.0.1.min.js"></script>
+    <link rel="stylesheet" href="css/app.css">
+    <script src="vendor/crypto-js-4.1.1.js"></script>
+</head>
+<body>
+
+<!-- ═══ SPLASH SCREEN ═══════════════════════════════════════ -->
+<div id="splashScreen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:20000; background:#0f1829; align-items:center; justify-content:center; flex-direction:column; cursor:pointer;" onclick="splashTap()">
+
+    <!-- Logo -->
+    <div id="splashLogo" style="opacity:0; transform:scale(0.6); transition:opacity 1.4s ease, transform 1.4s cubic-bezier(0.34,1.56,0.64,1);">
+        <img src="images/banner-large.webp" style="width:210px; height:210px; object-fit:contain; filter:drop-shadow(0 8px 32px rgba(212,175,55,0.5)) drop-shadow(0 2px 12px rgba(0,0,0,0.7));" alt="Sommerville Ledger">
+    </div>
+
+    <!-- Tap to continue — blinks -->
+    <div id="splashTapMsg" style="opacity:0; transition:opacity 0.6s ease; color:#A09070; font-size:13px; letter-spacing:2.5px; font-family:-apple-system,BlinkMacSystemFont,sans-serif; margin-top:28px; animation:none;">
+        tap to continue
+    </div>
+</div>
+
+<!-- Claude Splash Screen -->
+<div id="claudeSplashScreen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:19999; background:#08090e; align-items:center; justify-content:center; flex-direction:column; cursor:pointer;" onclick="claudeSplashTap()">
+
+    <!-- Animated symbol -->
+    <div id="claudeSymbol" style="opacity:0; font-size:72px;line-height:1; margin-bottom:18px" class="col-gold">✦</div>
+
+    <!-- CLAUDE typewriter label -->
+    <div id="claudeLabel" style="opacity:0; font-size:11px; font-weight:700; letter-spacing:6px;font-family:-apple-system,BlinkMacSystemFont,sans-serif; margin-bottom:24px; text-transform:uppercase" class="col-gold">CLAUDE</div>
+
+    <!-- Loading bar -->
+    <div style="width:120px; height:1px; background:rgba(212,175,55,0.15); border-radius:2px; overflow:hidden;">
+        <div id="claudeBar" style="height:100%; width:0; background:linear-gradient(90deg,transparent,#D4AF37,transparent); border-radius:2px;"></div>
+    </div>
+
+    <!-- Powered by line -->
+    <div id="claudePowered" style="opacity:0; font-size:10px; color:rgba(212,175,55,0.4); letter-spacing:2px; font-family:-apple-system,BlinkMacSystemFont,sans-serif; margin-top:20px;">powered by Anthropic</div>
+
+</div>
+
+<!-- Lock Screen / Login -->
+<div id="lockScreen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, #16213e 0%, #0f1419 100%); z-index:10000; align-items:center; justify-content:center;">
+    <div style="background:rgba(255,255,255,0.05); backdrop-filter:blur(10px); border:2px solid #D4AF37; border-radius:20px; padding:40px; max-width:400px; width:90%; text-align:center;">
+        <div style="font-size:48px; margin-bottom:20px;">🔒</div>
+        <h2 style="margin-bottom:10px; font-size:24px" class="col-gold">Sommerville Ledger</h2>
+        <p id="lockMessage" style="margin-bottom:30px; font-size:14px" class="col-silver2">Enter your 4-digit PIN</p>
+
+        <!-- PIN Input -->
+        <div id="pinInputSection">
+            <!-- Hidden input still used by attemptLogin() -->
+            <input type="password" id="pinInput" maxlength="4" pattern="[0-9]*" inputmode="numeric"
+                   style="position:absolute; opacity:0; pointer-events:none; width:1px; height:1px;"
+                   autocomplete="off">
+
+            <!-- Dot indicators -->
+            <div id="pinDots" style="display:flex; justify-content:center; gap:18px; margin-bottom:20px;">
+                <div class="pin-dot" id="pd0"></div>
+                <div class="pin-dot" id="pd1"></div>
+                <div class="pin-dot" id="pd2"></div>
+                <div class="pin-dot" id="pd3"></div>
+            </div>
+
+            <div id="pinError" style="color:#ff4757; font-size:14px; margin-bottom:10px; min-height:18px;"></div>
+
+            <!-- Numpad -->
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:270px; margin:0 auto 14px;">
+                <button onclick="pinPad(1)" class="npbtn">1</button>
+                <button onclick="pinPad(2)" class="npbtn">2<span class="npbtn-sub">ABC</span></button>
+                <button onclick="pinPad(3)" class="npbtn">3<span class="npbtn-sub">DEF</span></button>
+                <button onclick="pinPad(4)" class="npbtn">4<span class="npbtn-sub">GHI</span></button>
+                <button onclick="pinPad(5)" class="npbtn">5<span class="npbtn-sub">JKL</span></button>
+                <button onclick="pinPad(6)" class="npbtn">6<span class="npbtn-sub">MNO</span></button>
+                <button onclick="pinPad(7)" class="npbtn">7<span class="npbtn-sub">PQRS</span></button>
+                <button onclick="pinPad(8)" class="npbtn">8<span class="npbtn-sub">TUV</span></button>
+                <button onclick="pinPad(9)" class="npbtn">9<span class="npbtn-sub">WXYZ</span></button>
+                <div></div>
+                <button onclick="pinPad(0)" class="npbtn">0</button>
+                <button onclick="pinPadBack()" class="npbtn npbtn-back">⌫</button>
+            </div>
+
+            <div id="hintDisplay" style="display:none; background:rgba(212,175,55,0.1); border:1px solid #D4AF37; border-radius:8px; padding:12px; margin-top:8px; opacity:0; transition:opacity 0.3s;">
+                <div style="font-size:12px; margin-bottom:4px" class="col-gold">💡 Hint:</div>
+                <div id="hintText" style="font-size:14px" class="col-silver2"></div>
+            </div>
+            <button id="hintButton" onclick="toggleHint()" style="display:none; width:100%; padding:10px; background:transparent;border:1px solid #D4AF37; border-radius:8px; font-size:14px; cursor:pointer; margin-top:10px; transition:none" class="col-gold">Show Hint</button>
+
+        </div>
+
+        <!-- Setup New PIN -->
+        <div id="pinSetupSection" class="u-hidden">
+            <p style="margin-bottom:20px; font-size:14px" class="col-silver2">Create a 4-digit PIN to secure your portfolio</p>
+            <input type="password" id="newPin" maxlength="4" pattern="[0-9]*" inputmode="numeric"
+                   style="width:100%; padding:16px; font-size:32px; text-align:center; letter-spacing:12px; border:2px solid #D4AF37; border-radius:12px; background:rgba(0,0,0,0.3);margin-bottom:15px" class="col-gold"
+                   placeholder="••••" autocomplete="off">
+            <input type="password" id="confirmPin" maxlength="4" pattern="[0-9]*" inputmode="numeric"
+                   style="width:100%; padding:16px; font-size:32px; text-align:center; letter-spacing:12px; border:2px solid #D4AF37; border-radius:12px; background:rgba(0,0,0,0.3);margin-bottom:15px" class="col-gold"
+                   placeholder="••••" autocomplete="off">
+            <input type="text" id="pinHint" maxlength="100"
+                   style="width:100%; padding:12px; font-size:14px; border:2px solid #D4AF37; border-radius:12px; background:rgba(0,0,0,0.3);margin-bottom:20px" class="col-silver2"
+                   placeholder="Hint (e.g., 'Last 4 of phone number')" autocomplete="off">
+            <div id="setupError" style="color:#ff4757; font-size:14px; margin-bottom:15px; min-height:20px;"></div>
+            <button onclick="setupPin()" style="width:100%; padding:14px; background:#D4AF37; color:#0f1419; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer;">Set PIN</button>
+        </div>
+    </div>
+</div>
+
+<!-- Logbook Page (swipe from any page) -->
+<div id="notepadPage" class="container" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:2000; transform:translateY(100%); transition:transform 0.3s ease-out;">
+    <div class="header">
+        <h1>📖 Logbook</h1>
+    </div>
+
+    <div class="content" style="height:calc(100vh - 160px); display:flex; flex-direction:column;">
+
+        <!-- Nav arrows + entry counter -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <button onclick="logbookPrev()" id="logbookPrevBtn" style="font-size:22px; width:44px; height:44px; border-radius:10px; cursor:pointer" class="bdr-alaskan col-silver bg-alaskan">&#8249;</button>
+            <span id="logbookCounter" style="font-size:13px" class="col-grey">New Entry</span>
+            <button onclick="logbookNext()" id="logbookNextBtn" style="font-size:22px; width:44px; height:44px; border-radius:10px; cursor:pointer" class="bdr-alaskan col-silver bg-alaskan">&#8250;</button>
+        </div>
+
+        <!-- Timestamp display -->
+        <div id="logbookTimestampBar" style="font-size:12px;margin-bottom:8px; min-height:18px" class="col-gold"></div>
+
+        <!-- Textarea + copy button -->
+        <div style="position:relative; flex:1; display:flex;">
+            <textarea id="notepadText" placeholder="Write your log entry here..." style="flex:1; width:100%; padding:16px; padding-bottom:44px;border-radius:8px; font-size:15px; font-family:inherit; resize:none; box-sizing:border-box; line-height:1.6; overflow-y:auto; -webkit-overflow-scrolling:touch" class="bdr-alaskan col-silver bg-deep-alaskan"></textarea>
+            <button onclick="logbookCopy()" id="logbookCopyBtn" title="Copy to clipboard"
+                style="position:absolute; bottom:10px; right:10px; background:rgba(212,175,55,0.15); border:1px solid #D4AF37;border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:background 0.2s" class="col-gold">
+                📋 Copy
+            </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-top:12px;">
+            <button class="action-btn" onclick="logbookNew()" style="margin:0; font-size:13px;">+ New</button>
+            <button class="action-btn" onclick="saveNotepad()" style="margin:0; font-size:13px;">Save</button>
+            <button class="action-btn" onclick="logbookDelete()" id="logbookDeleteBtn" style="margin:0; font-size:13px; background:linear-gradient(135deg,#9A3010,#7A2008); border-color:#7A2008;">Delete</button>
+            <button class="action-btn dark" onclick="closeNotepad()" style="margin:0; font-size:13px;">Close</button>
+        </div>
+
+        <div id="notepadSaveMsg" style="display:none; margin-top:10px; padding:10px; background:#4CAF50; color:white; border-radius:6px; text-align:center; font-size:14px; font-weight:600;">
+            ✓ Log entry saved!
+        </div>
+    </div>
+</div>
+
+<!-- Overview / Statement Page (swipe down from any page) -->
+<div id="overviewPage" class="container" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:2000; transform:translateY(-100%); transition:transform 0.35s cubic-bezier(0.4,0,0.2,1); overflow-y:auto;">
+
+    <div class="overview-header">
+        <div class="total-value" id="ovSummaryLabel" style="font-size:28px; letter-spacing:6px; margin-top:0; margin-bottom:4px;">SUMMARY</div>
+        <div class="firm-name" id="ovDate"></div>
+    </div>
+
+    <div style="padding:16px;">
+
+        <!-- Portfolio Snapshot Card (above FIRE) -->
+        <div class="overview-card" style="margin-bottom:0;">
+            <div class="card-title">Portfolio Snapshot <button class="info-btn" onclick="event.stopPropagation();openInfo('netWorth')" aria-label="How this is calculated">i</button></div>
+            <div class="overview-row">
+                <span class="row-label">Investments</span>
+                <span class="row-value" id="ovPortfolioBalance">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">Net Worth</span>
+                <span class="row-value" id="ovNetWorth">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label u-pl12-fs12">↳ Liquid</span>
+                <span class="row-value u-fs13" id="ovLiquidNW">—</span>
+            </div>
+            <div class="overview-row u-hidden" id="ovHomeEquityRow">
+                <span class="row-label">Real Estate</span>
+                <span class="row-value u-fs13" id="ovHomeEquity">—</span>
+            </div>
+            <div id="ovDebtRows"><!-- individual debt lines --></div>
+        </div>
+
+        <div class="overview-divider"></div>
+        <div class="overview-card">
+            <div class="card-title">FIRE Metrics <button class="info-btn" onclick="event.stopPropagation();openInfo('fireMetrics')" aria-label="How this is calculated">i</button></div>
+            <div class="overview-row">
+                <span class="row-label">Annual Expenses</span>
+                <span class="row-value" id="ovAnnualExp">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">Safe Withdrawal (4%)</span>
+                <span class="row-value" id="ovSafeWithdrawal">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">Full FIRE (all bills)</span>
+                <span class="row-value" id="ovFullFire">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">Coast FIRE (w/o mortgage)</span>
+                <span class="row-value" id="ovCoastFire">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">Break-Even Rate</span>
+                <span class="row-value" id="ovBreakEven">—</span>
+            </div>
+        </div>
+
+        <div class="overview-divider"></div>
+
+        <!-- Income Snapshot -->
+        <div class="overview-card">
+            <div class="card-title">Income Snapshot</div>
+            <div class="overview-row">
+                <span class="row-label">Annual Total</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label u-pl12-fs12">↳ Gross</span>
+                <span class="row-value" style="font-size:13px; opacity:0.7;" id="ovIncomeGross">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label u-pl12-fs12">↳ Net</span>
+                <span class="row-value u-fs13" id="ovIncomeAnnual">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">Monthly Average</span>
+                <span class="row-value" id="ovIncomeMonthly">—</span>
+            </div>
+            <div id="ovIncomeTypeRows"><!-- income by type rows --></div>
+            <div id="ovIncomePayerRows"><!-- top payer rows --></div>
+        </div>
+
+        <div class="overview-divider"></div>
+
+        <!-- Retirement Snapshot -->
+        <div class="overview-card">
+            <div class="card-title">Retirement <button class="info-btn" onclick="event.stopPropagation();openInfo('retLimits')" aria-label="How this is calculated">i</button></div>
+            <div class="overview-row">
+                <span class="row-label">YTD Total</span>
+                <span class="row-value" id="ovRetYTD">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label u-pl12-fs12">↳ Employee 401k</span>
+                <span class="row-value u-fs13" id="ovRetEmployee401k">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label u-pl12-fs12">↳ Employer Match</span>
+                <span class="row-value u-fs13" id="ovRetMatch">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label u-pl12-fs12">↳ HSA</span>
+                <span class="row-value u-fs13" id="ovRetHSA">—</span>
+            </div>
+            <div id="ovRet401kLimitRow" class="overview-row u-hidden">
+                <span class="row-label">401k Limit Remaining</span>
+                <span class="row-value" id="ovRet401kRemain">—</span>
+            </div>
+            <div id="ovRetHSALimitRow" class="overview-row u-hidden">
+                <span class="row-label">HSA Limit Remaining</span>
+                <span class="row-value" id="ovRetHSARemain">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">Avg / Month</span>
+                <span class="row-value" id="ovRetAvgMonth">—</span>
+            </div>
+        </div>
+
+        <div class="overview-divider"></div>
+
+        <!-- Coast Contributions Snapshot -->
+        <div class="overview-card">
+            <div class="card-title">🌴 Coast Contributions</div>
+            <div class="overview-row">
+                <span class="row-label">YTD Total</span>
+                <span class="row-value" id="ovCoastYTD">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">Monthly Average</span>
+                <span class="row-value" id="ovCoastMonthly">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">All-Time Total</span>
+                <span class="row-value" id="ovCoastAllTime">—</span>
+            </div>
+            <div class="overview-divider" style="margin:10px 0;"></div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px" class="col-muted">Combined Savings Rate <button class="info-btn" onclick="event.stopPropagation();openInfo('savingsRate')" aria-label="How this is calculated">i</button></div>
+            <div class="overview-row">
+                <span class="row-label" style="font-size:12px;">↳ Retirement avg/mo</span>
+                <span class="row-value u-fs13" id="ovSRRetirement">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label" style="font-size:12px;">↳ Coast contrib avg/mo</span>
+                <span class="row-value u-fs13" id="ovSRCoast">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label" style="font-weight:700;">Total Savings/mo</span>
+                <span class="row-value" style="font-weight:700;" id="ovSRTotal">—</span>
+            </div>
+            <div class="overview-row">
+                <span class="row-label">Savings Rate</span>
+                <span class="row-value" style="font-weight:700;" id="ovSRPct">—</span>
+            </div>
+        </div>
+
+        <div class="overview-divider"></div>
+
+        <!-- Account Breakdown (second) -->
+        <div class="overview-card">
+            <div class="card-title">Account Breakdown</div>
+            <div id="ovAccountRows">—</div>
+        </div>
+
+        <div class="overview-divider"></div>
+
+        <!-- Allocation by Type (third) -->
+        <div class="overview-card">
+            <div class="card-title">Allocation by Type</div>
+            <div id="ovAllocRows">—</div>
+        </div>
+
+        <div class="overview-close-hint">↑ Swipe up to close</div>
+
+    </div>
+</div>
+
+<!-- Home Page -->
+<div id="homePage" class="container u-hidden">
+
+
+<div id="homeScreen">
+
+    <!-- 3.6: backup reminder (shown when no backup has left this phone for 30 days) — backup.js _renderBackupBanner() -->
+    <button id="backupBanner" type="button" onclick="openBackupFromBanner()" style="display:none; position:fixed; top:calc(env(safe-area-inset-top) + 8px); left:12px; right:12px; z-index:60; padding:10px 14px; border-radius:12px; border:1px solid #D4AF37; background:rgba(15,24,41,0.94); color:#E8D9A8; font:600 13px/1.35 -apple-system,BlinkMacSystemFont,sans-serif; text-align:left; box-shadow:0 4px 14px rgba(0,0,0,0.45); cursor:pointer;"></button>
+
+    <!-- Slider holds page 1 and page 2 -->
+    <div id="homeSlider">
+      <div id="homeSliderTrack">
+
+        <!-- PAGE 1 -->
+        <div class="home-slide" id="homeSlide1">
+            <div id="homeWidget">
+                <div id="homeTitle"><img src="images/banner.webp" style="width:100%;height:auto;display:block;" alt="Sommerville Ledger"></div>
+            </div>
+            <div class="home-grid" id="homeGrid1"></div>
+        </div>
+
+        <!-- PAGE 2 -->
+        <div class="home-slide" id="homeSlide2">
+            <div class="home-grid" id="homeGrid2"></div>
+        </div>
+
+      </div><!-- /homeSliderTrack -->
+    </div><!-- /homeSlider -->
+
+    <!-- Page dots -->
+    <div id="homeDots">
+        <div class="home-dot active" id="homeDot0"></div>
+        <div class="home-dot"        id="homeDot1"></div>
+    </div>
+
+    <!-- Dock: Data / Log / Settings -->
+    <div id="homeDock">
+        <button class="home-app" onclick="openDataDump()">
+            <div class="home-icon icon-data"><img src="icons/home/data.png" alt="Data" width="88" height="88" style="width:88px;height:88px;object-fit:contain;"></div>
+        </button>
+        <button class="home-app" onclick="openNotepad()">
+            <div class="home-icon icon-log"><img src="icons/home/log.png" alt="Log" width="88" height="88" style="width:88px;height:88px;object-fit:contain;"></div>
+        </button>
+        <button class="home-app" onclick="openModal('settingsModal')">
+            <div class="home-icon icon-settings"><img src="icons/home/settings.png" alt="Settings" width="88" height="88" style="width:88px;height:88px;object-fit:contain;"></div>
+        </button>
+    </div><!-- /homeDock -->
+
+</div><!-- /homeScreen -->
+</div>
+
+<!-- Income Page (hidden by default) -->
+<div id="incomePage" class="container u-hidden">
+    <div class="header">
+        <h1>Income</h1>
+        <div class="total-balance" id="incomeYearTotal">$0</div>
+        <p class="balance-label" id="incomeBalanceLabel">Past Year Total</p>
+        <div style="font-size:18px; color:white; margin-top:8px; opacity:0.9;" id="incomeMonthlyAvg">Monthly Avg: $0</div>
+    </div>
+    <div class="content">
+        <!-- Filter buttons — mirrors investments page style -->
+        <div class="chart-controls" id="incomeViewButtons">
+            <!-- v3.2: buttons built by renderIncomeViewButtons() — Total, one per company, Payroll, Bonus, Other -->
+        </div>
+        <!-- 12-Month Income Bar Chart -->
+        <div class="chart-container expenses-chart-wrap">
+            <canvas id="incomeChart"></canvas>
+        </div>
+        <div id="incomeAvgLegend" style="text-align:center; margin-top:4px; font-size:12px; padding-bottom:4px;"></div>
+        <div style="height:16px;"></div>
+        <button class="action-btn" onclick="showIncomeStatsPage()">Milestones</button>
+        <div class="u-mt16">
+            <div id="incomeSnapshotList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Income Milestones Page (hidden by default) -->
+<div id="incomeStatsPage" class="container u-hidden">
+    <div class="header">
+        <h1>Milestones</h1>
+    </div>
+    <div class="content" id="incomeStatsContent">
+        <!-- filled by renderIncomeStats() -->
+    </div>
+</div>
+
+<!-- Accounts Page (hidden by default) -->
+<div id="accountsPage" class="container u-hidden">
+    <div class="header">
+        <h1>Investments</h1>
+        <div class="total-balance" id="headerBalance">$0</div>
+        <p class="balance-label" id="headerLabel">Total Invested</p>
+    </div>
+
+    <div class="content">
+        <div class="chart-controls">
+            <button data-view="total" class="active" onclick="setView(this)">Total</button>
+            <button data-view="401k" onclick="setView(this)">401k</button>
+            <button data-view="taxable" onclick="setView(this)">Taxable</button>
+            <button data-view="ira" onclick="setView(this)">IRA</button>
+            <button data-view="hsa" onclick="setView(this)">HSA</button>
+            <button data-view="metals" onclick="setView(this)">Metals</button>
+        </div>
+
+        <div class="chart-container" onclick="toggleChartFullscreen()" style="cursor: pointer;" title="Click to expand chart">
+            <canvas id="myChart"></canvas>
+        </div>
+
+        <button class="action-btn" onclick="openModal('goalsModal')">🎯 Goals</button>
+        <div class="u-mt16">
+            <div id="investSnapshotList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Expenses Page -->
+<div id="expensesPage" class="container u-hidden">
+    <div class="header">
+        <h1>Expenses</h1>
+        <div class="total-balance" id="expensesYearTotal">$0</div>
+        <p class="balance-label">Past Year Total</p>
+        <div style="font-size:18px; color:white; margin-top:20px; opacity:0.9;" id="expensesMonthlyAvg">Monthly Avg: $0</div>
+    </div>
+    <div class="content">
+        <div class="chart-container expenses-chart-wrap">
+            <canvas id="expensesChart"></canvas>
+        </div>
+        <div id="expensesAvgLegend" style="text-align:center; margin-top:4px; font-size:12px; padding-bottom:4px;"></div>
+        <div style="height:16px;"></div>
+        <div id="expenseSnapshotList"></div>
+    </div>
+</div>
+
+<!-- Net Worth Page -->
+<div id="networthPage" class="container u-hidden">
+    <div class="header">
+        <h1>Net Worth <button class="info-btn" onclick="event.stopPropagation();openInfo('netWorth')" aria-label="How this is calculated">i</button></h1>
+        <div class="total-balance" id="debtTotalBalance">$0</div>
+        <p class="balance-label">Total Net Worth (incl. home)</p>
+        <div style="font-size:15px; color:rgba(255,255,255,0.75); margin-top:6px;">
+            Liquid: <span id="debtLiquidNW" class="u-fw6">$0</span>
+        </div>
+    </div>
+    <div class="content">
+        <div class="chart-container u-cursor" onclick="toggleNetWorthChartFullscreen()" title="Click to expand chart">
+            <canvas id="debtChart"></canvas>
+        </div>
+        <button class="action-btn" onclick="openModal('networthGoalsModal')">🏦 Net Worth Goals</button>
+        <div class="u-mt16">
+            <div id="nwSnapshotList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Debt Page -->
+<div id="debtPage" class="container u-hidden">
+    <div class="header">
+        <h1>Debt</h1>
+        <div class="total-balance" id="debtPageTotal">$0</div>
+        <p class="balance-label">Total Outstanding Debt</p>
+    </div>
+    <div class="content">
+        <div class="chart-controls" id="debtChartControls">
+            <button data-debtview="total" class="active" onclick="setDebtView(this)">Total</button>
+        </div>
+        <div class="chart-container u-cursor" title="Debt over time">
+            <canvas id="debtTrendChart"></canvas>
+        </div>
+        <div style="height:8px;"></div>
+        <div id="debtAccountsList"></div>
+        <div class="u-mt16">
+            <div id="debtSnapshotList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Real Estate Page (3.5.3: was the homeValueModal pop-up). Values are logged on the Data page. -->
+<div id="realEstatePage" class="container u-hidden">
+    <div class="header">
+        <h1>Real Estate</h1>
+        <div class="total-balance" id="rePageTotal">$0</div>
+        <p class="balance-label" id="rePageLabel">Total Property Value</p>
+    </div>
+    <div class="content">
+        <div class="chart-controls" id="reChartControls"></div>
+        <div class="chart-container" title="Assessed value over time">
+            <canvas id="reChart"></canvas>
+        </div>
+        <div style="height:8px;"></div>
+        <div id="rePropList"></div>
+    </div>
+</div>
+
+<!-- Retirement Contributions Page -->
+<div id="retirementPage" class="container u-hidden">
+    <div class="header">
+        <h1>Retirement <button class="info-btn" onclick="event.stopPropagation();openInfo('retLimits')" aria-label="How this is calculated">i</button></h1>
+        <div class="total-balance" id="retYTDTotal">$0</div>
+        <p class="balance-label" id="retYearLabel">Total Contributions</p>
+    </div>
+    <div class="content">
+        <div id="retVertBars" class="u-mb20"></div>
+        <button class="action-btn dark" onclick="openModal('retirementLimitsModal')">Annual Limits</button>
+        <div class="u-mt16">
+            <div id="retSnapshotList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Retirement Annual Limits Modal -->
+<div id="retirementLimitsModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Annual Contribution Limits</h2>
+            <button class="close-btn" onclick="closeModal('retirementLimitsModal')">×</button>
+        </div>
+        <div id="retLimitsMsg" class="msg u-hidden"></div>
+        <p style="font-size:13px;margin-bottom:16px" class="col-muted" id="retLimitsSubtitle">IRS limits for the current year. Limits are tracked per person across all sources.</p>
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px" class="col-blue" id="retLimitsAccentHead">401(k) / 403(b)</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Employee Limit (Pre-Tax + Roth)</label>
+                <input type="number" id="retLimit401k" placeholder="e.g. 23500" step="500">
+            </div>
+            <div class="form-group">
+                <label>Total Limit (incl. Match + After-Tax)</label>
+                <input type="number" id="retLimitTotal401k" placeholder="e.g. 70000" step="500">
+            </div>
+        </div>
+
+        <!-- Per-person limits (dynamic) -->
+        <div id="retPerPersonLimits"></div>
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px" class="col-blue" id="retLimitsHSAHead">HSA</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>HSA Annual Limit</label>
+                <input type="number" id="retLimitHSA" placeholder="e.g. 8300" step="100">
+            </div>
+            <div class="form-group">
+                <label>Coverage</label>
+                <select id="retHSACoverage">
+                    <option value="self">Self-Only</option>
+                    <option value="family">Family</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="submit-btn" onclick="saveRetirementLimits()">Save Limits</button>
+    </div>
+</div>
+
+<!-- ════ Coast Contributions Page ════ -->
+<!-- ════ FIRE & Coast Unified Page ════ -->
+<div id="firePage" class="container u-hidden">
+    <div class="header">
+        <h1>Coast FIRE <button class="info-btn" onclick="event.stopPropagation();openInfo('coastPage')" aria-label="How this is calculated">i</button></h1>
+        <div class="total-balance" id="firePageHeaderVal">—</div>
+        <p class="balance-label" id="firePageHeaderLabel">Total Taxable</p>
+        <p style="font-size:14px;margin-top:2px;opacity:0.75;" id="firePageYTDLabel">— YTD Contributions</p>
+    </div>
+    <div class="content">
+        <!-- Hidden fireTabBar kept for setFireTabByName() compatibility -->
+        <div id="fireTabBar" class="u-hidden">
+            <button data-ftab="coast" class="active"></button>
+            <button data-ftab="plan"></button>
+            <button data-ftab="goals"></button>
+        </div>
+
+        <!-- ── Coast main content ── -->
+        <div id="fireTab-coast">
+            <!-- Hidden elements kept for updateCoastPage() writes -->
+            <div id="coastYTDTotal" class="u-hidden"></div>
+            <p id="coastYearLabel" class="u-hidden"></p>
+            <!-- Annual Contributions table -->
+            <div class="bg-card-blue-r12-14">
+                <div style="font-size:13px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px" class="col-navy">Annual Contributions</div>
+                <div id="goalsAnnualTable">—</div>
+            </div>
+            <!-- Goals button -->
+            <button class="action-btn u-mb16" style="width:100%;" onclick="openCoastGoals()">🎯 Goals</button>
+            <!-- Monthly snapshots -->
+            <div id="coastSnapshotList"></div>
+        </div>
+
+        <!-- ── Tab: Goals ── -->
+        <div id="fireTab-goals" class="u-hidden">
+            <!-- Hidden element kept for updateGoalsPage() writes -->
+            <div id="goalsAllTimeCoast" class="u-hidden"></div>
+            <!-- Coast FIRE card -->
+            <div class="bg-card-blue-r12">
+                <h3 class="fire-title col-navy" style="font-size:16px;margin-bottom:8px">🏠 Coast FIRE (No Mortgage) <button class="info-btn" onclick="event.stopPropagation();openInfo('coastFire')" aria-label="How this is calculated">i</button></h3>
+                <p style="font-size:13px;margin-bottom:12px" class="col-muted">Taxable accounts needed for expenses minus mortgage</p>
+                <div style="font-size:28px;font-weight:700" class="col-gold" id="statsCoastFIRE">$0</div>
+                <div style="margin-top:12px;padding-top:12px" class="bdt-light">
+                    <div class="u-flex-between-4">
+                        <span class="u-fs13-666">Current Taxable:</span>
+                        <span style="font-size:14px;font-weight:600;" id="statsCurrentTaxable">$0</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;">
+                        <span class="u-fs13-666">Progress:</span>
+                        <span style="font-size:14px;font-weight:600" class="col-blue" id="statsCoastProgress">0%</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px" class="bdt-light">
+                        <span class="u-fs13-666">Projected Coast Date:</span>
+                        <span style="font-size:14px;font-weight:600" class="col-green" id="statsCoastDate">Calculating...</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Full FIRE card -->
+            <div class="bg-card-blue-r12">
+                <h3 class="fire-title col-navy" style="font-size:16px;margin-bottom:8px">🔥 Full FIRE Number <button class="info-btn" onclick="event.stopPropagation();openInfo('fullFire')" aria-label="How this is calculated">i</button></h3>
+                <p style="font-size:13px;margin-bottom:12px" class="col-muted">Total portfolio needed to cover your logged bills + taxes</p>
+                <div style="font-size:28px;font-weight:700" class="col-gold" id="statsFullFIRE">$0</div>
+                <div style="margin-top:12px;padding-top:12px" class="bdt-light">
+                    <div class="u-flex-between-4">
+                        <span class="u-fs13-666">Current Portfolio:</span>
+                        <span style="font-size:14px;font-weight:600;" id="statsCurrentPortfolio">$0</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;">
+                        <span class="u-fs13-666">Progress:</span>
+                        <span style="font-size:14px;font-weight:600" class="col-blue" id="statsFullProgress">0%</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px" class="bdt-light">
+                        <span class="u-fs13-666">Projected FIRE Date:</span>
+                        <span style="font-size:14px;font-weight:600" class="col-green" id="statsFullDate">Calculating...</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Coast to 65 -->
+            <div class="bg-card-blue-r12" id="coastTo65Card">
+                <h3 class="fire-title col-navy" style="font-size:16px;margin-bottom:4px">🚀 Coast to 65</h3>
+                <p style="font-size:13px;margin-bottom:12px" class="col-muted">Current portfolio, zero new contributions</p>
+                <div id="coastTo65Body">—</div>
+            </div>
+            <!-- 3.8: Coast goal tracks (contributions, taxable balance + Coast FIRE) — goals.js -->
+            <div id="goalsCoastMilestones"></div>
+            <!-- Savings rate summary -->
+            <div class="bg-card-blue-r12-14">
+                <div style="font-size:13px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px" class="col-navy">Combined Savings Rate <button class="info-btn" onclick="event.stopPropagation();openInfo('savingsRate')" aria-label="How this is calculated">i</button></div>
+                <div id="goalsSavingsRate">—</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calculator Page (hidden by default) -->
+<div id="calculatorPage" class="container u-hidden">
+    <div class="header">
+        <h1>Compounding Calculator</h1>
+    </div>
+
+    <div class="content">
+        <!-- Initial Investment -->
+        <div class="u-card-blue">
+            <label class="u-fs14-block-666-mb8">Initial Investment</label>
+            <input type="number" id="calcInitial" value="10000" step="100" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:16px;" oninput="runCompoundCalc()">
+        </div>
+
+        <!-- Monthly Contribution -->
+        <div class="u-card-blue">
+            <label class="u-fs14-block-666-mb8">Monthly Contribution</label>
+            <input type="number" id="calcMonthly" value="500" step="50" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:16px;" oninput="runCompoundCalc()">
+        </div>
+
+        <!-- Annual Return Rate -->
+        <div class="u-card-blue">
+            <label class="u-fs14-block-666-mb8">Annual Return Rate</label>
+            <input type="range" id="calcRate" min="1" max="20" step="0.5" value="7" style="width:100%;" oninput="runCompoundCalc()">
+            <div style="text-align:center; font-size:20px; font-weight:700;margin-top:8px" class="col-blue" id="calcRateDisplay">7.0%</div>
+        </div>
+
+        <!-- Years -->
+        <div class="u-card-blue">
+            <label class="u-fs14-block-666-mb8">Years</label>
+            <input type="range" id="calcYears" min="1" max="50" step="1" value="30" style="width:100%;" oninput="runCompoundCalc()">
+            <div style="text-align:center; font-size:20px; font-weight:700;margin-top:8px" class="col-blue" id="calcYearsDisplay">30 Years</div>
+        </div>
+
+        <!-- Results -->
+        <div style="border-radius:12px; padding:20px; margin-bottom:16px; text-align:center" class="bg-success">
+            <div style="font-size:14px; color:#fff; opacity:0.9; margin-bottom:8px;">FUTURE VALUE</div>
+            <div style="font-size:36px; font-weight:700; color:#fff;" id="calcFutureValue">$0</div>
+        </div>
+
+        <div style="border-radius:12px; padding:16px; margin-bottom:16px" class="bg-white-card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                <span style="font-size:14px" class="col-muted">Total Contributions:</span>
+                <span style="font-size:16px; font-weight:600;" id="calcTotalContrib">$0</span>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+                <span style="font-size:14px" class="col-muted">Total Interest Earned:</span>
+                <span style="font-size:16px; font-weight:600" class="col-green" id="calcTotalInterest">$0</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Budget Calculator Page (hidden by default) -->
+<div id="budgetPage" class="container u-hidden">
+    <div class="header">
+        <h1>Budget Calculator</h1>
+        <p class="balance-label" style="font-size:18px; margin-top:10px;">Plan Your Monthly Spending</p>
+    </div>
+
+    <div class="content">
+        <!-- Monthly Income -->
+        <div class="u-card-blue">
+            <label class="u-fs14-block-666-mb8">Monthly Take-Home Income (After Tax)</label>
+            <input type="number" id="budgetIncome" value="5000" step="100" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:16px;" oninput="runBudgetCalc()">
+        </div>
+
+        <!-- Budget Breakdown -->
+        <div id="budgetBreakdown"></div>
+
+        <!-- Custom Budget Toggle Button -->
+        <button class="action-btn u-mb16" onclick="toggleCustomBudget()">✏️ Custom Budget</button>
+
+        <!-- Custom Budget Section (Hidden by default) -->
+        <div id="customBudgetSection" style="display:none" class="bg-card-blue-r12">
+            <p style="font-size:13px;margin-bottom:12px" class="col-muted">Enter your actual expenses to see how you compare to the 50/30/20 rule.</p>
+
+            <div class="u-mb12">
+                <label style="display:block; font-size:13px;margin-bottom:4px" class="col-muted">Needs (Housing, Food, Utilities, etc.)</label>
+                <input type="number" id="customNeeds" placeholder="0" step="50" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;" oninput="runBudgetCalc()">
+            </div>
+
+            <div class="u-mb12">
+                <label style="display:block; font-size:13px;margin-bottom:4px" class="col-muted">Wants (Dining, Entertainment, etc.)</label>
+                <input type="number" id="customWants" placeholder="0" step="50" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;" oninput="runBudgetCalc()">
+            </div>
+
+            <div class="u-mb12">
+                <label style="display:block; font-size:13px;margin-bottom:4px" class="col-muted">Savings & Debt Payments</label>
+                <input type="number" id="customSavings" placeholder="0" step="50" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;" oninput="runBudgetCalc()">
+            </div>
+        </div>
+
+        <!-- Comparison Results -->
+        <div id="budgetComparison"></div>
+
+    </div>
+</div>
+
+<!-- Historical Data Modal -->
+<!-- Expenses Modal -->
+<!-- Debt History Modal -->
+<!-- Net Worth Goals Modal -->
+<div id="networthGoalsModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>🏦 Net Worth Goals</h2>
+            <button class="close-btn" onclick="closeModal('networthGoalsModal')">×</button>
+        </div>
+        <div id="networthGoalsContent" style="padding:8px 0;"></div>
+        <button class="action-btn dark u-mt10" onclick="closeModal('networthGoalsModal')">← Back</button>
+    </div>
+</div>
+
+<!-- Config Themes Modal -->
+<div id="configThemesModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Themes</h2>
+            <button class="close-btn" onclick="closeModal('configThemesModal')">×</button>
+        </div>
+
+        <div style="padding:20px 0;">
+            <h3 style="font-size:16px; margin-bottom:16px; font-weight:600;">Select Theme</h3>
+
+            <label style="display:flex; align-items:center; cursor:pointer; padding:14px; background:#0A1A2F;border-radius:8px; margin-bottom:12px; border:2px solid #D4AF37" class="col-silver2" onclick="setTheme('alaskan')">
+                <input type="radio" name="theme" value="alaskan" id="themeAlaskan" onchange="setTheme('alaskan')" style="width:18px; height:18px; cursor:pointer; margin-right:12px;">
+                <div>
+                    <div style="font-size:14px; font-weight:600" class="col-gold">🦅 Dark Mode</div>
+                    <div style="font-size:12px; color:#8A8F98; margin-top:2px;">Alaska — deep navy with gold accents</div>
+                </div>
+            </label>
+
+            <label style="display:flex; align-items:center; cursor:pointer; padding:14px; background:linear-gradient(135deg,#2A0808,#180404); color:#F0D0A0; border-radius:8px; margin-bottom:12px; border:2px solid #E08020; overflow:hidden; position:relative;" onclick="setTheme('sunset')">
+                <!-- Color swatches strip -->
+                <div style="position:absolute;top:0;left:0;right:0;height:4px;display:flex;">
+                    <div style="flex:1;background:#F5C030;"></div>
+                    <div style="flex:1;background:#E08020;"></div>
+                    <div style="flex:1;background:#C04010;"></div>
+                    <div style="flex:1;background:#7A1010;"></div>
+                    <div style="flex:1;background:#280808;"></div>
+                </div>
+                <input type="radio" name="theme" value="sunset" id="themeSunset" onchange="setTheme('sunset')" style="width:18px; height:18px; cursor:pointer; margin-right:12px; margin-top:4px; accent-color:#E08020;">
+                <div class="u-mt4">
+                    <div style="font-size:14px; font-weight:600; color:#F5C030;">🌅 Sunset</div>
+                    <div style="font-size:12px; color:#C09070; margin-top:2px;">Hawaiian beach — warm crimson &amp; gold</div>
+                </div>
+            </label>
+        </div>
+
+        <button class="action-btn dark u-mt10" onclick="closeModal('configThemesModal')">← Back to Settings</button>
+
+    </div>
+</div>
+
+<div id="settingsModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Settings</h2>
+        </div>
+        <div class="settings-section">
+            <h3>Themes</h3>
+            <p>Choose your preferred color scheme.</p>
+            <button class="action-btn" onclick="openConfigThemes()">Select Theme</button>
+        </div>
+        <div class="settings-section">
+            <h3>Goals</h3>
+            <p>Set the steps each goal climbs: portfolio, net worth, taxable, coast, income.</p>
+            <button class="action-btn" onclick="openGoalSteps()">Goal Steps</button>
+        </div>
+        <div class="settings-section">
+            <h3>Display Options</h3>
+            <p>Customize how your portfolio is displayed.</p>
+            <button class="action-btn" onclick="openModal('displayOptionsModal')">Display Settings</button>
+        </div>
+        <div class="settings-section">
+            <h3>Data Management</h3>
+            <p>Backup, restore, or delete your portfolio data.</p>
+            <button class="action-btn" onclick="openModal('dataManagementModal'); _prepareExport();">Manage Data</button>
+        </div>
+        <div class="settings-section">
+            <h3>Security</h3>
+            <div style="background:rgba(212,175,55,0.1); border:1px solid #D4AF37; border-radius:8px; padding:10px; margin-bottom:12px; font-size:13px" class="col-gold">
+                🔒 Locked with your PIN on this phone
+            </div>
+            <!-- 3.6: result of navigator.storage.persist() — backup.js _renderPersistState() -->
+            <p id="storagePersistStatus" style="font-size:12px; margin:0 0 12px; opacity:0.85;"></p>
+            <button class="action-btn dark" onclick="lockApp()">Lock App</button>
+        </div>
+        <div class="settings-section">
+            <h3>About</h3>
+            <div id="settingsAboutCard" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
+                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.0 &nbsp;·&nbsp; Mobile</div>
+                <div class="about-divider" style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px;"></div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:18px;">🤖</span>
+                    <div>
+                        <div class="about-claude-label col-gold" style="font-size:12px;font-weight:700;font-family:-apple-system,sans-serif">Built with Claude</div>
+                        <div class="about-claude-sub" style="font-size:11px;color:rgba(255,255,255,0.45);line-height:1.4;font-family:-apple-system,sans-serif;">AI coding engine by Anthropic — designed, written, and iterated entirely through conversation.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="action-btn dark u-mt20" onclick="closeModal('settingsModal'); showHomePage();">← Back to Home</button>
+    </div>
+</div>
+
+<!-- ═══ DATA: the monthly logger (v3.3 — full page; was the Data Dump popup) ═══ -->
+<div id="dataPage" class="u-hidden">
+    <div class="su-wrap dd-wrap">
+        <div class="dd-sticky">
+            <div class="su-top">
+                <button class="su-back" onclick="ddClose()" aria-label="Back to Home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Home</button>
+                <button class="dd-setup" onclick="ddOpenSetup()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Accounts</button>
+            </div>
+            <div class="dd-month">
+                <button id="ddPrevMob" class="dd-step" onclick="ddStep(-1)" aria-label="Previous month"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <select id="ddMonthSelectMob" class="dd-msel" onchange="ddMonthChanged()" aria-label="Month"></select>
+                <button id="ddNextMob" class="dd-step" onclick="ddStep(1)" aria-label="Next month"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+            </div>
+            <div id="ddChipsMob" class="dd-chips"></div>
+            <div id="ddTimeTravelMsgMob" class="dd-future" style="display:none;"></div>
+        </div>
+        <div id="ddFormBodyMob" class="dd-list"></div>
+    </div>
+</div>
+
+<!-- ═══ SETUP: Accounts & companies (v3.2) — replaces the Data Dump Configure grid ═══ -->
+<div id="setupPage" class="u-hidden"><div id="setupBody"></div></div>
+
+<!-- ═══ LOANS: money you've lent (v3.4) ═══ -->
+<div id="loansPage" class="container u-hidden">   <!-- 3.5.4: a page like Debt / Real Estate (was a Setup-style page with its own forms) -->
+    <div class="header">
+        <h1>Loans</h1>
+        <div class="total-balance" id="lnPageTotal">$0</div>
+        <p class="balance-label" id="lnPageLabel">Owed to You</p>
+    </div>
+    <div class="content">
+        <div id="lnWarn"></div>
+        <div class="chart-controls" id="lnChartControls"></div>
+        <div class="chart-container" title="Owed to you over time">
+            <canvas id="lnChart"></canvas>
+        </div>
+        <div style="height:8px;"></div>
+        <div id="lnPersonList"></div>
+        <div class="u-mt16">
+            <div id="lnSnapshotList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ GOALS (3.8): the current step of every goal track — goals.js updateGoalsOverview() ═══ -->
+<div id="goalsPage" class="container u-hidden">
+    <div class="header">
+        <h1>Goals</h1>
+        <p class="balance-label">Every goal's next step</p>
+    </div>
+    <div class="content">
+        <div id="goalsOverviewBody"></div>
+    </div>
+</div>
+
+<!-- Goal steps editor (3.8, Settings → Goals) — goals.js renderGoalSteps() -->
+<div id="goalStepsModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>🎯 Goal steps</h2>
+            <button class="close-btn" onclick="closeModal('goalStepsModal')">×</button>
+        </div>
+        <div id="goalStepsBody"></div>
+        <button class="action-btn dark u-mt10" onclick="closeModal('goalStepsModal')">← Back</button>
+    </div>
+</div>
+
+<!-- Display Options Modal -->
+<div id="displayOptionsModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Display Options</h2>
+            <button class="close-btn" onclick="closeModal('displayOptionsModal')">×</button>
+        </div>
+        <div class="settings-section">
+            <h3>Demo Mode</h3>
+            <p>Show balances at a percentage of real values for screenshots/demos. Disables data export.</p>
+            <label style="display:flex; align-items:center; cursor:pointer; margin-top:10px;">
+                <input type="checkbox" id="demoModeCheckbox" onchange="toggleDemoMode()" style="width:20px; height:20px; cursor:pointer; margin-right:10px;">
+                <span style="font-size:14px;">Enable Demo Mode</span>
+            </label>
+        </div>
+        <div class="settings-section">
+            <h3>Full Screen</h3>
+            <p>Enter full screen mode. Or hold anywhere on screen for 5 seconds.</p>
+            <button class="action-btn u-mt10" onclick="enterFullscreen()">⛶ Enter Full Screen</button>
+        </div>
+
+                <button class="action-btn dark u-mt20" onclick="closeModal('displayOptionsModal')">← Back to Settings</button>
+    </div>
+</div>
+
+<!-- Data Management Modal -->
+<div id="dataManagementModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Data Management</h2>
+            <button class="close-btn" onclick="closeModal('dataManagementModal')">×</button>
+        </div>
+        <div class="settings-section">
+            <h3>Save Data</h3>
+            <p>Save all your accounts and entries as a backup file.</p>
+            <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin:6px 0 8px;cursor:pointer;">
+                <input type="checkbox" id="exportEncrypt" checked onchange="_prepareExport()" style="width:18px;height:18px;">
+                Lock with my PIN (use this for OneDrive)
+            </label>
+            <p style="font-size:12px;opacity:.75;margin:0 0 8px;">Open it on the desktop with the same 4-digit PIN you use here.</p>
+            <div id="exportMsg" class="msg" style="display:none; margin-bottom:10px;"></div>
+            <button class="green-btn" onclick="exportData('share')">📤 Save to OneDrive / Share…</button>
+            <button class="action-btn dark u-mt10" onclick="exportData('download')">Download Backup File</button>
+        </div>
+        <div class="settings-section">
+            <h3>Load Data</h3>
+            <p>Restore from a previously saved backup file. You’ll see what’s in it and confirm first, and a copy of this phone’s data downloads before anything is replaced.</p>
+            <label class="file-label">
+                Load Backup File
+                <input type="file" id="importFile" accept=".json,.txt,application/json,text/plain" onchange="importData(event)" class="u-hidden">
+            </label>
+            <div id="importPwWrap" style="display:none;margin-top:10px;">
+                <p style="font-size:13px;margin:0 0 6px;" id="importPwMsg">🔒 This backup is locked. Enter the PIN it was saved with.</p>
+                <input type="password" id="importPw" placeholder="PIN" autocomplete="current-password" style="width:100%;padding:10px;border-radius:8px;margin-bottom:8px;box-sizing:border-box;" class="bdr-alaskan col-silver bg-deep-alaskan" onkeydown="if(event.key==='Enter')unlockImport()">
+                <button class="green-btn" onclick="unlockImport()">Unlock &amp; Load</button>
+            </div>
+            <div id="importMsg" class="msg" style="display:none; margin-top:10px;"></div>
+        </div>
+        <div class="settings-section">
+            <h3>🎯 Fix Goal Status</h3>
+            <p>Reset a goal year that shows incorrectly as completed or stuck. Choose the year to un-complete.</p>
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+                <select id="goalResetYear" style="flex:1; padding:10px;border-radius:6px" class="bdr-alaskan col-silver bg-deep-alaskan">
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                    <option value="2028">2028</option>
+                    <option value="2029">2029</option>
+                    <option value="2030">2030</option>
+                </select>
+                <button class="action-btn u-mb0" onclick="resetGoalYear()">Reset Goal</button>
+            </div>
+            <div id="goalResetMsg" style="display:none; margin-top:6px; padding:8px; background:#4CAF50; color:white; border-radius:6px; font-size:13px; text-align:center;"></div>
+        </div>
+        <div class="settings-section">
+            <h3>Delete All Data</h3>
+            <p>Permanently removes all entries, accounts, and institutions.</p>
+            <button class="danger-btn" onclick="openModal('confirmDeleteModal')">Delete All Data</button>
+        </div>
+        <button class="action-btn dark u-mt20" onclick="closeModal('dataManagementModal')">← Back to Settings</button>
+    </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div id="confirmDeleteModal" class="modal" style="z-index:1100;">
+    <div class="modal-box" style="text-align:center;">
+        <div style="font-size:48px; margin-bottom:15px;">⚠️</div>
+        <h2 class="u-mb10">Are you sure?</h2>
+        <p style="margin-bottom:25px" class="col-muted">This will permanently delete <strong>all entries, accounts, and institutions</strong>. This cannot be undone.</p>
+        <div class="btn-row">
+            <button class="submit-btn col-dark" style="background:#f1f2f6" onclick="closeModal('confirmDeleteModal')">No, Cancel</button>
+            <button class="submit-btn" style="background:#ff4757;" onclick="deleteAll()">Yes, Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Fullscreen Chart Modal -->
+<div id="chartFullscreenModal" class="modal" style="z-index:1100;">
+    <div class="modal-box" style="max-width:95%; max-height:95vh; width:95%; padding:10px;">
+        <div class="modal-header" style="padding:10px 15px;">
+            <h2 style="font-size:18px;">📊 Portfolio Chart</h2>
+            <button class="close-btn" onclick="closeChartFullscreen()">×</button>
+        </div>
+
+        <div style="height:70vh; width:100%; position:relative;border-radius:10px; padding:15px" class="bg-card-muted">
+            <canvas id="fullscreenChart"></canvas>
+        </div>
+
+        <div style="padding:10px; text-align:center;font-size:12px" class="col-muted">
+            💡 Tip: Turn your phone sideways for a better view
+        </div>
+    </div>
+</div>
+
+<!-- Net Worth Fullscreen Chart Modal -->
+<div id="networthFullscreenModal" class="modal" style="z-index:1100;">
+    <div class="modal-box" style="max-width:95%; max-height:95vh; width:95%; padding:10px;">
+        <div class="modal-header" style="padding:10px 15px;">
+            <h2 style="font-size:18px;">📈 Net Worth Chart</h2>
+            <button class="close-btn" onclick="closeNetWorthChartFullscreen()">×</button>
+        </div>
+        <div style="height:70vh; width:100%; position:relative;border-radius:10px; padding:15px" class="bg-card-muted">
+            <canvas id="networthFullscreenCanvas"></canvas>
+        </div>
+        <div style="padding:10px; text-align:center;font-size:12px" class="col-muted">
+            💡 Tip: Turn your phone sideways for a better view
+        </div>
+    </div>
+</div>
+
+<!-- Goals Modal -->
+<div id="goalsModal" class="modal">
+    <div class="modal-box" style="max-width:600px;">
+        <div class="modal-header">
+            <h2>🎯 Goals</h2>
+            <button class="close-btn" onclick="closeModal('goalsModal')">×</button>
+        </div>
+
+        <!-- 3.8: the Portfolio goal track (steps incl. $1M, critical mass) — goals.js goalCard('portfolio') -->
+        <div id="portfolioGoalCard"></div>
+
+        <!-- Taxable Account Milestone -->
+        <div id="taxableMortgageMilestone"></div>
+
+        <!-- Yearly Goals Container -->
+        <div id="yearlyGoalsContainer"></div>
+    </div>
+</div>
+
+<!-- Info / "How this is calculated" panel (v15.2) -->
+<div id="infoModal" class="modal" onclick="if(event.target===this)closeInfo()">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 id="infoTitle">How this is calculated</h2>
+            <button class="close-btn" onclick="closeInfo()">×</button>
+        </div>
+        <div id="infoBody"></div>
+    </div>
+</div>
+
+<script src="js/ledger-core.js"></script>   <!-- 3.7: shared money math, also used by desktop.html -->
+<script src="js/app.js"></script>
+<script src="js/home.js"></script>
+<script src="js/planning.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/setup.js"></script>
+<script src="js/loans.js"></script>
+<script src="js/data-page.js"></script>
+<script src="js/pages.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/income.js"></script>
+<script src="js/retirement.js"></script>
+<script src="js/coast.js"></script>
+<script src="js/goals.js"></script>   <!-- 3.8: one goals system -->
+<script src="js/backup.js"></script>
+<script src="js/common.js"></script>
+
+
+</body>
+</html>
