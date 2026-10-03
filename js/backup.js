@@ -156,7 +156,7 @@
     async function _prepareExport() {
         _prepared = null;
         if (demoMode) return;
-        const locked = !!document.getElementById('exportEncrypt')?.checked;
+        const locked = true;   // 4.0.1: the OneDrive/share copy is always locked
         try { const r = await _buildExport(locked); _prepared = { ...r, file: _shareableFile(r.json, r.name), at: Date.now() }; }
         catch (e) { _prepared = null; }
     }
@@ -167,7 +167,8 @@
             alert('⚠️ Export is disabled in Demo Mode. Please disable Demo Mode in Settings first.');
             return;
         }
-        const locked = !!document.getElementById('exportEncrypt')?.checked;
+        // 4.0.1: no lock checkbox. OneDrive/share is always locked with the PIN; Download to this phone is never locked.
+        const locked = mode === 'share';
 
         // Share sheet → OneDrive / Drive / Files (phones). Never falls through to a silent download.
         if (mode === 'share') {

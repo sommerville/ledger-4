@@ -36,7 +36,7 @@
         return CryptoJS.SHA256(pin).toString();
     }
 
-    function setupPin() {
+    async function setupPin() {
         const newPin = document.getElementById('newPin').value;
         const confirmPin = document.getElementById('confirmPin').value;
         const hint = document.getElementById('pinHint').value.trim();
@@ -65,7 +65,7 @@
         localStorage.setItem('pf_pin_hint', hint);
 
         // Derive encryption key from PIN
-        encryptionKey = deriveEncryptionKey(newPin);
+        encryptionKey = await deriveEncryptionKey(newPin);
         _sessionPin = newPin;
 
         // Unlock and init app
@@ -73,21 +73,27 @@
         _unlockWithTransition();
     }
 
+    // 4.0.1: the home screen is built behind the lock screen first, then the lock fades away over it
+    // (was: fade, then build, so the build time came on top of the fade).
     function _unlockWithTransition() {
         const lock = document.getElementById('lockScreen');
-        lock.style.transition = 'opacity 0.45s ease';
-        lock.style.opacity = '0';
         // Fire fullscreen early so browser has time to settle
         requestFullscreen();
-        setTimeout(() => {
-            lock.style.display = 'none';
-            lock.style.transition = '';
-            lock.style.opacity = '';
-            initApp();
-        }, 420);
+        initApp();
+        requestAnimationFrame(() => {
+            lock.style.transition = 'opacity 0.35s ease';
+            lock.style.opacity = '0';
+            setTimeout(() => {
+                lock.style.display = 'none';
+                lock.style.transition = '';
+                lock.style.opacity = '';
+            }, 350);
+        });
     }
 
-    function attemptLogin() {
+    let _loginBusy = false;   // 4.0.1: the key is worked out asynchronously; ignore repeat taps/Enter meanwhile
+    async function attemptLogin() {
+        if (_loginBusy) return;
         const pin = document.getElementById('pinInput').value;
         const errorDiv = document.getElementById('pinError');
         const storedHash = localStorage.getItem('pf_pin');
@@ -99,7 +105,8 @@
 
         if (hashPin(pin) === storedHash) {
             // Correct PIN - derive encryption key
-            encryptionKey = deriveEncryptionKey(pin);
+            _loginBusy = true;
+            try { encryptionKey = await deriveEncryptionKey(pin); } finally { _loginBusy = false; }
             _sessionPin = pin;
             isUnlocked = true;
             failedLoginAttempts = 0; // Reset counter on successful login
@@ -165,7 +172,7 @@
         _pinUpdateDots();
         document.getElementById('pinInput').value = _pinBuffer;
         document.getElementById('pinError').textContent = '';
-        if (_pinBuffer.length === 4) setTimeout(attemptLogin, 120);
+        if (_pinBuffer.length === 4) setTimeout(attemptLogin, 50);   // 4.0.1: was 120 ms; just long enough for the 4th dot to show
     }
 
     function pinPadBack() {

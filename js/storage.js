@@ -140,8 +140,19 @@
     let encryptionKey = null;
     let _sessionPin = null;   // v3.1: kept in memory only while unlocked (opens old PIN-locked backups)
 
-    function deriveEncryptionKey(pin) {
-        // Derive a strong encryption key from the PIN
+    // 4.0.1: the browser's built-in PBKDF2 (about 10 ms) instead of CryptoJS (over a second on a phone,
+    // with the screen frozen after the 4th PIN digit). CryptoJS 4.1.1's PBKDF2 defaults to SHA-1, so this
+    // gives the exact same key and existing data opens unchanged. CryptoJS stays as the fallback.
+    async function deriveEncryptionKey(pin) {
+        try {
+            if (window.crypto && crypto.subtle) {
+                const enc  = new TextEncoder();
+                const base = await crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveBits']);
+                const bits = await crypto.subtle.deriveBits(
+                    { name: 'PBKDF2', salt: enc.encode('portfolio-salt-v1'), iterations: 10000, hash: 'SHA-1' }, base, 256);
+                return Array.from(new Uint8Array(bits), b => b.toString(16).padStart(2, '0')).join('');
+            }
+        } catch (e) { /* fall through to CryptoJS */ }
         return CryptoJS.PBKDF2(pin, 'portfolio-salt-v1', {
             keySize: 256/32,
             iterations: 10000

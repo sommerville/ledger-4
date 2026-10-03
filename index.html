@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Sommerville Ledger">
-    <meta name="theme-color" content="#1a3a5c">
+    <meta name="theme-color" content="#04090F">
     <script>
         // Apply theme immediately to prevent white flash on load
         (function() {
@@ -882,7 +882,7 @@
         <div class="settings-section">
             <h3>About</h3>
             <div id="settingsAboutCard" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
-                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.0 &nbsp;·&nbsp; Mobile</div>
+                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.0.1 &nbsp;·&nbsp; Mobile</div>
                 <div class="about-divider" style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px;"></div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <span style="font-size:18px;">🤖</span>
@@ -999,11 +999,7 @@
         <div class="settings-section">
             <h3>Save Data</h3>
             <p>Save all your accounts and entries as a backup file.</p>
-            <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin:6px 0 8px;cursor:pointer;">
-                <input type="checkbox" id="exportEncrypt" checked onchange="_prepareExport()" style="width:18px;height:18px;">
-                Lock with my PIN (use this for OneDrive)
-            </label>
-            <p style="font-size:12px;opacity:.75;margin:0 0 8px;">Open it on the desktop with the same 4-digit PIN you use here.</p>
+            <p style="font-size:12px;opacity:.75;margin:0 0 8px;">🔒 OneDrive copies are locked with your PIN (open them on the desktop with the same 4-digit PIN). Downloads to this phone are not locked.</p>
             <div id="exportMsg" class="msg" style="display:none; margin-bottom:10px;"></div>
             <button class="green-btn" onclick="exportData('share')">📤 Save to OneDrive / Share…</button>
             <button class="action-btn dark u-mt10" onclick="exportData('download')">Download Backup File</button>
