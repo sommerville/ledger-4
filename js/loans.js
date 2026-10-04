@@ -53,9 +53,9 @@
     let lnPageView = 'total';
     function setLnView(btn) { lnPageView = btn.getAttribute('data-lnview'); updateLoansPage(); }
     function lnColors() {
-        const isSunset = document.body.classList.contains('sunset-theme');
-        return { isSunset, cardBg: isSunset ? 'rgba(35,8,4,0.7)' : '#1A2A42', border: isSunset ? '#5A2018' : '#2A3A52',
-                 txt: isSunset ? '#F0D0A0' : '#C8D0DC', sub: isSunset ? '#C09070' : '#8A9AB0', accent: isSunset ? '#F5C030' : '#D4AF37',
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        return { isSunset, cardBg: isSunset ? tc('rgba(35,8,4,0.7)') : '#1A2A42', border: isSunset ? tc('#5A2018') : '#2A3A52',
+                 txt: isSunset ? tc('#F0D0A0') : '#C8D0DC', sub: isSunset ? tc('#C09070') : '#8A9AB0', accent: isSunset ? tc('#F5C030') : '#D4AF37',
                  pos: '#4CAF50', neg: '#EF5350' };
     }
     function updateLoansPage() {
@@ -174,7 +174,7 @@
         const fmtTick = v => v >= 1e3 ? '$' + Math.round(v / 1e3) + 'k' : '$' + Math.round(v);
         lnChartInst = new Chart(canvas.getContext('2d'), {
             type: 'line',
-            data: { labels, datasets: [{ label: 'Owed', data, borderColor: C.accent, backgroundColor: C.isSunset ? 'rgba(245,192,48,0.12)' : 'rgba(212,175,55,0.15)',
+            data: { labels, datasets: [{ label: 'Owed', data, borderColor: C.accent, backgroundColor: C.isSunset ? tc('rgba(245,192,48,0.12)') : 'rgba(212,175,55,0.15)',
                 tension: 0.3, fill: true, pointRadius: data.length > 24 ? 0 : 3, pointBackgroundColor: C.accent, borderWidth: 2.5 }] },
             options: { responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' $' + Number(c.raw).toLocaleString() } } },

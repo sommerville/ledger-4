@@ -315,13 +315,15 @@
 
     function setTheme(theme) {
         // Remove all theme classes
-        document.body.classList.remove('alaskan-theme', 'sunset-theme');
+        document.body.classList.remove('alaskan-theme', 'sunset-theme', 'seaglass-theme');
 
-        // Apply selected theme (only two Alaskan themes)
+        // Apply selected theme (Dark, Sunset, Sea Glass 4.1.0)
         if (theme === 'alaskan') {
             document.body.classList.add('alaskan-theme');
         } else if (theme === 'sunset') {
             document.body.classList.add('sunset-theme');
+        } else if (theme === 'seaglass') {
+            document.body.classList.add('seaglass-theme');
         } else {
             // Default to dark if unrecognized
             document.body.classList.add('alaskan-theme');
@@ -333,6 +335,11 @@
         if (darkWingRadio) darkWingRadio.checked = (theme === 'alaskan');
         const sunsetRadio = document.getElementById('themeSunset');
         if (sunsetRadio) sunsetRadio.checked = (theme === 'sunset');
+        const seaglassRadio = document.getElementById('themeSeaglass');
+        if (seaglassRadio) seaglassRadio.checked = (theme === 'seaglass');
+        // 4.1.0: keep <html> in step too (the startup script set it from the saved theme)
+        document.documentElement.classList.remove('alaskan-theme', 'sunset-theme', 'seaglass-theme');
+        document.documentElement.classList.add(theme + '-theme');
 
         // Save preference
         localStorage.setItem('pf_theme', theme);

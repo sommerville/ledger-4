@@ -88,10 +88,10 @@
         document.getElementById('incomeMonthlyAvg').textContent = `Monthly Avg: ${fmt(monthlyAvg)}`;
 
         // Theme-aware text colour for monthly avg line
-        const _isSunset = document.body.classList.contains('sunset-theme');
+        const _isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const _isDark   = document.body.classList.contains('alaskan-theme');
         const avgEl     = document.getElementById('incomeMonthlyAvg');
-        if (avgEl) avgEl.style.color = _isSunset ? '#F0D0A0' : '#A0B8CC';
+        if (avgEl) avgEl.style.color = _isSunset ? tc('#F0D0A0') : '#A0B8CC';
 
         const lblEl = document.getElementById('incomeBalanceLabel');
         if (lblEl) lblEl.textContent = incomeViewLabel(currentIncomeView);
@@ -104,14 +104,14 @@
         const ctx = document.getElementById('incomeChart');
         if (!ctx) return;
 
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme');
 
         // Single bar color per theme — consistent regardless of active view filter
-        const barColor  = isSunset ? '#E08020' : '#D4AF37';
+        const barColor  = isSunset ? tc('#E08020') : '#D4AF37';
         const gridColor = (isDark||isSunset) ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.1)';
-        const tickColor = isSunset ? '#D0B090' : '#A0B8CC';
-        const avgColor  = isSunset ? '#F5C030' : '#D4AF37';
+        const tickColor = isSunset ? tc('#D0B090') : '#A0B8CC';
+        const avgColor  = isSunset ? tc('#F5C030') : '#D4AF37';
 
         // v3.5.1: one bar colour in every view (the v3.2 two-shade bonus split was removed)
 
@@ -167,7 +167,7 @@ const lbl = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: isSunset ? 'rgba(20,4,2,0.95)' : '#0A1A2F',
+                        backgroundColor: isSunset ? tc('rgba(20,4,2,0.95)') : '#0A1A2F',
                         titleColor: barColor,
                         bodyColor: tickColor,
                         callbacks: {
@@ -198,7 +198,7 @@ const lbl = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
         // Legend: the average line only
         const avgLegEl = document.getElementById('incomeAvgLegend');
         if (avgLegEl) {
-            const lblColor = isSunset ? '#D0A888' : '#A0B8CC';
+            const lblColor = isSunset ? tc('#D0A888') : '#A0B8CC';
             avgLegEl.innerHTML =
                 '<span style="display:inline-flex;align-items:center;gap:6px;color:' + lblColor + ';">' +
                 '<svg width="28" height="10" style="flex-shrink:0"><line x1="0" y1="5" x2="28" y2="5" ' +
@@ -212,17 +212,17 @@ const lbl = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
         const container = document.getElementById('incomeSnapshotList');
         if (!container) return;
 
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
-        const accent  = isSunset ? '#F5C030' : '#D4AF37';
-        const cardBg  = isSunset ? '#2A0808' : '#1A2A42';
-        const border  = isSunset ? '#5A2018' : '#2A3A52';
-        const txtClr  = isSunset ? '#F0D0A0' : '#E0E8F0';
-        const subClr  = isSunset ? '#C08060' : '#7A8FA0';
-        const posClr  = isSunset ? '#F5C030' : '#D4AF37';
+        const accent  = isSunset ? tc('#F5C030') : '#D4AF37';
+        const cardBg  = isSunset ? tc('#2A0808') : '#1A2A42';
+        const border  = isSunset ? tc('#5A2018') : '#2A3A52';
+        const txtClr  = isSunset ? tc('#F0D0A0') : '#E0E8F0';
+        const subClr  = isSunset ? tc('#C08060') : '#7A8FA0';
+        const posClr  = isSunset ? tc('#F5C030') : '#D4AF37';
         const negClr  = '#e74c3c';
-        const inputBg = isSunset ? '#1A0404' : '#0D1829';
+        const inputBg = isSunset ? tc('#1A0404') : '#0D1829';
 
         const start = new Date(2024, 0, 1);
         const today = new Date();
@@ -327,16 +327,16 @@ function renderIncomeStats() {
         const startStr = moKey(new Date(today.getFullYear(), today.getMonth() - 12, 1));
 
         // Theme
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme');
-        const accent   = isSunset ? '#F5C030' : '#D4AF37';
-        const cardBg   = isSunset ? '#2A0808' : '#1A2A42';
-        const borderClr= isSunset ? '#5A2018' : '#2A3A52';
-        const textClr  = isSunset ? '#F0D0A0' : '#E0E8F0';
-        const mutedClr = isSunset ? '#C08060' : '#7A8FA0';
-        const valClr   = isSunset ? '#F5C030' : '#60A5FA';
-        const greenClr = isSunset ? '#F5C030' : '#4ADE80';
-        const goldClr  = isSunset ? '#F5C030' : '#D4AF37';
+        const accent   = isSunset ? tc('#F5C030') : '#D4AF37';
+        const cardBg   = isSunset ? tc('#2A0808') : '#1A2A42';
+        const borderClr= isSunset ? tc('#5A2018') : '#2A3A52';
+        const textClr  = isSunset ? tc('#F0D0A0') : '#E0E8F0';
+        const mutedClr = isSunset ? tc('#C08060') : '#7A8FA0';
+        const valClr   = isSunset ? tc('#F5C030') : '#60A5FA';
+        const greenClr = isSunset ? tc('#F5C030') : '#4ADE80';
+        const goldClr  = isSunset ? tc('#F5C030') : '#D4AF37';
 
         // Build monthly data for last 12 months
         const monthData = [];
@@ -390,7 +390,7 @@ const lbl = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                     : s + (e.amount || 0), 0);
             const showGross = gross > tot;
             const ytdBadge = isCurrentYear
-                ? `<span style="font-size:10px;background:${accent};color:${isDark||isSunset?'#000':'#fff'};padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;">YTD</span>`
+                ? `<span style="font-size:10px;background:${accent};color:${isDark||isSunset?tc('#000'):'#fff'};padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;">YTD</span>`
                 : '';
             return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid ${borderClr};">
                 <div style="font-size:14px;font-weight:700;color:${textClr};">${yr}${ytdBadge}</div>

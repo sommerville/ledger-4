@@ -87,13 +87,13 @@
         const container = document.getElementById('nwSnapshotList');
         if (!container) return;
 
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
-        const accent   = isSunset ? '#F5C030' : '#D4AF37';
-        const cardBg   = isSunset ? 'rgba(35,8,4,0.7)' : '#1A2A42';
-        const border   = isSunset ? '#5A2018' : '#2A3A52';
-        const txtClr   = isSunset ? '#F0D0A0' : '#C8D0DC';
-        const subClr   = isSunset ? '#C09070' : '#8A9AB0';
+        const accent   = isSunset ? tc('#F5C030') : '#D4AF37';
+        const cardBg   = isSunset ? tc('rgba(35,8,4,0.7)') : '#1A2A42';
+        const border   = isSunset ? tc('#5A2018') : '#2A3A52';
+        const txtClr   = isSunset ? tc('#F0D0A0') : '#C8D0DC';
+        const subClr   = isSunset ? tc('#C09070') : '#8A9AB0';
         const posClr   = '#4CAF50';
         const negClr   = '#EF5350';
         const debtClr  = '#EF9A9A';
@@ -216,12 +216,12 @@ return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         if (!canvas) return;
         if (debtTrendChartInst) { debtTrendChartInst.destroy(); debtTrendChartInst = null; }
 
-        const isDark   = document.body.classList.contains('alaskan-theme') || document.body.classList.contains('sunset-theme');
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isDark   = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const tick  = '#C0C0C0';
         const grid  = '#5A6F83';
-        const lineC = isSunset ? '#F5C030' : '#EF9A9A';
-        const fillC = isSunset ? 'rgba(245,192,48,0.12)' : 'rgba(239,154,154,0.12)';
+        const lineC = isSunset ? tc('#F5C030') : '#EF9A9A';
+        const fillC = isSunset ? tc('rgba(245,192,48,0.12)') : 'rgba(239,154,154,0.12)';
 
         // Rebuild per-account filter buttons fresh every render
         // Only show accounts that actually have logged entries
@@ -329,12 +329,12 @@ labels.push(d.toLocaleDateString('en-US', {month:'short'}) + " '" + String(d.get
     // ─── Debt Page (standalone) ──────────────────────────────────
     function updateDebtAccountsPage() {
         buildDebtTrendChart();
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
-        const cardBg   = isSunset ? 'rgba(35,8,4,0.7)' : '#1A2A42';
-        const border   = isSunset ? '#5A2018' : '#2A3A52';
-        const txtClr   = isSunset ? '#F0D0A0' : '#C8D0DC';
-        const subClr   = isSunset ? '#C09070' : '#8A9AB0';
+        const cardBg   = isSunset ? tc('rgba(35,8,4,0.7)') : '#1A2A42';
+        const border   = isSunset ? tc('#5A2018') : '#2A3A52';
+        const txtClr   = isSunset ? tc('#F0D0A0') : '#C8D0DC';
+        const subClr   = isSunset ? tc('#C09070') : '#8A9AB0';
         const debtClr  = '#EF9A9A';
 
         let total = 0;
@@ -395,14 +395,14 @@ labels.push(d.toLocaleDateString('en-US', {month:'short'}) + " '" + String(d.get
         return (y && m) ? new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
     }
     function reColors() {
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         return {
             isSunset,
-            cardBg: isSunset ? 'rgba(35,8,4,0.7)' : '#1A2A42',
-            border: isSunset ? '#5A2018' : '#2A3A52',
-            txt:    isSunset ? '#F0D0A0' : '#C8D0DC',
-            sub:    isSunset ? '#C09070' : '#8A9AB0',
-            accent: isSunset ? '#F5C030' : '#D4AF37',
+            cardBg: isSunset ? tc('rgba(35,8,4,0.7)') : '#1A2A42',
+            border: isSunset ? tc('#5A2018') : '#2A3A52',
+            txt:    isSunset ? tc('#F0D0A0') : '#C8D0DC',
+            sub:    isSunset ? tc('#C09070') : '#8A9AB0',
+            accent: isSunset ? tc('#F5C030') : '#D4AF37',
             pos: '#4CAF50', neg: '#EF5350',
         };
     }
@@ -468,7 +468,7 @@ labels.push(d.toLocaleDateString('en-US', {month:'short'}) + " '" + String(d.get
         const fmtTick = v => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : (v >= 1e3 ? '$' + Math.round(v / 1e3) + 'k' : '$' + Math.round(v));
         reChartInst = new Chart(canvas.getContext('2d'), {
             type: 'line',
-            data: { labels, datasets: [{ label: 'Value', data, borderColor: C.accent, backgroundColor: C.isSunset ? 'rgba(245,192,48,0.12)' : 'rgba(212,175,55,0.15)',
+            data: { labels, datasets: [{ label: 'Value', data, borderColor: C.accent, backgroundColor: C.isSunset ? tc('rgba(245,192,48,0.12)') : 'rgba(212,175,55,0.15)',
                 tension: 0.3, fill: true, pointRadius: 4, pointBackgroundColor: C.accent, pointHoverRadius: 6, borderWidth: 2.5 }] },
             options: {
                 responsive: true, maintainAspectRatio: false,
@@ -514,11 +514,11 @@ return d.toLocaleDateString('en-US', { month: 'short' }) + " '" + String(d.getFu
 
         if (debtChart) { debtChart.destroy(); debtChart = null; }
 
-        const isDark  = document.body.classList.contains('alaskan-theme') || document.body.classList.contains('sunset-theme');
-        const nwColor = '#D4AF37';
-        const nwBg    = 'rgba(212,175,55,0.15)';
-        const tick    = '#C0C0C0';
-        const grid    = '#5A6F83';
+        const isDark  = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const nwColor = tc('#D4AF37');
+        const nwBg    = tc('rgba(212,175,55,0.15)');
+        const tick    = tc('#C0C0C0');
+        const grid    = tc('#5A6F83');
 
         const fmtTick = v => {
             const a = Math.abs(v);
@@ -600,11 +600,11 @@ return d.toLocaleDateString('en-US', { month: 'short' }) + " '" + String(d.getFu
             nwData.push(Math.round((invest - debt + getLoansOwed(m)) * scale));   // v3.4: + loans
         });
 
-        const isDark  = document.body.classList.contains('alaskan-theme') || document.body.classList.contains('sunset-theme');
-        const nwColor = '#D4AF37';
-        const nwBg    = 'rgba(212,175,55,0.1)';
-        const tick    = '#C0C0C0';
-        const grid    = '#5A6F83';
+        const isDark  = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const nwColor = tc('#D4AF37');
+        const nwBg    = tc('rgba(212,175,55,0.1)');
+        const tick    = tc('#C0C0C0');
+        const grid    = tc('#5A6F83');
 
         const fmtTick = v => {
             const a = Math.abs(v);
@@ -870,15 +870,15 @@ const fmtMK = mk => new Date(mk + '-15').toLocaleDateString('en-US', { month: 'l
         const container = document.getElementById('investSnapshotList');
         if (!container) return;
 
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
-        const accent  = isSunset ? '#F5C030' : '#D4AF37';
-        const cardBg  = isSunset ? '#2A0808' : '#1A2A42';
-        const border  = isSunset ? '#5A2018' : '#2A3A52';
-        const txtClr  = isSunset ? '#F0D0A0' : '#E0E8F0';
-        const subClr  = isSunset ? '#C08060' : '#7A8FA0';
-        const posClr  = isSunset ? '#F5C030' : '#D4AF37';
+        const accent  = isSunset ? tc('#F5C030') : '#D4AF37';
+        const cardBg  = isSunset ? tc('#2A0808') : '#1A2A42';
+        const border  = isSunset ? tc('#5A2018') : '#2A3A52';
+        const txtClr  = isSunset ? tc('#F0D0A0') : '#E0E8F0';
+        const subClr  = isSunset ? tc('#C08060') : '#7A8FA0';
+        const posClr  = isSunset ? tc('#F5C030') : '#D4AF37';
         const negClr  = '#e74c3c';
 
         const start = new Date(2024, 0, 1);
@@ -947,17 +947,17 @@ const fmtMK = mk => new Date(mk + '-02').toLocaleDateString('en-US', { month: 'l
         const container = document.getElementById('expenseSnapshotList');
         if (!container) return;
 
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
-        const accent  = isSunset ? '#E08020' : '#D4AF37';
-        const cardBg  = isSunset ? '#2A0808' : '#1A2A42';
-        const border  = isSunset ? '#5A2018' : '#2A3A52';
-        const txtClr  = isSunset ? '#F0D0A0' : '#E0E8F0';
-        const subClr  = isSunset ? '#C08060' : '#7A8FA0';
+        const accent  = isSunset ? tc('#E08020') : '#D4AF37';
+        const cardBg  = isSunset ? tc('#2A0808') : '#1A2A42';
+        const border  = isSunset ? tc('#5A2018') : '#2A3A52';
+        const txtClr  = isSunset ? tc('#F0D0A0') : '#E0E8F0';
+        const subClr  = isSunset ? tc('#C08060') : '#7A8FA0';
         const negClr  = '#e74c3c';
-        const posClr  = isSunset ? '#F5C030' : '#D4AF37';
-        const inputBg = isSunset ? '#1A0404' : '#0D1829';
+        const posClr  = isSunset ? tc('#F5C030') : '#D4AF37';
+        const inputBg = isSunset ? tc('#1A0404') : '#0D1829';
 
         const start = new Date(2024, 0, 1);
         const today = new Date();
@@ -1014,16 +1014,16 @@ const entryRows = monthExpenses.slice().reverse().map(e =>
         const container = document.getElementById('debtSnapshotList');
         if (!container) return;
 
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
-        const cardBg  = isSunset ? '#2A0808' : '#1A2A42';
-        const border  = isSunset ? '#5A2018' : '#2A3A52';
-        const txtClr  = isSunset ? '#F0D0A0' : '#E0E8F0';
-        const subClr  = isSunset ? '#C08060' : '#7A8FA0';
+        const cardBg  = isSunset ? tc('#2A0808') : '#1A2A42';
+        const border  = isSunset ? tc('#5A2018') : '#2A3A52';
+        const txtClr  = isSunset ? tc('#F0D0A0') : '#E0E8F0';
+        const subClr  = isSunset ? tc('#C08060') : '#7A8FA0';
         const debtClr = '#EF9A9A';
-        const posClr  = isSunset ? '#F5C030' : '#D4AF37';
-        const inputBg = isSunset ? '#1A0404' : '#0D1829';
+        const posClr  = isSunset ? tc('#F5C030') : '#D4AF37';
+        const inputBg = isSunset ? tc('#1A0404') : '#0D1829';
 
         const debtTypeLabels = {
             credit_card: 'Credit Card', mortgage: 'Mortgage', auto: 'Auto Loan',

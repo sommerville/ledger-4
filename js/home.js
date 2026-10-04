@@ -320,13 +320,13 @@
         const ctx = document.getElementById('expensesChart');
         if (!ctx) return;
 
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark = document.body.classList.contains('alaskan-theme') || isSunset;
 
-        const barColor   = isSunset ? '#E08020' : '#D4AF37';
+        const barColor   = isSunset ? tc('#E08020') : '#D4AF37';
         const gridColor  = 'rgba(255,255,255,0.08)';
-        const tickColor  = isSunset ? '#D0B090' : '#A0B8CC';
-        const bgColor    = isDark   ? (isSunset ? 'rgba(35,8,4,0.0)' : 'rgba(10,26,47,0.0)') : 'rgba(0,0,0,0.0)';
+        const tickColor  = isSunset ? tc('#D0B090') : '#A0B8CC';
+        const bgColor    = isDark   ? (isSunset ? tc('rgba(35,8,4,0.0)') : 'rgba(10,26,47,0.0)') : 'rgba(0,0,0,0.0)';
 
         // Build last 12 complete months
         const today = new Date();
@@ -349,7 +349,7 @@ const monthLabel = d.toLocaleDateString('en-US', { month: 'short', year: '2-digi
         }
 
         const avg = data.length ? Math.round(data.reduce((a,b)=>a+b,0) / data.length) : 0;
-        const avgColor = isSunset ? '#F5C030' : '#D4AF37';
+        const avgColor = isSunset ? tc('#F5C030') : '#D4AF37';
 
         window._expensesChart = new Chart(ctx, {
             type: 'bar',
@@ -384,7 +384,7 @@ const monthLabel = d.toLocaleDateString('en-US', { month: 'short', year: '2-digi
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: isSunset ? 'rgba(20,4,2,0.95)' : '#0A1A2F',
+                        backgroundColor: isSunset ? tc('rgba(20,4,2,0.95)') : '#0A1A2F',
                         titleColor: barColor,
                         bodyColor: tickColor,
                         callbacks: {
@@ -412,7 +412,7 @@ const monthLabel = d.toLocaleDateString('en-US', { month: 'short', year: '2-digi
         // Custom HTML avg-line label — below chart, always readable
         const avgLegEl = document.getElementById('expensesAvgLegend');
         if (avgLegEl) {
-            const lblColor = isSunset ? '#D0A888' : '#A0B8CC';
+            const lblColor = isSunset ? tc('#D0A888') : '#A0B8CC';
             avgLegEl.innerHTML =
                 '<span style="display:inline-flex;align-items:center;gap:6px;color:' + lblColor + ';">' +
                 '<svg width="28" height="10" style="flex-shrink:0"><line x1="0" y1="5" x2="28" y2="5" ' +

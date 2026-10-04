@@ -46,11 +46,11 @@
         closeModal('settingsModal');
     }
     function buildChart() {
-        const isDark = document.body.classList.contains('alaskan-theme') || document.body.classList.contains('sunset-theme');
+        const isDark = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isAnyDark = isDark;
 
-        const lineColor = '#D4AF37';
-        const bgColor   = 'rgba(212,175,55,0.1)';
+        const lineColor = tc('#D4AF37');
+        const bgColor   = tc('rgba(212,175,55,0.1)');
 
         const ctx = document.getElementById('myChart').getContext('2d');
         chart = new Chart(ctx, {
@@ -140,11 +140,11 @@
         const data = getChartData();
 
         // Determine colors based on theme
-        const isDarkWing2 = document.body.classList.contains('alaskan-theme') || document.body.classList.contains('sunset-theme');
+        const isDarkWing2 = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isAnyDark2 = isDarkWing2;
 
-        let lineColor = isDarkWing2 ? '#D4AF37' : '#C87820';
-        let bgColor   = isDarkWing2 ? 'rgba(212,175,55,0.1)' : 'rgba(200,120,32,0.12)';
+        let lineColor = isDarkWing2 ? tc('#D4AF37') : '#C87820';
+        let bgColor   = isDarkWing2 ? tc('rgba(212,175,55,0.1)') : 'rgba(200,120,32,0.12)';
 
         const ctx = document.getElementById('fullscreenChart').getContext('2d');
         fullscreenChart = new Chart(ctx, {

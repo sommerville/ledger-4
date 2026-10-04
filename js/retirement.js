@@ -16,18 +16,18 @@
 
     // ─── Theme helpers ──────────────────────────────────────────
     function retTheme() {
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
         return {
             isDark, isSunset,
-            accent:    isSunset ? '#F5C030' : '#D4AF37',
-            cardBg:    isSunset ? '#2A0808' : '#1A2A42',
-            inputBg:   isSunset ? '#1A0404' : '#0D1829',
-            borderClr: isSunset ? '#5A2018' : '#2A3A52',
-            textClr:   isSunset ? '#F0D0A0' : '#E0E8F0',
-            mutedClr:  isSunset ? '#C08060' : '#7A8FA0',
-            valClr:    isSunset ? '#F5C030' : '#60A5FA',
-            greenClr:  isSunset ? '#4ADE80' : '#4ADE80',
+            accent:    isSunset ? tc('#F5C030') : '#D4AF37',
+            cardBg:    isSunset ? tc('#2A0808') : '#1A2A42',
+            inputBg:   isSunset ? tc('#1A0404') : '#0D1829',
+            borderClr: isSunset ? tc('#5A2018') : '#2A3A52',
+            textClr:   isSunset ? tc('#F0D0A0') : '#E0E8F0',
+            mutedClr:  isSunset ? tc('#C08060') : '#7A8FA0',
+            valClr:    isSunset ? tc('#F5C030') : '#60A5FA',
+            greenClr:  isSunset ? tc('#4ADE80') : '#4ADE80',
             warnClr:   '#F87171',
         };
     }

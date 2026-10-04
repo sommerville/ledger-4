@@ -9,6 +9,50 @@
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     }
 
+    // ─── Themes (4.1.0) ──────────────────────────────────────
+    // Code that colors things itself checks "isSunset" (which also covers Sea Glass) and passes each Sunset
+    // color through tc(): on Sunset it's unchanged, on Sea Glass it becomes that color's sea glass version.
+    // The CSS works the same way (each sunset rule has a seaglass twin right after it in app.css).
+    // Add a color here whenever a new isSunset ? '...' color is added, or it shows in sunset colors on Sea Glass.
+    const SEAGLASS_COLORS = {
+        // shared Dark/Sunset gold used by the main charts
+        '#D4AF37': '#87DFC8',
+        'rgba(212,175,55,0.1)': 'rgba(135,223,200,0.1)',
+        'rgba(212,175,55,0.15)': 'rgba(135,223,200,0.15)',
+        '#C0C0C0': '#A9D1C2',
+        '#5A6F83': '#2A5A64',
+        '#2A3A52': '#22525E',
+        // Sunset colors
+        '#000': '#000',
+        '#1A0404': '#091619',
+        '#2A0808': '#0F2429',
+        '#4ADE80': '#6FE3B0',
+        '#5A2018': '#22525E',
+        '#5CD080': '#6FD6A0',
+        '#6AB0E0': '#6AB8E0',
+        '#C08060': '#74ACA4',
+        '#C09070': '#7EB2AB',
+        '#D0A888': '#A4CEBE',
+        '#D0B090': '#A9D1C2',
+        '#E05050': '#E06060',
+        '#E08020': '#4EA6C6',
+        '#F0D0A0': '#C8E1D8',
+        '#F5C030': '#87DFC8',
+        'rgba(20,4,2,0.9)': 'rgba(7,16,18,0.9)',
+        'rgba(20,4,2,0.95)': 'rgba(7,16,18,0.95)',
+        'rgba(245,192,48,0.12)': 'rgba(135,223,200,0.12)',
+        'rgba(30,80,30,0.35)': 'rgba(40,110,80,0.35)',
+        'rgba(35,8,4,0.0)': 'rgba(12,28,32,0.0)',
+        'rgba(35,8,4,0.7)': 'rgba(12,28,32,0.7)',
+        'rgba(35,8,4,0.88)': 'rgba(12,28,32,0.88)',
+        'rgba(35,8,4,0.90)': 'rgba(12,28,32,0.90)',
+        'rgba(50,12,6,0.85)': 'rgba(17,40,46,0.85)',
+        'rgba(80,20,20,0.35)': 'rgba(110,30,30,0.35)'
+    };
+    function tc(c) {
+        return document.body.classList.contains('seaglass-theme') ? (SEAGLASS_COLORS[c] || c) : c;
+    }
+
     // ─── State ───────────────────────────────────────────────
     let entries = [];
     let accounts = [];
@@ -409,10 +453,10 @@ now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', 
                 btn.style.color = '#4CAF50';
                 setTimeout(() => {
                     btn.innerHTML = orig;
-                    const isDark = document.body.classList.contains('alaskan-theme') || document.body.classList.contains('sunset-theme');
-                    btn.style.background = 'rgba(212,175,55,0.15)';
-                    btn.style.borderColor = '#D4AF37';
-                    btn.style.color = '#D4AF37';
+                    const isDark = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+                    btn.style.background = tc('rgba(212,175,55,0.15)');
+                    btn.style.borderColor = tc('#D4AF37');
+                    btn.style.color = tc('#D4AF37');
                 }, 1800);
             }
         }).catch(() => {

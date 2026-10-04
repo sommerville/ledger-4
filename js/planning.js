@@ -418,23 +418,23 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         const income = parseFloat(document.getElementById('budgetIncome').value) || 0;
 
         // Theme-aware colors
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
-        const cardBg   = isSunset ? 'rgba(35,8,4,0.90)'    : '#1A2A42';
-        const subBg    = isSunset ? 'rgba(50,12,6,0.85)'   : 'rgba(10,26,47,0.7)';
-        const headColor= isSunset ? '#F5C030'               : '#D4AF37';
-        const txtMain  = isSunset ? '#F0D0A0'               : '#E0E0E0';
-        const txtSub   = isSunset ? '#C09070'               : '#8A8F98';
-        const needsCol = isSunset ? '#5CD080'               : '#4CAF50';
-        const wantsCol = isSunset ? '#E08020'               : '#FFA040';
-        const savCol   = isSunset ? '#6AB0E0'               : '#5BA8D8';
-        const remBg    = isSunset ? 'rgba(30,80,30,0.35)'   : 'rgba(20,60,20,0.4)';
-        const remBdr   = isSunset ? '#5CD080'               : '#4CAF50';
-        const remTxt   = isSunset ? '#5CD080'               : '#4CAF50';
-        const overBg   = isSunset ? 'rgba(80,20,20,0.35)'   : 'rgba(60,10,10,0.4)';
-        const overBdr  = isSunset ? '#E05050'               : '#E57373';
-        const overTxt  = isSunset ? '#E05050'               : '#E57373';
+        const cardBg   = isSunset ? tc('rgba(35,8,4,0.90)')    : '#1A2A42';
+        const subBg    = isSunset ? tc('rgba(50,12,6,0.85)')   : 'rgba(10,26,47,0.7)';
+        const headColor= isSunset ? tc('#F5C030')               : '#D4AF37';
+        const txtMain  = isSunset ? tc('#F0D0A0')               : '#E0E0E0';
+        const txtSub   = isSunset ? tc('#C09070')               : '#8A8F98';
+        const needsCol = isSunset ? tc('#5CD080')               : '#4CAF50';
+        const wantsCol = isSunset ? tc('#E08020')               : '#FFA040';
+        const savCol   = isSunset ? tc('#6AB0E0')               : '#5BA8D8';
+        const remBg    = isSunset ? tc('rgba(30,80,30,0.35)')   : 'rgba(20,60,20,0.4)';
+        const remBdr   = isSunset ? tc('#5CD080')               : '#4CAF50';
+        const remTxt   = isSunset ? tc('#5CD080')               : '#4CAF50';
+        const overBg   = isSunset ? tc('rgba(80,20,20,0.35)')   : 'rgba(60,10,10,0.4)';
+        const overBdr  = isSunset ? tc('#E05050')               : '#E57373';
+        const overTxt  = isSunset ? tc('#E05050')               : '#E57373';
 
         // 50/30/20 Rule calculations
         const needsTarget   = income * 0.50;
@@ -561,13 +561,13 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         // Mortgage principal balance: latest per mortgage account, capped at last month like all debt
         const mortgageBalance = LC.mortgageInfo(debtAccounts, debtEntries, expenses, moKey(new Date())).balance;   // 3.7.2
 
-        const isSunset = document.body.classList.contains('sunset-theme');
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
         const isDark  = document.body.classList.contains('alaskan-theme');
-        const accentColor = isSunset ? '#F5C030' : '#D4AF37';
-        const bgColor     = isSunset ? 'rgba(35,8,4,0.88)' : '#1A2A42';
-        const subColor    = isSunset ? '#C09070' : '#8A8F98';
-        const textColor   = isSunset ? '#F0D0A0' : '#C0C0C0';
-        const barBg       = isSunset ? 'rgba(20,4,2,0.9)' : '#0A1A2F';
+        const accentColor = isSunset ? tc('#F5C030') : '#D4AF37';
+        const bgColor     = isSunset ? tc('rgba(35,8,4,0.88)') : '#1A2A42';
+        const subColor    = isSunset ? tc('#C09070') : '#8A8F98';
+        const textColor   = isSunset ? tc('#F0D0A0') : '#C0C0C0';
+        const barBg       = isSunset ? tc('rgba(20,4,2,0.9)') : '#0A1A2F';
 
         if (mortgageBalance <= 0) {
             container.innerHTML = `
@@ -582,7 +582,7 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
 
         const achieved = taxableTotal >= mortgageBalance;
         const pct = Math.min(100, Math.max(0, (taxableTotal / mortgageBalance) * 100));
-        const borderColor = isDark ? (achieved ? '#D4AF37' : '#2A3A52') : (achieved ? '#C87820' : '#C4A870');
+        const borderColor = isDark ? (achieved ? tc('#D4AF37') : tc('#2A3A52')) : (achieved ? '#C87820' : '#C4A870');
 
         container.innerHTML = `
             <div style="background:${bgColor}; border-radius:12px; padding:16px; margin-bottom:16px; border:2px solid ${borderColor};">
