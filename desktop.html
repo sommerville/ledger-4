@@ -19,6 +19,12 @@
   --text:#F0D8C0; --muted:#B08A78; --accent:#F5C030; --pos:#F5A020; --neg:#E05040;
   --grid:rgba(255,200,100,0.07); --surface:#180608;
 }
+/* 4.5.0: Royal Navy, the phone's 4.2.0 palette (Oceanic Noir, Nocturnal, Forsythia, Arctic Powder) */
+.navy-theme {
+  --bg:#0C1A22; --panel:#172B36; --panel2:#1C3542; --border:#114C5A; --hover:#1F3A48;
+  --text:#F1F6F4; --muted:#93B3B1; --accent:#FFC801; --pos:#5EE0A0; --neg:#F0675A;
+  --grid:rgba(217,232,227,0.07); --surface:#172B36;
+}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
@@ -192,7 +198,7 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <aside>
-    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.4.0</span></div>
+    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.5.0</span></div>
     <nav id="nav"></nav>
     <div class="side-foot">
       <button onclick="toggleTheme()">🎨 Switch theme</button>
@@ -323,9 +329,10 @@ function load(b) {
   EXTRAS_ON = st.extrasOn !== false;   // v3.1: estimated yearly costs switch (planner setting, default on)
   TAX_PCT = typeof st.taxRate === 'number' ? st.taxRate : b.taxRatePct;   // v3.1: tax rate lives here; first run uses the phone's
   MC_LAST = null;
-  THEME = st.theme || (b.theme === 'sunset' ? 'sunset' : 'alaskan');
+  THEME = normTheme(st.theme || b.theme);   // 4.5.0: Royal Navy (a phone's old 'seaglass' opens as navy)
   if (st.pulseRange != null) PULSE_RANGE = st.pulseRange;
   if (st.growthRange != null) GROWTH_RANGE = st.growthRange;   // 4.4.0
+  if (st.growthRet != null) GROWTH_RET = !!st.growthRet;       // 4.4.1
   if (st.flowRange != null) FLOW_RANGE = st.flowRange;         // 4.4.0
   if (st.fireRet != null) window._fireRet = st.fireRet;
   if (st.fireStop != null) window._fireStop = st.fireStop;
@@ -401,7 +408,9 @@ async function loadNewest() {
   } catch (e) { err.textContent = "Couldn't read the folder: " + e.message + (/NotFound/i.test(e.name) ? ' (was it moved? Pick it again.)' : ''); }
 }
 renderDirRow();
-function toggleTheme() { THEME = THEME === 'sunset' ? 'alaskan' : 'sunset'; saveSettings({ theme: THEME }); applyTheme(); show(VIEW); }
+const THEMES = ['alaskan', 'sunset', 'navy'];   // 4.5.0: Dark → Sunset → Royal Navy, same order as the phone
+function normTheme(t) { return t === 'seaglass' ? 'navy' : THEMES.includes(t) ? t : 'alaskan'; }
+function toggleTheme() { THEME = THEMES[(THEMES.indexOf(THEME) + 1) % THEMES.length]; saveSettings({ theme: THEME }); applyTheme(); show(VIEW); }
 function applyTheme() { document.body.className = THEME + '-theme'; }
 
 /* ═══ PLANNER SETTINGS (v3.0) ════════════════════════════════════════════════
@@ -418,7 +427,7 @@ function saveSettings(patch) {
 function resetSettings() {
   if (!confirm('Reset all planner settings (goal, retirement age, rates, elections) to the defaults from your backup?')) return;
   try { localStorage.removeItem(SETTINGS_KEY); } catch (e) {}
-  RP = null; PS = null; PULSE_RANGE = 12; GROWTH_RANGE = 24; FLOW_RANGE = 24; window._fireRet = undefined; window._fireStop = undefined; EXTRAS_ON = true; MC = null; MC_LAST = null; if (D) TAX_PCT = D.taxRatePct;
+  RP = null; PS = null; PULSE_RANGE = 12; GROWTH_RANGE = 24; GROWTH_RET = false; FLOW_RANGE = 24; window._fireRet = undefined; window._fireStop = undefined; EXTRAS_ON = true; MC = null; MC_LAST = null; if (D) TAX_PCT = D.taxRatePct;
   if (D) show(VIEW);
 }
 const RP_KEYS = ['goal', 'r1', 'retireAge', 'r2', 'freed', 'r3', 'tax3', 'exp3', 'wr4', 'tax4', 'r4'];
@@ -1068,27 +1077,30 @@ function buildPulse() {
    the raw 12-month lines were too noisy). The table shows raw and smoothed.
    When the market line passes yours, growth beats saving.
    ═══════════════════════════════════════════════════════════════════════════ */
-let GROWTH_RANGE = 24;
+let GROWTH_RANGE = 24, GROWTH_RET = false;   // 4.4.1: 12-month return line, off by default (toggle chip)
 function growthSeries() {
   const first = D.entries.map(e => e.date && e.date.slice(0, 7)).filter(Boolean).sort()[0];
   if (!first) return null;
   const end = addM(asOfMk(), -1), inMk = (l, m) => (l || []).filter(e => e.date && e.date.startsWith(m));
-  const months = [], mkt = [], put = [];
+  const months = [], mkt = [], put = [], ret = [];
   for (let m = addM(first, 1); m <= end; m = addM(m, 1)) {   // the first month has no balance before it
     const c = inMk(D.retirementContribs, m).reduce((s, e) => s + (e.totalAmount || e.amount || 0), 0)
             + inMk(D.coastContribs, m).reduce((s, e) => s + (e.amount || 0), 0);
-    months.push(m); put.push(c); mkt.push(investTotal(m) - investTotal(addM(m, -1)) - c);
+    const v0 = investTotal(addM(m, -1)), v1 = investTotal(m);
+    months.push(m); put.push(c); mkt.push(v1 - v0 - c);
+    ret.push(v0 + c / 2 > 0 ? (v1 - v0 - c) / (v0 + c / 2) : 0);   // month's return, contributions assumed mid-month
   }
   const t12 = a => a.map((_, i) => i < 11 ? null : a.slice(i - 11, i + 1).reduce((s, v) => s + v, 0));
   const smooth = a => a.map((v, i) => { if (v == null) return null; const w = a.slice(Math.max(0, i - 2), i + 1).filter(x => x != null); return w.reduce((s, x) => s + x, 0) / w.length; });
   const mT = t12(mkt), pT = t12(put);
-  return { months, mT, pT, mS: smooth(smooth(mT)), pS: smooth(smooth(pT)) };
+  const rT = ret.map((_, i) => i < 11 ? null : ret.slice(i - 11, i + 1).reduce((g, r) => g * (1 + r), 1) - 1);   // 12-month return, chained
+  return { months, mT, pT, mS: smooth(smooth(mT)), pS: smooth(smooth(pT)), rT, rS: smooth(smooth(rT)) };
 }
 function growthCard() {
   const chip = (n, l) => `<button class="chip ${GROWTH_RANGE === n ? 'on' : ''}" onclick="GROWTH_RANGE=${n};saveSettings({growthRange:${n}});show(VIEW)">${l}</button>`;
   return card('growth', `Market growth vs. what you put in — last 12 months <button class="info" onclick="openInfo('growth')">i</button>`,
     `<div class="chart" style="height:260px"><canvas id="c-growth"></canvas></div>
-     <div class="pulse-sum" id="growth-sum"></div>`, { chips: chip(12, '12M') + chip(24, '24M') + chip(0, 'All') });
+     <div class="pulse-sum" id="growth-sum"></div>`, { chips: `<button class="chip ${GROWTH_RET ? 'on' : ''}" onclick="GROWTH_RET=!GROWTH_RET;saveSettings({growthRet:GROWTH_RET});show(VIEW)">Return %</button>` + chip(12, '12M') + chip(24, '24M') + chip(0, 'All') });
 }
 function buildGrowth() {
   const g = growthSeries(), el = document.getElementById('growth-sum');
@@ -1100,11 +1112,21 @@ function buildGrowth() {
   const last = idx[idx.length - 1], m = g.mT[last], p = g.pT[last];
   el.innerHTML = `<div><span>Market, last 12 mo</span><b class="num ${m >= 0 ? 'pos' : 'neg'}">${$(m)}</b></div>` +
     `<div><span>You put in, last 12 mo</span><b class="num">${$(p)}</b></div>` +
-    `<div><span>Market ÷ what you put in</span><b class="num">${p > 0 ? pct(m / p, 0) : '—'}</b></div>`;
-  TABLES.growth = () => tableFor(labels, [{ label: 'Market (12 mo)', data: pick(g.mT) }, { label: 'You put in (12 mo)', data: pick(g.pT) },
-    { label: 'Market, smoothed', data: pick(g.mS) }, { label: 'You put in, smoothed', data: pick(g.pS) }]);
-  mkChart('c-growth', { type: 'line', data: { labels, datasets: [
-      lineDs('Market growth', pick(g.mS), SERIES[0]), lineDs('You put in (retirement + Coast)', pick(g.pS), SERIES[1]) ] }, options: baseOpts() });
+    `<div><span>Market ÷ what you put in</span><b class="num">${p > 0 ? pct(m / p, 0) : '—'}</b></div>` +
+    `<div><span>Market return, last 12 mo</span><b class="num ${g.rT[last] >= 0 ? 'pos' : 'neg'}">${pct(g.rT[last])}</b></div>`;
+  const rcol = a => idx.map(i => a[i] == null ? '—' : pct(a[i]));
+  TABLES.growth = () => {   // 4.4.1: add the 12-month return, raw and smoothed
+    const rows = labels.map((l, j) => `<tr><td>${esc(l)}</td>${[pick(g.mT), pick(g.pT), pick(g.mS), pick(g.pS)].map(a => `<td class="r num">${a[j] == null ? '—' : $(a[j])}</td>`).join('')}<td class="r num">${rcol(g.rT)[j]}</td><td class="r num">${rcol(g.rS)[j]}</td></tr>`).reverse().join('');
+    return `<div class="tbl-wrap"><table><thead><tr><th>Month</th>${['Market (12 mo)', 'You put in (12 mo)', 'Market, smoothed', 'You put in, smoothed', 'Return (12 mo)', 'Return, smoothed'].map(h => `<th class="r">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  };
+  const pickR = a => idx.map(i => a[i] == null ? null : +(a[i] * 100).toFixed(1));
+  const base = baseOpts();
+  base.scales.yRet = { position: 'right', grid: { display: false }, border: { display: false }, ticks: { color: SERIES[2], font: { size: 11 }, callback: v => v + '%' } };
+  base.plugins.tooltip.callbacks.label = c => ' ' + c.dataset.label + ': ' + (c.dataset.yAxisID === 'yRet' ? c.parsed.y.toFixed(1) + '%' : $(c.parsed.y));
+  const sets = [lineDs('Market growth', pick(g.mS), SERIES[0]), lineDs('You put in (retirement + Coast)', pick(g.pS), SERIES[1])];
+  if (GROWTH_RET) sets.push(lineDs('Market return, 12 mo (right)', pickR(g.rS), SERIES[2], { yAxisID: 'yRet', borderDash: [6, 4], borderWidth: 2 }));
+  else delete base.scales.yRet;
+  mkChart('c-growth', { type: 'line', data: { labels, datasets: sets }, options: base });
 }
 
 /* ═══ LAST 12 MONTHS: PAY, CONTRIBUTIONS & BILLS (Overview, 4.4.0) ═════════
@@ -1784,12 +1806,16 @@ progress = taxable ${$(T)} ÷ target`, ['Only taxable accounts count, since they
   market = change in invested balance − what you put in
   put in = retirement (incl. employer match, HSA) + Coast
 last 12 months = the 12 months ending that month, added up
-smoothed       = 3-month average, taken twice (each point ≈ last 5 months)` + (i != null ? `
+smoothed       = 3-month average, taken twice (each point ≈ last 5 months)
+return % (Return % button, right axis):
+  month return = market ÷ (start balance + half of what you put in)
+  12-month     = the 12 month returns chained: (1 + r1) × … × (1 + r12) − 1` + (i != null ? `
 
 12 months ending ${mkLabel(g.months[i])}:
   market ${$(g.mT[i])}   put in ${$(g.pT[i])}
-  smoothed: market ${$(g.mS[i])}   put in ${$(g.pS[i])}` : ''); })(),
-      ['Market line above yours = the market added more than you saved over that year (growth beats saving).', 'Balances are the latest per account each month, all investment accounts; complete months only (' + mkLabel(addM(asOfMk(), -1)) + ' is the last).', 'Money taken out of an account (e.g. to fund a loan) counts as a market loss; money moved in without a logged contribution counts as a gain.', 'The smoothed lines turn about two months after the raw numbers. The Table button shows both.']],
+  smoothed: market ${$(g.mS[i])}   put in ${$(g.pS[i])}
+  return ${pct(g.rT[i])}   smoothed ${pct(g.rS[i])}` : ''); })(),
+      ['Market line above yours = the market added more than you saved over that year (growth beats saving).', 'Balances are the latest per account each month, all investment accounts; complete months only (' + mkLabel(addM(asOfMk(), -1)) + ' is the last).', 'Money taken out of an account (e.g. to fund a loan) counts as a market loss; money moved in without a logged contribution counts as a gain.', 'The smoothed lines turn about two months after the raw numbers. The Table button shows both.', 'Return % is per dollar invested, so new contributions don\'t raise it; it matches how funds report returns. It assumes contributions land mid-month.']],
     flow12: ['Last 12 months — pay, contributions & bills', (() => { const g = flowSeries(), i = g ? g.take.map((v, j) => v == null ? -1 : j).filter(j => j >= 0).pop() : undefined;
       return `each line = the 12 months ending that month, added up
   gross pay     = gross on paychecks and bonuses
