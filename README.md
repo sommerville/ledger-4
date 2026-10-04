@@ -2,7 +2,7 @@
 
 A personal finance app built as two web apps on GitHub Pages (no build step): a **phone logger** and a **desktop planner**.
 
-Ledger 3.0 was the pivot from Ledger 2: backups go to the cloud, and all the planning (Retirement Plan, Paycheck Planner, FIRE projections) lives on the desktop. **Current version: 4.3.2.** 4.0 rolls up 3.6–3.8.1: bundled libraries and import safety (3.6), golden-number tests, one shared math file used by both apps (`js/ledger-core.js`, 3.7–3.7.2), the goals rework with editable goal steps and critical mass (3.8), and a home icon layout that finally stays put (3.8.1). See [CHANGELOG](library/CHANGELOG.md).
+Ledger 3.0 was the pivot from Ledger 2: backups go to the cloud, and all the planning (Retirement Plan, Paycheck Planner, FIRE projections) lives on the desktop. **Current version: 4.3.3 (phone), 4.4.0 (desktop).** 4.0 rolls up 3.6–3.8.1: bundled libraries and import safety (3.6), golden-number tests, one shared math file used by both apps (`js/ledger-core.js`, 3.7–3.7.2), the goals rework with editable goal steps and critical mass (3.8), and a home icon layout that finally stays put (3.8.1). See [CHANGELOG](library/CHANGELOG.md).
 
 | App | Open it at | What it does |
 |---|---|---|

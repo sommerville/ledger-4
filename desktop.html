@@ -192,7 +192,7 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <aside>
-    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.0</span></div>
+    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.4.0</span></div>
     <nav id="nav"></nav>
     <div class="side-foot">
       <button onclick="toggleTheme()">🎨 Switch theme</button>
@@ -325,6 +325,8 @@ function load(b) {
   MC_LAST = null;
   THEME = st.theme || (b.theme === 'sunset' ? 'sunset' : 'alaskan');
   if (st.pulseRange != null) PULSE_RANGE = st.pulseRange;
+  if (st.growthRange != null) GROWTH_RANGE = st.growthRange;   // 4.4.0
+  if (st.flowRange != null) FLOW_RANGE = st.flowRange;         // 4.4.0
   if (st.fireRet != null) window._fireRet = st.fireRet;
   if (st.fireStop != null) window._fireStop = st.fireStop;
   applyTheme();
@@ -416,7 +418,7 @@ function saveSettings(patch) {
 function resetSettings() {
   if (!confirm('Reset all planner settings (goal, retirement age, rates, elections) to the defaults from your backup?')) return;
   try { localStorage.removeItem(SETTINGS_KEY); } catch (e) {}
-  RP = null; PS = null; PULSE_RANGE = 12; window._fireRet = undefined; window._fireStop = undefined; EXTRAS_ON = true; MC = null; MC_LAST = null; if (D) TAX_PCT = D.taxRatePct;
+  RP = null; PS = null; PULSE_RANGE = 12; GROWTH_RANGE = 24; FLOW_RANGE = 24; window._fireRet = undefined; window._fireStop = undefined; EXTRAS_ON = true; MC = null; MC_LAST = null; if (D) TAX_PCT = D.taxRatePct;
   if (D) show(VIEW);
 }
 const RP_KEYS = ['goal', 'r1', 'retireAge', 'r2', 'freed', 'r3', 'tax3', 'exp3', 'wr4', 'tax4', 'r4'];
@@ -1059,6 +1061,98 @@ function buildPulse() {
       yPort: { position: 'right', grid: { display: false }, border: { display: false }, ticks: { color: Au, font: { size: 11 }, callback: v => $k(v) } } } } });
 }
 
+/* ═══ MARKET GROWTH vs. WHAT YOU PUT IN (Overview, 4.4.0) ══════════════════
+   Each complete month: market = change in invested balance − contributions
+   (retirement incl. match/HSA + Coast). Both summed over the trailing 12
+   months, then smoothed twice with a trailing 3-month average (Darrin's pick:
+   the raw 12-month lines were too noisy). The table shows raw and smoothed.
+   When the market line passes yours, growth beats saving.
+   ═══════════════════════════════════════════════════════════════════════════ */
+let GROWTH_RANGE = 24;
+function growthSeries() {
+  const first = D.entries.map(e => e.date && e.date.slice(0, 7)).filter(Boolean).sort()[0];
+  if (!first) return null;
+  const end = addM(asOfMk(), -1), inMk = (l, m) => (l || []).filter(e => e.date && e.date.startsWith(m));
+  const months = [], mkt = [], put = [];
+  for (let m = addM(first, 1); m <= end; m = addM(m, 1)) {   // the first month has no balance before it
+    const c = inMk(D.retirementContribs, m).reduce((s, e) => s + (e.totalAmount || e.amount || 0), 0)
+            + inMk(D.coastContribs, m).reduce((s, e) => s + (e.amount || 0), 0);
+    months.push(m); put.push(c); mkt.push(investTotal(m) - investTotal(addM(m, -1)) - c);
+  }
+  const t12 = a => a.map((_, i) => i < 11 ? null : a.slice(i - 11, i + 1).reduce((s, v) => s + v, 0));
+  const smooth = a => a.map((v, i) => { if (v == null) return null; const w = a.slice(Math.max(0, i - 2), i + 1).filter(x => x != null); return w.reduce((s, x) => s + x, 0) / w.length; });
+  const mT = t12(mkt), pT = t12(put);
+  return { months, mT, pT, mS: smooth(smooth(mT)), pS: smooth(smooth(pT)) };
+}
+function growthCard() {
+  const chip = (n, l) => `<button class="chip ${GROWTH_RANGE === n ? 'on' : ''}" onclick="GROWTH_RANGE=${n};saveSettings({growthRange:${n}});show(VIEW)">${l}</button>`;
+  return card('growth', `Market growth vs. what you put in — last 12 months <button class="info" onclick="openInfo('growth')">i</button>`,
+    `<div class="chart" style="height:260px"><canvas id="c-growth"></canvas></div>
+     <div class="pulse-sum" id="growth-sum"></div>`, { chips: chip(12, '12M') + chip(24, '24M') + chip(0, 'All') });
+}
+function buildGrowth() {
+  const g = growthSeries(), el = document.getElementById('growth-sum');
+  if (!g || !el) return;
+  let idx = g.months.map((_, i) => i).filter(i => g.mT[i] != null);
+  if (!idx.length) { el.innerHTML = '<div><span>Needs 13 months of balances</span></div>'; return; }
+  if (GROWTH_RANGE > 0) idx = idx.slice(-GROWTH_RANGE);
+  const labels = idx.map(i => mkLabel(g.months[i])), pick = a => idx.map(i => a[i] == null ? null : Math.round(a[i]));
+  const last = idx[idx.length - 1], m = g.mT[last], p = g.pT[last];
+  el.innerHTML = `<div><span>Market, last 12 mo</span><b class="num ${m >= 0 ? 'pos' : 'neg'}">${$(m)}</b></div>` +
+    `<div><span>You put in, last 12 mo</span><b class="num">${$(p)}</b></div>` +
+    `<div><span>Market ÷ what you put in</span><b class="num">${p > 0 ? pct(m / p, 0) : '—'}</b></div>`;
+  TABLES.growth = () => tableFor(labels, [{ label: 'Market (12 mo)', data: pick(g.mT) }, { label: 'You put in (12 mo)', data: pick(g.pT) },
+    { label: 'Market, smoothed', data: pick(g.mS) }, { label: 'You put in, smoothed', data: pick(g.pS) }]);
+  mkChart('c-growth', { type: 'line', data: { labels, datasets: [
+      lineDs('Market growth', pick(g.mS), SERIES[0]), lineDs('You put in (retirement + Coast)', pick(g.pS), SERIES[1]) ] }, options: baseOpts() });
+}
+
+/* ═══ LAST 12 MONTHS: PAY, CONTRIBUTIONS & BILLS (Overview, 4.4.0) ═════════
+   Trailing 12-month totals, complete months only, no smoothing (12-month sums
+   are already steady). Gross = grossPay on paychecks and bonuses (refunds and
+   dividends have none); take-home = every income deposit; contributions =
+   retirement (incl. match/HSA) + Coast, same as the chart above; bills = logged
+   expenses.
+   ═══════════════════════════════════════════════════════════════════════════ */
+let FLOW_RANGE = 24;
+function flowCard() {
+  const chip = (n, l) => `<button class="chip ${FLOW_RANGE === n ? 'on' : ''}" onclick="FLOW_RANGE=${n};saveSettings({flowRange:${n}});show(VIEW)">${l}</button>`;
+  return card('flow12', `Last 12 months — gross pay, take-home, contributions &amp; bills <button class="info" onclick="openInfo('flow12')">i</button>`,
+    `<div class="chart" style="height:260px"><canvas id="c-flow12"></canvas></div>
+     <div class="pulse-sum" id="flow12-sum"></div>`, { chips: chip(12, '12M') + chip(24, '24M') + chip(0, 'All') });
+}
+function flowSeries() {
+  const first = [...D.incomeEntries, ...D.expenses, ...D.retirementContribs, ...D.coastContribs].map(e => e.date && e.date.slice(0, 7)).filter(Boolean).sort()[0];
+  if (!first) return null;
+  const end = addM(asOfMk(), -1), inMk = (l, m) => (l || []).filter(e => e.date && e.date.startsWith(m)), sum = (l, m, f) => inMk(l, m).reduce((s, e) => s + (f(e) || 0), 0);
+  const months = [], gross = [], take = [], put = [], bills = [];
+  for (let m = first; m <= end; m = addM(m, 1)) {
+    months.push(m);
+    gross.push(sum(D.incomeEntries, m, e => e.grossPay || e.gross));
+    take.push(sum(D.incomeEntries, m, e => e.amount));
+    put.push(sum(D.retirementContribs, m, e => e.totalAmount || e.amount) + sum(D.coastContribs, m, e => e.amount));
+    bills.push(sum(D.expenses, m, e => e.amount));
+  }
+  const t12 = a => a.map((_, i) => i < 11 ? null : a.slice(i - 11, i + 1).reduce((s, v) => s + v, 0));
+  return { months, gross: t12(gross), take: t12(take), put: t12(put), bills: t12(bills) };
+}
+function buildFlow12() {
+  const g = flowSeries(), el = document.getElementById('flow12-sum');
+  if (!g || !el) return;
+  let idx = g.months.map((_, i) => i).filter(i => g.take[i] != null);
+  if (!idx.length) { el.innerHTML = '<div><span>Needs 12 months of data</span></div>'; return; }
+  if (FLOW_RANGE > 0) idx = idx.slice(-FLOW_RANGE);
+  const labels = idx.map(i => mkLabel(g.months[i])), pick = a => idx.map(i => a[i]);
+  const L = idx[idx.length - 1], F = idx[0];
+  const chg = k => { const d = g[k][L] - g[k][F], good = k === 'bills' ? d <= 0 : d >= 0; return idx.length > 1 ? `<span class="${good ? 'pos' : 'neg'}" style="font-size:11px">${d >= 0 ? '+' : ''}${$(d)} since ${mkLabel(g.months[F])}</span>` : ''; };
+  el.innerHTML = [['Gross pay', 'gross'], ['Take-home', 'take'], ['Contributions', 'put'], ['Bills', 'bills']]
+    .map(([l, k]) => `<div><span>${l}</span><b class="num">${$(g[k][L])}</b>${chg(k)}</div>`).join('');
+  const sets = [['Gross pay', 'gross'], ['Take-home pay', 'take'], ['Contributions (retirement + Coast)', 'put'], ['Bills paid', 'bills']];
+  TABLES.flow12 = () => tableFor(labels, sets.map(([l, k]) => ({ label: l + ' (12 mo)', data: pick(g[k]) })));
+  const base = baseOpts(); base.scales.y.beginAtZero = true;
+  mkChart('c-flow12', { type: 'line', data: { labels, datasets: sets.map(([l, k], i) => lineDs(l, pick(g[k]), SERIES[[2, 3, 1, 4][i]])) }, options: base });
+}
+
 /* ═══ RETIREMENT PLAN (4 phases) ═══════════════════════════════════════════
    Moved here from the phone in Ledger 3.0 (was erCalcP1…erCalcP4 in
    index.html ≤ v15.4). This is now the only copy of the phase math.
@@ -1400,6 +1494,8 @@ overview() {
       ${kpi('Full FIRE', pct(inv / full, 0), 'of ' + $k(full) + ' · ' + monthsLabel(monthsToGoal(inv, full, sv.totalMo)), 'fullfire')}
     </div>
     <div style="margin-bottom:14px">${pulseCard()}</div>
+    <div style="margin-bottom:14px">${growthCard()}</div>
+    <div style="margin-bottom:14px">${flowCard()}</div>
     <div class="grid g21">
       ${card('ovnw', 'Net worth over time', '<div class="chart tall"><canvas id="c-ovnw"></canvas></div>')}
       <div class="card"><div class="card-h"><h3>Allocation by type</h3></div>
@@ -1419,6 +1515,8 @@ overview() {
   mkChart('c-ovnw', { type: 'line', data: { labels: months.map(mkLabel), datasets: [
       lineDs('Net worth incl. real estate', nwHome, SERIES[0]), lineDs('Liquid net worth', nwLiquid, SERIES[1]) ] }, options: baseOpts() });
   buildPulse();
+  buildGrowth();
+  buildFlow12();
 },
 
 investments() {
@@ -1681,6 +1779,28 @@ progress = taxable ${$(T)} ÷ target`, ['Only taxable accounts count, since they
     savings: ['Savings rate', `(retirement + coast) ÷ (take-home + retirement)
   = (${$(sv.ret)} + ${$(sv.coast)}) ÷ (${$(takeHomeT12())} + ${$(sv.ret)})
   = ${savingsRate() == null ? '—' : pct(savingsRate())}`, ['Last 12 complete months: ' + t12Label() + '.', 'Retirement money leaves before payday, so it is added back to the income side.']],
+    growth: ['Market growth vs. what you put in', (() => { const g = growthSeries(), i = g ? g.mT.map((v, j) => v == null ? -1 : j).filter(j => j >= 0).pop() : undefined;
+      return `each month:
+  market = change in invested balance − what you put in
+  put in = retirement (incl. employer match, HSA) + Coast
+last 12 months = the 12 months ending that month, added up
+smoothed       = 3-month average, taken twice (each point ≈ last 5 months)` + (i != null ? `
+
+12 months ending ${mkLabel(g.months[i])}:
+  market ${$(g.mT[i])}   put in ${$(g.pT[i])}
+  smoothed: market ${$(g.mS[i])}   put in ${$(g.pS[i])}` : ''); })(),
+      ['Market line above yours = the market added more than you saved over that year (growth beats saving).', 'Balances are the latest per account each month, all investment accounts; complete months only (' + mkLabel(addM(asOfMk(), -1)) + ' is the last).', 'Money taken out of an account (e.g. to fund a loan) counts as a market loss; money moved in without a logged contribution counts as a gain.', 'The smoothed lines turn about two months after the raw numbers. The Table button shows both.']],
+    flow12: ['Last 12 months — pay, contributions & bills', (() => { const g = flowSeries(), i = g ? g.take.map((v, j) => v == null ? -1 : j).filter(j => j >= 0).pop() : undefined;
+      return `each line = the 12 months ending that month, added up
+  gross pay     = gross on paychecks and bonuses
+  take-home     = every deposit (pay, bonuses, refunds, dividends)
+  contributions = retirement (incl. employer match, HSA) + Coast
+  bills         = logged expenses` + (i != null ? `
+
+12 months ending ${mkLabel(g.months[i])}:
+  gross ${$(g.gross[i])}   take-home ${$(g.take[i])}
+  contributions ${$(g.put[i])}   bills ${$(g.bills[i])}` : ''); })(),
+      ['Complete months only (' + mkLabel(addM(asOfMk(), -1)) + ' is the last).', 'Tax refunds and dividends have no gross, so they count in take-home only.', 'Contributions are the same numbers as the market-growth chart above, before smoothing.']],
     networth: ['Net worth', `liquid    = investments ${$(inv)} − debt ${$(debtTotal())} + loans owed ${$(loansOwed())} = ${$(inv - debtTotal() + loansOwed())}
 net worth = liquid + real estate ${$(realEstate())} = ${$(inv - debtTotal() + loansOwed() + realEstate())}`, ['Latest balance per account. Debt is capped at last month, same as the phone.', 'Loans owed to you include interest added through ' + mkLabel(asOfMk()) + ' (same math as the phone).', 'Real estate = the most recent value logged for each property (' + (realEstateItems().map(x => x.p.name).join(', ') || 'none') + '). Not part of liquid net worth, FIRE or the plan.']],
     paycheck: ['Paycheck planner', `eligible  = gross − LTD gross-up

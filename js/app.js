@@ -203,16 +203,6 @@
         const rate     = LC.savingsRate({ ret, coast }, takeHome);
         const bills    = (expenses || []).filter(inMk);
         const spent    = bills.reduce((s, e) => s + (e.amount || 0), 0);
-        // 4.3.1: Spending = take-home − (bills + Coast); retirement comes out before take-home, so it isn't subtracted
-        const spending = takeHome - (spent + coast);
-        // 4.3.2: split by paycheck. Sunshine's take-home pays no bills or savings, so all of it is spending;
-        // the rest (Hilcorp pay, bonuses, dividends…) is what's left after bills and Coast. Matched by payer name.
-        const isSun = e => { const p = e.payerId != null ? (payers || []).find(x => String(x.id) === String(e.payerId)) : null;
-            return /sunshine/i.test((p && p.name) || e.payerName || ''); };
-        const sunSpend = sum(incomeEntries, e => isSun(e) ? e.amount : 0);
-        const hilSpend = spending - sunSpend;
-        const hilName  = ((payers || []).find(p => /hilcorp/i.test(p.name)) || {}).name || 'Hilcorp';
-        const sunName  = ((payers || []).find(p => /sunshine/i.test(p.name)) || {}).name || 'Sunshine';
         const top      = bills.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 3);
         const p0 = investAt(prevMk), p1 = investAt(mk), n0 = worthAt(prevMk), n1 = worthAt(mk);
         const added  = ret + coast;
@@ -251,7 +241,6 @@
             ${card('EARNED', big(fmt(takeHome), 'take-home') + (gross ? row('Gross pay', fmt(gross)) : ''))}
             ${card('SAVED', big(fmt(added), rate !== null ? Math.round(rate * 100) + '% savings rate' : '') + row('Retirement (incl. match)', fmt(ret)) + row('Coast', fmt(coast)))}
             ${card('BILLS PAID', big(fmt(spent), bills.length + (bills.length === 1 ? ' bill' : ' bills') + ' logged') + top.map(b => row(esc(b.companyName || b.serviceType || 'Bill'), fmt(b.amount || 0))).join(''))}
-            ${takeHome > 0 ? card('SPENDING', `<div style="font-size:24px;font-weight:800;color:${spending >= 0 ? T.textClr : neg}">${spending >= 0 ? fmt(spending) : '−' + fmt(-spending)}</div><div style="font-size:11px;color:${T.mutedClr};margin-bottom:4px">${spending >= 0 ? 'left to spend' : 'more went out than came in'}</div>` + (sunSpend ? [[esc(hilName), hilSpend], [esc(sunName), sunSpend]].sort((a, b) => b[1] - a[1]).map(([l, v]) => row(l, v >= 0 ? fmt(v) : '−' + fmt(-v), v >= 0 ? null : neg)).join('') : '')) : ''}
             ${card('WHERE THE PORTFOLIO MOVE CAME FROM', row('Start of month', fmt(p0)) + row('You added', '+' + fmt(added)) + row('The market', signed(market), tone(market)) + `<div style="border-top:1px solid ${T.borderClr};margin-top:4px"></div>` + row('End of month', fmt(p1)))}
             ${reached.length ? card('GOALS REACHED', reached.map(r => `<div style="padding:4px 0;font-size:13px;color:${T.textClr}">✓ ${r}</div>`).join('')) : ''}
             ${note ? card('YOUR NOTE', `<div style="font-size:13px;line-height:1.5;color:${T.textClr};font-style:italic">“${esc(note)}”</div>`) : ''}
