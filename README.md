@@ -2,20 +2,20 @@
 
 A personal finance app built as two web apps on GitHub Pages (no build step): a **phone logger** and a **desktop planner**.
 
-Ledger 3.0 was the pivot from Ledger 2: backups go to the cloud, and all the planning (Retirement Plan, Paycheck Planner, FIRE projections) lives on the desktop. **Current version: 4.1.0.** 4.0 rolls up 3.6–3.8.1: bundled libraries and import safety (3.6), golden-number tests, one shared math file used by both apps (`js/ledger-core.js`, 3.7–3.7.2), the goals rework with editable goal steps and critical mass (3.8), and a home icon layout that finally stays put (3.8.1). See [CHANGELOG](library/CHANGELOG.md).
+Ledger 3.0 was the pivot from Ledger 2: backups go to the cloud, and all the planning (Retirement Plan, Paycheck Planner, FIRE projections) lives on the desktop. **Current version: 4.3.1.** 4.0 rolls up 3.6–3.8.1: bundled libraries and import safety (3.6), golden-number tests, one shared math file used by both apps (`js/ledger-core.js`, 3.7–3.7.2), the goals rework with editable goal steps and critical mass (3.8), and a home icon layout that finally stays put (3.8.1). See [CHANGELOG](library/CHANGELOG.md).
 
 | App | Open it at | What it does |
 |---|---|---|
 | **Phone app** (`index.html`) | `https://sommerville.github.io/ledger-4/` | **The logger.** The only app that saves financial data. You log balances, bills, income, 401(k) and coast contributions, loans you've made and property values here, and track your goals. Data stays on the phone, encrypted with your PIN. Installs as a PWA and works offline. |
 | **Desktop planner** (`desktop.html`) | `https://sommerville.github.io/ledger-4/desktop.html` | **The planner.** Dashboards plus the Retirement Plan, Paycheck Planner and FIRE projections. Open a backup from the phone (plain or locked). It remembers only your planning settings; your financial data is never stored there and never leaves the browser. |
 
-The two apps share two things: the **backup file** (`ledger-YYYY-MM-DD-locked.json`) and the **math** (`js/ledger-core.js`), so a number means the same thing on both screens.
+The two apps share two things: the **backup file** (`ledger-YYYY-MM-DD.json`) and the **math** (`js/ledger-core.js`), so a number means the same thing on both screens.
 
 **Typical flow:**
 1. Phone → Settings → Data Management. Tap **📤 Save to OneDrive / Share…** → OneDrive (backups are plain files since 4.0.10, no PIN).
-2. Computer → open `desktop.html` → choose the newest backup in the synced OneDrive folder (or **Load newest backup** once the folder is chosen) → enter the app PIN.
+2. Computer → open `desktop.html` → choose the newest backup in the synced OneDrive folder (or **Load newest backup** once the folder is chosen). Older locked backups ask for the app PIN.
 
-Locked backups use the 4-digit app PIN as their key (a separate passphrase was tried in 3.6 and dropped). That's a weak key for a file kept in the cloud, so keep the OneDrive folder private.
+Backups are plain files since 4.0.10 (Darrin's call: there are no account numbers or other sensitive data in them). Backups saved locked before that (`-locked.json`, keyed with the 4-digit app PIN) still open on both apps.
 
 ---
 
@@ -52,7 +52,7 @@ The repo is `ledger-4` (it was `ledger-3.2`). The phone's saved data and PIN bel
 4. **Don't upload `library/`, `tests/` or any backup file.** The repo is public. If they're already there, delete them on GitHub (open the folder → ⋯ → Delete directory).
 5. Wait a minute or two for the **Actions** tab to show a green check.
 6. On the phone, close and reopen the app (twice if the update doesn't show). Settings → About shows the version.
-7. Test in all three themes (Dark, Sunset, Sea Glass).
+7. Test in all three themes (Dark, Sunset, Royal Navy).
 
 ## Repo layout
 
@@ -83,5 +83,4 @@ tests/golden/   golden backup + test scripts
 
 - **Never commit a backup file (`ledger-*.json` / `.txt`) to this repo**, locked or not. The repo is public. `.gitignore` blocks them if you use git; uploading through the GitHub website ignores `.gitignore`, so check before you drag files in.
 - `library/` and `tests/` stay local. The docs describe the math with example numbers, but `PAYSPLIT.md` and `CLAUDE.md` contain a few real paycheck figures used to verify the payroll math. The golden test backup is made up, but still don't put it on the phone: importing it replaces your data.
-- Anything going to OneDrive or another cloud should be a **locked** backup. Unlocked backups are plain text: fine for AirDrop or USB, not for the cloud.
-- Locked backups open with your app PIN. Keep the cloud folder private and don't share backup files.
+- Backups are plain text since 4.0.10, on OneDrive or the phone, by choice (nothing sensitive in them). Keep the OneDrive folder private anyway and don't share backup files.
