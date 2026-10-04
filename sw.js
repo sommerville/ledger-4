@@ -36,14 +36,13 @@ const ASSETS = [
   './icons/app/icon-192-maskable.png',
   './images/banner.webp',
   './images/banner-large.webp',
-  './icons/home/backtest.png',
   './icons/home/budget.png',
   './icons/home/compound-interest.png',
   './icons/home/data.png',
   './icons/home/debt.png',
   './icons/home/expenses.png',
   './icons/home/fire.png',
-  './icons/home/goals.png',   // 3.8 (placeholder until Darrin's art)
+  './icons/home/goals.png',   // 3.8, Darrin's art (4.0)
   './icons/home/real-estate.png',
   './icons/home/income.png',
   './icons/home/investments.png',
