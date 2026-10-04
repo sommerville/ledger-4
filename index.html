@@ -168,6 +168,9 @@
     </div>
 </div>
 
+<!-- 4.3.0: Month in Review sheet (filled by renderMonthReview in app.js), above Summary -->
+<div id="monthReview" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:2100; overflow-y:auto; -webkit-overflow-scrolling:touch;"></div>
+
 <!-- Overview / Statement Page (swipe down from any page) -->
 <div id="overviewPage" class="container" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:2000; transform:translateY(-100%); transition:transform 0.35s cubic-bezier(0.4,0,0.2,1); overflow-y:auto;">
 
@@ -175,6 +178,11 @@
         <div class="total-value" id="ovSummaryLabel" style="font-size:28px; letter-spacing:6px; margin-top:0; margin-bottom:4px;">SUMMARY</div>
         <div class="firm-name" id="ovDate"></div>
     </div>
+
+    <!-- 4.3.0: Month in Review (colors from the theme: styleReviewLink in app.js) -->
+    <button type="button" id="ovReviewLink" onclick="openMonthReview()" style="display:flex; align-items:center; justify-content:space-between; width:calc(100% - 32px); margin:14px 16px 0; padding:13px 16px; border-radius:12px; border:1px solid rgba(212,175,55,0.33); background:rgba(212,175,55,0.08); color:#D4AF37; font:700 14px -apple-system,BlinkMacSystemFont,sans-serif; cursor:pointer;">
+        <span>Month in Review</span><span style="font-size:18px; opacity:0.8;">›</span>
+    </button>
 
     <div style="padding:16px;">
 
@@ -885,7 +893,7 @@
         <div class="settings-section">
             <h3>About</h3>
             <div id="settingsAboutCard" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
-                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.2.0 &nbsp;·&nbsp; Mobile</div>
+                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.3.0 &nbsp;·&nbsp; Mobile</div>
                 <div class="about-divider" style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px;"></div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <span style="font-size:18px;">🤖</span>

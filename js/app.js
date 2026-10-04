@@ -100,6 +100,11 @@
         const minSwipe = 65;
         const minVelocity = 0.35;
 
+        // 4.3.0: Month in Review — a sideways swipe steps months; nothing else (so it can't close Summary)
+        if (mirIsOpen()) {
+            if (absX > absY * 1.5 && absX >= minSwipe) mirStep(swipeDistanceX > 0 ? -1 : 1);
+            return;
+        }
         // Overview/logbook overlay close-swipes (still needed for the overlays themselves)
         if (overviewIsOpen) {
             const clearlyUp = swipeDistanceY < -120 && absY > absX * 2.5 && (Math.abs(swipeDistanceY) / elapsed) > 0.6;
@@ -126,6 +131,7 @@
     // ─── Overview / Statement Page ───────────────────────────
     function openOverview() {
         try { buildOverview(); } catch(e) { console.error('buildOverview error:', e); }
+        styleReviewLink();   // 4.3.0: the Month in Review link takes the theme's accent
         const page = document.getElementById('overviewPage');
         page.style.display = 'block';
         // Force reflow so CSS transition fires reliably
@@ -135,10 +141,118 @@
     }
 
     function closeOverview() {
+        closeMonthReview();   // 4.3.0
         const page = document.getElementById('overviewPage');
         page.style.transform = 'translateY(-100%)';
         setTimeout(() => { page.style.display = 'none'; }, 350);
         overviewIsOpen = false;
+    }
+
+    // ─── Month in Review (4.3.0) ─────────────────────────────
+    // Summary → Month in Review. One complete month at a time, starting with last month; ‹ › or a sideways swipe
+    // steps through the months that have data. Balances use the same math as the Net Worth / Investments monthly
+    // snapshots (each account's latest value on or before the month), the savings rate is LC.savingsRate, and
+    // every amount goes through fmt(), so Demo Mode scales it.
+    let mirMk = null;
+    function mirIsOpen() { const el = document.getElementById('monthReview'); return !!(el && el.style.display !== 'none'); }
+    function mirMonths() {
+        const cur = moKey(new Date());
+        const all = [entries, incomeEntries, expenses, retirementContribs, coastContribs, debtEntries]
+            .flatMap(list => (list || []).map(e => e && e.date && e.date.slice(0, 7)));
+        return [...new Set(all.filter(Boolean))].filter(m => m < cur).sort();
+    }
+    function openMonthReview() {
+        const ms = mirMonths();
+        if (!ms.length) { alert('No complete month logged yet.'); return; }
+        if (!mirMk || !ms.includes(mirMk)) mirMk = ms[ms.length - 1];
+        renderMonthReview();
+        const el = document.getElementById('monthReview');
+        el.style.display = 'block';
+        el.scrollTop = 0;
+        history.pushState({ idx: 0 }, '', '');   // Back closes the review, not Summary
+    }
+    function closeMonthReview() {
+        const el = document.getElementById('monthReview');
+        if (el) el.style.display = 'none';
+    }
+    function mirStep(dir) {
+        const ms = mirMonths(), i = ms.indexOf(mirMk), j = i + dir;
+        if (j < 0 || j >= ms.length) return;
+        mirMk = ms[j];
+        renderMonthReview();
+        document.getElementById('monthReview').scrollTop = 0;
+    }
+    function renderMonthReview() {
+        const el = document.getElementById('monthReview');
+        if (!el) return;
+        const T = retTheme(), mk = mirMk, prevMk = LC.addMonths(mk, -1);
+        const neg = '#EF5350';
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const inMk = e => e && e.date && e.date.slice(0, 7) === mk;
+        const sum = (list, f) => (list || []).filter(inMk).reduce((s, e) => s + (f(e) || 0), 0);
+        const signed = n => (n >= 0 ? '+' : '−') + fmt(Math.abs(n));
+        const tone = n => n >= 0 ? T.greenClr : neg;
+        const pct = (n, base) => base > 0 ? (n >= 0 ? '+' : '−') + Math.abs(n / base * 100).toFixed(1) + '%' : '';
+        const investAt = m => LC.investTotal(accounts, entries, m);
+        const worthAt  = m => investAt(m) - LC.debtThrough(debtAccounts, debtEntries, m) + LC.loansOwed(loanPeople, loanEvents, m) + realEstateTotal(m);
+
+        const takeHome = sum(incomeEntries, e => e.amount);
+        const gross    = sum(incomeEntries, e => e.grossPay || e.gross);
+        const ret      = sum(retirementContribs, e => e.totalAmount || e.amount);
+        const coast    = sum(coastContribs, e => e.amount);
+        const rate     = LC.savingsRate({ ret, coast }, takeHome);
+        const bills    = (expenses || []).filter(inMk);
+        const spent    = bills.reduce((s, e) => s + (e.amount || 0), 0);
+        const top      = bills.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 3);
+        const p0 = investAt(prevMk), p1 = investAt(mk), n0 = worthAt(prevMk), n1 = worthAt(mk);
+        const added  = ret + coast;
+        const market = (p1 - p0) - added;
+        const reached = [];
+        if (typeof GOAL_TRACKS !== 'undefined' && typeof goalState === 'function') {
+            GOAL_TRACKS.forEach(t => (goalState(t.id).done || []).filter(d => d.mk === mk)
+                .forEach(d => reached.push(`${t.emoji} ${esc(t.name)} passed ${t.id === 'incomeMonthly' ? fmt(d.target) + '/mo' : fmt(d.target)}`)));
+        }
+        let note = monthNotes[mk] || '';
+        if (note && demoMode && typeof ddDemoText === 'function') note = ddDemoText(note);
+
+        const ms = mirMonths(), i = ms.indexOf(mk);
+        const name = new Date(mk + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        const arrow = (dir, on) => `<button type="button" onclick="mirStep(${dir})" ${on ? '' : 'disabled'} aria-label="${dir < 0 ? 'Earlier month' : 'Later month'}" style="width:38px;height:38px;border-radius:10px;border:1px solid ${T.borderClr};background:${T.cardBg};color:${on ? T.accent : T.borderClr};font-size:20px;line-height:1;cursor:${on ? 'pointer' : 'default'}">${dir < 0 ? '‹' : '›'}</button>`;
+        const row = (l, r, c) => `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:${T.mutedClr}">${l}</span><span style="color:${c || T.textClr};font-weight:600">${r}</span></div>`;
+        const card = (title, body) => `<div style="background:${T.cardBg};border:1px solid ${T.borderClr};border-radius:14px;padding:12px 14px;margin-bottom:10px"><div style="font-size:10px;letter-spacing:2px;color:${T.accent};font-weight:700;margin-bottom:4px">${title}</div>${body}</div>`;
+        const big = (v, sub) => `<div style="font-size:24px;font-weight:800;color:${T.textClr}">${v}</div>${sub ? `<div style="font-size:11px;color:${T.mutedClr};margin-bottom:4px">${sub}</div>` : ''}`;
+        const tile = (label, v, sub, c) => `<div style="background:${T.cardBg};border:1px solid ${T.borderClr};border-radius:14px;padding:12px"><div style="font-size:10px;letter-spacing:1.5px;color:${T.mutedClr};font-weight:700">${label}</div><div style="font-size:18px;font-weight:800;color:${c};margin-top:3px">${v}</div><div style="font-size:11px;color:${T.mutedClr}">${sub}</div></div>`;
+
+        el.style.background = 'rgba(0,0,0,0.55)';
+        el.innerHTML = `<div style="margin:24px 14px 30px;padding:18px 16px 14px;border-radius:20px;background:${T.inputBg};border:1px solid ${T.borderClr};box-shadow:0 20px 50px rgba(0,0,0,0.5);font-family:-apple-system,BlinkMacSystemFont,sans-serif">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div style="font-size:11px;letter-spacing:3px;color:${T.accent};font-weight:700;margin-top:6px">MONTH IN REVIEW</div>
+                <button type="button" onclick="closeMonthReview()" aria-label="Close" style="background:none;border:none;color:${T.mutedClr};font-size:28px;line-height:1;cursor:pointer;padding:0 2px">×</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 14px">
+                ${arrow(-1, i > 0)}
+                <div style="font-size:22px;font-weight:800;color:${T.textClr};text-align:center;flex:1">${name}</div>
+                ${arrow(1, i < ms.length - 1)}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                ${tile('PORTFOLIO', signed(p1 - p0), pct(p1 - p0, p0) || '&nbsp;', tone(p1 - p0))}
+                ${tile('NET WORTH', signed(n1 - n0), fmt(n1), tone(n1 - n0))}
+            </div>
+            ${card('EARNED', big(fmt(takeHome), 'take-home') + (gross ? row('Gross pay', fmt(gross)) : ''))}
+            ${card('SAVED', big(fmt(added), rate !== null ? Math.round(rate * 100) + '% savings rate' : '') + row('Retirement (incl. match)', fmt(ret)) + row('Coast', fmt(coast)))}
+            ${card('SPENT', big(fmt(spent), bills.length + (bills.length === 1 ? ' bill' : ' bills') + ' logged') + top.map(b => row(esc(b.companyName || b.serviceType || 'Bill'), fmt(b.amount || 0))).join(''))}
+            ${card('WHERE THE PORTFOLIO MOVE CAME FROM', row('Start of month', fmt(p0)) + row('You added', '+' + fmt(added)) + row('The market', signed(market), tone(market)) + `<div style="border-top:1px solid ${T.borderClr};margin-top:4px"></div>` + row('End of month', fmt(p1)))}
+            ${reached.length ? card('GOALS REACHED', reached.map(r => `<div style="padding:4px 0;font-size:13px;color:${T.textClr}">✓ ${r}</div>`).join('')) : ''}
+            ${note ? card('YOUR NOTE', `<div style="font-size:13px;line-height:1.5;color:${T.textClr};font-style:italic">“${esc(note)}”</div>`) : ''}
+        </div>`;
+    }
+    function styleReviewLink() {
+        const b = document.getElementById('ovReviewLink');
+        if (!b) return;
+        const T = retTheme();
+        b.style.borderColor = T.accent + '55';
+        b.style.background  = T.accent + '14';
+        b.style.color       = T.accent;
     }
 
     function buildOverview() {
@@ -608,8 +722,10 @@ tsBar.textContent = '🕐 ' + d.toLocaleDateString('en-US', {weekday:'short', ye
             const target = e.target;
             const overviewPage = document.getElementById('overviewPage');
             const notepadPage = document.getElementById('notepadPage');
+            const reviewEl = document.getElementById('monthReview');   // 4.3.0
             const isInsideScrollable = (overviewPage && overviewPage.contains(target)) ||
-                                       (notepadPage && notepadPage.contains(target));
+                                       (notepadPage && notepadPage.contains(target)) ||
+                                       (reviewEl && reviewEl.contains(target));
             if (!isInsideScrollable) e.preventDefault();
         }
 }, { passive: false });
@@ -849,6 +965,8 @@ el.addEventListener('animationend', () => el.classList.remove('page-entering'), 
     window.addEventListener('popstate', (e) => {
         e.preventDefault();
         if (skipNextPopstate) { skipNextPopstate = false; return; }
+        // 4.3.0: Back closes Month in Review and stays on Summary
+        if (mirIsOpen()) { closeMonthReview(); return; }
         // v15.2.1: Back closes an open info panel and stays on the page
         if (typeof infoIsOpen === 'function' && infoIsOpen()) {
             closeInfo();

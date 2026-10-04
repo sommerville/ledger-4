@@ -21,13 +21,8 @@
         // Refresh all displays
         refreshAll();
         updateStats();   // 4.0.5: the old updateExpenseStats() call is gone (it no longer exists and threw before the message)
-
-        // Show visual indicator
-        if (demoMode) {
-            showMsg('Demo Mode enabled - showing reduced values', 'success');
-        } else {
-            showMsg('Demo Mode disabled - showing real values', 'success');
-        }
+        // 4.3.0: the "Demo Mode enabled/disabled" messages called showMsg(), which doesn't exist, so turning Demo
+        // Mode on or off always ended in an error after the switch had already flipped. The checkbox shows the state.
     }
 
     // ─── PIN & Security ──────────────────────────────────────
