@@ -869,7 +869,7 @@
         <div class="settings-section">
             <h3>About</h3>
             <div id="settingsAboutCard" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
-                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.0.9 &nbsp;·&nbsp; Mobile</div>
+                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.0.10 &nbsp;·&nbsp; Mobile</div>
                 <div class="about-divider" style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px;"></div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <span style="font-size:18px;">🤖</span>
@@ -986,7 +986,6 @@
         <div class="settings-section">
             <h3>Save Data</h3>
             <p>Save all your accounts and entries as a backup file.</p>
-            <p style="font-size:12px;opacity:.75;margin:0 0 8px;">🔒 OneDrive copies are locked with your PIN (open them on the desktop with the same 4-digit PIN). Downloads to this phone are not locked.</p>
             <!-- 3.6: result of navigator.storage.persist() — backup.js _renderPersistState(); moved here from Settings → Security in 4.0.9 -->
             <p id="storagePersistStatus" style="font-size:12px; margin:0 0 8px; opacity:0.85;"></p>
             <div id="exportMsg" class="msg" style="display:none; margin-bottom:10px;"></div>
@@ -1007,40 +1006,7 @@
             </div>
             <div id="importMsg" class="msg" style="display:none; margin-top:10px;"></div>
         </div>
-        <div class="settings-section">
-            <h3>🎯 Fix Goal Status</h3>
-            <p>Reset a goal year that shows incorrectly as completed or stuck. Choose the year to un-complete.</p>
-            <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
-                <select id="goalResetYear" style="flex:1; padding:10px;border-radius:6px" class="bdr-alaskan col-silver bg-deep-alaskan">
-                    <option value="2026">2026</option>
-                    <option value="2027">2027</option>
-                    <option value="2028">2028</option>
-                    <option value="2029">2029</option>
-                    <option value="2030">2030</option>
-                </select>
-                <button class="action-btn u-mb0" onclick="resetGoalYear()">Reset Goal</button>
-            </div>
-            <div id="goalResetMsg" style="display:none; margin-top:6px; padding:8px; background:#4CAF50; color:white; border-radius:6px; font-size:13px; text-align:center;"></div>
-        </div>
-        <div class="settings-section">
-            <h3>Delete All Data</h3>
-            <p>Permanently removes all entries, accounts, and institutions.</p>
-            <button class="danger-btn" onclick="openModal('confirmDeleteModal')">Delete All Data</button>
-        </div>
         <button class="action-btn dark u-mt20" onclick="closeModal('dataManagementModal')">← Back to Settings</button>
-    </div>
-</div>
-
-<!-- Confirm Delete Modal -->
-<div id="confirmDeleteModal" class="modal" style="z-index:1100;">
-    <div class="modal-box" style="text-align:center;">
-        <div style="font-size:48px; margin-bottom:15px;">⚠️</div>
-        <h2 class="u-mb10">Are you sure?</h2>
-        <p style="margin-bottom:25px" class="col-muted">This will permanently delete <strong>all entries, accounts, and institutions</strong>. This cannot be undone.</p>
-        <div class="btn-row">
-            <button class="submit-btn col-dark" style="background:#f1f2f6" onclick="closeModal('confirmDeleteModal')">No, Cancel</button>
-            <button class="submit-btn" style="background:#ff4757;" onclick="deleteAll()">Yes, Delete</button>
-        </div>
     </div>
 </div>
 

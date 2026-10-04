@@ -1,10 +1,12 @@
 // Sommerville Ledger 4 — backup.js
-// Backup export (locked/plain), import, backup reminder, pre-2024 cleanup
+// Backup export (plain since 4.0.10), import (plain or locked), backup reminder, pre-2024 cleanup
 // Part of index.html (3.5.2 split). Plain script, loaded in order; all files share one global scope.
     // ── Backup file ─────────────────────────────────────────
     // v3.0: optional password lock (AES-GCM, key from PBKDF2-SHA256 via WebCrypto),
     // and a share-sheet button so the file can go straight to OneDrive (or any cloud app).
     // 3.6: a passphrase lock was tried and dropped (Darrin's call): backups stay locked with the app PIN.
+    // 4.0.10: backups are never locked (Darrin's call: nothing in them is sensitive). Locked files saved before
+    // 4.0.10 still load (import + desktop), so encryptBackup / decryptBackup stay.
     function buildBackup() {
         return {
             README: "Portfolio Backup File - How to Reset Yearly Goals: To reset a yearly goal (e.g., if you exceeded the 2026 goal and want to set it again), open this file in a text editor, find the 'yearlyGoals' section, locate the year (e.g., '2026'), and change 'completed: true' to 'completed: false' and set 'completionDate: null'. Then save the file and import it back into the app.",
@@ -141,7 +143,7 @@
         let out = buildBackup();
         if (locked) {
             const pw = _sessionPin;   // v3.1: locked with the app PIN
-            if (!pw) throw new Error('Lock the app (Settings → Security) and unlock it with your PIN, then save again.');
+            if (!pw) throw new Error('Close and reopen the app, unlock it with your PIN, then save again.');
             if (!window.crypto || !crypto.subtle) throw new Error("This browser can't encrypt files. Uncheck the lock or use Chrome/Safari.");
             try { out = await encryptBackup(out, pw, 'pin'); } catch (e) { throw new Error('Encryption failed: ' + e.message); }
         }
@@ -156,7 +158,7 @@
     async function _prepareExport() {
         _prepared = null;
         if (demoMode) return;
-        const locked = true;   // 4.0.1: the OneDrive/share copy is always locked
+        const locked = false;   // 4.0.10: never locked (was: the OneDrive/share copy was always locked, 4.0.1)
         try { const r = await _buildExport(locked); _prepared = { ...r, file: _shareableFile(r.json, r.name), at: Date.now() }; }
         catch (e) { _prepared = null; }
     }
@@ -167,8 +169,8 @@
             alert('⚠️ Export is disabled in Demo Mode. Please disable Demo Mode in Settings first.');
             return;
         }
-        // 4.0.1: no lock checkbox. OneDrive/share is always locked with the PIN; Download to this phone is never locked.
-        const locked = mode === 'share';
+        // 4.0.10: neither OneDrive/share nor Download is locked (4.0.1–4.0.9: OneDrive/share was locked with the PIN)
+        const locked = false;
 
         // Share sheet → OneDrive / Drive / Files (phones). Never falls through to a silent download.
         if (mode === 'share') {
@@ -347,17 +349,10 @@
         t += '\n\nA copy of this phone’s data downloads first, so you can undo.';
         return t;
     }
-    // A copy of what's on the phone before an import replaces it. Locked with the PIN when possible.
+    // A copy of what's on the phone before an import replaces it. Plain since 4.0.10, like every backup.
     async function _safetyCopy() {
         const name = `ledger-${moKey(new Date())}-${String(new Date().getDate()).padStart(2, '0')}-before-import`;
-        let out = buildBackup();
-        const pw = _sessionPin;
-        if (pw && window.crypto && crypto.subtle) {
-            out = await encryptBackup(out, pw, 'pin');
-            _downloadFile(JSON.stringify(out), name + '-locked.json', true);
-        } else {
-            _downloadFile(JSON.stringify(out, null, 2), name + '.json', true);
-        }
+        _downloadFile(JSON.stringify(buildBackup(), null, 2), name + '.json', true);
         return name;
     }
     async function applyImport(b) {
