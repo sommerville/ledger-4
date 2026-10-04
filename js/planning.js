@@ -418,7 +418,7 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         const income = parseFloat(document.getElementById('budgetIncome').value) || 0;
 
         // Theme-aware colors
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
         const cardBg   = isSunset ? tc('rgba(35,8,4,0.90)')    : '#1A2A42';
@@ -561,7 +561,7 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         // Mortgage principal balance: latest per mortgage account, capped at last month like all debt
         const mortgageBalance = LC.mortgageInfo(debtAccounts, debtEntries, expenses, moKey(new Date())).balance;   // 3.7.2
 
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark  = document.body.classList.contains('alaskan-theme');
         const accentColor = isSunset ? tc('#F5C030') : '#D4AF37';
         const bgColor     = isSunset ? tc('rgba(35,8,4,0.88)') : '#1A2A42';

@@ -53,7 +53,7 @@
     let lnPageView = 'total';
     function setLnView(btn) { lnPageView = btn.getAttribute('data-lnview'); updateLoansPage(); }
     function lnColors() {
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         return { isSunset, cardBg: isSunset ? tc('rgba(35,8,4,0.7)') : '#1A2A42', border: isSunset ? tc('#5A2018') : '#2A3A52',
                  txt: isSunset ? tc('#F0D0A0') : '#C8D0DC', sub: isSunset ? tc('#C09070') : '#8A9AB0', accent: isSunset ? tc('#F5C030') : '#D4AF37',
                  pos: '#4CAF50', neg: '#EF5350' };

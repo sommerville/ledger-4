@@ -16,7 +16,7 @@
 
     // ─── Theme helpers ──────────────────────────────────────────
     function retTheme() {
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
         return {
             isDark, isSunset,

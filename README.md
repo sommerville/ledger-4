@@ -2,7 +2,7 @@
 
 A personal finance app built as two web apps on GitHub Pages (no build step): a **phone logger** and a **desktop planner**.
 
-Ledger 3.0 was the pivot from Ledger 2: backups are locked and go to the cloud, and all the planning (Retirement Plan, Paycheck Planner, FIRE projections) lives on the desktop. **Current version: 4.0.** 4.0 rolls up 3.6–3.8.1: bundled libraries and import safety (3.6), golden-number tests, one shared math file used by both apps (`js/ledger-core.js`, 3.7–3.7.2), the goals rework with editable goal steps and critical mass (3.8), and a home icon layout that finally stays put (3.8.1). See [CHANGELOG](library/CHANGELOG.md).
+Ledger 3.0 was the pivot from Ledger 2: backups go to the cloud, and all the planning (Retirement Plan, Paycheck Planner, FIRE projections) lives on the desktop. **Current version: 4.1.0.** 4.0 rolls up 3.6–3.8.1: bundled libraries and import safety (3.6), golden-number tests, one shared math file used by both apps (`js/ledger-core.js`, 3.7–3.7.2), the goals rework with editable goal steps and critical mass (3.8), and a home icon layout that finally stays put (3.8.1). See [CHANGELOG](library/CHANGELOG.md).
 
 | App | Open it at | What it does |
 |---|---|---|
@@ -12,7 +12,7 @@ Ledger 3.0 was the pivot from Ledger 2: backups are locked and go to the cloud, 
 The two apps share two things: the **backup file** (`ledger-YYYY-MM-DD-locked.json`) and the **math** (`js/ledger-core.js`), so a number means the same thing on both screens.
 
 **Typical flow:**
-1. Phone → Settings → Data Management. Keep the lock checked, then tap **📤 Save to OneDrive / Share…** → OneDrive.
+1. Phone → Settings → Data Management. Tap **📤 Save to OneDrive / Share…** → OneDrive (backups are plain files since 4.0.10, no PIN).
 2. Computer → open `desktop.html` → choose the newest backup in the synced OneDrive folder (or **Load newest backup** once the folder is chosen) → enter the app PIN.
 
 Locked backups use the 4-digit app PIN as their key (a separate passphrase was tried in 3.6 and dropped). That's a weak key for a file kept in the cloud, so keep the OneDrive folder private.
@@ -44,9 +44,6 @@ Tests live in `tests/golden/` (also local only): `run.py` checks every planning 
 
 The repo is `ledger-4` (it was `ledger-3.2`). The phone's saved data and PIN belong to `https://sommerville.github.io`, which every repo there shares, so moving to a new repo name kept them. The installed home-screen app is tied to the repo's address, though: after a rename, open the new address and Add to Home Screen again.
 
-### Running next to Ledger 2
-Both repos live under the same `https://<user>.github.io` address, so **the phone apps share the same saved data and PIN**. Ledger 3 opened with your data already there; nothing to import. That also means changes made in one app show up in the other, and Ledger 2's old Data Dump still has the save bugs fixed in 3.2. **Archive the Ledger 2 repo** (Settings → Archive) so it can't write to your data.
-
 ## Deploying an update
 
 1. **Upload the whole set every time**: `index.html`, `sw.js` (with `CACHE_NAME` bumped), `desktop.html`, `manifest.json`, `.gitignore`, and the `css/`, `js/` and `vendor/` folders. Drag them onto the repo page together → **Commit changes**; GitHub keeps the folders. Re-uploading unchanged files does no harm; leaving one out breaks the app.
@@ -55,7 +52,7 @@ Both repos live under the same `https://<user>.github.io` address, so **the phon
 4. **Don't upload `library/`, `tests/` or any backup file.** The repo is public. If they're already there, delete them on GitHub (open the folder → ⋯ → Delete directory).
 5. Wait a minute or two for the **Actions** tab to show a green check.
 6. On the phone, close and reopen the app (twice if the update doesn't show). Settings → About shows the version.
-7. Test in both themes (Alaskan and Sunset).
+7. Test in all three themes (Dark, Sunset, Sea Glass).
 
 ## Repo layout
 

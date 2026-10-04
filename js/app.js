@@ -9,48 +9,48 @@
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     }
 
-    // ─── Themes (4.1.0) ──────────────────────────────────────
-    // Code that colors things itself checks "isSunset" (which also covers Sea Glass) and passes each Sunset
-    // color through tc(): on Sunset it's unchanged, on Sea Glass it becomes that color's sea glass version.
-    // The CSS works the same way (each sunset rule has a seaglass twin right after it in app.css).
-    // Add a color here whenever a new isSunset ? '...' color is added, or it shows in sunset colors on Sea Glass.
-    const SEAGLASS_COLORS = {
-        // shared Dark/Sunset gold used by the main charts
-        '#D4AF37': '#87DFC8',
-        'rgba(212,175,55,0.1)': 'rgba(135,223,200,0.1)',
-        'rgba(212,175,55,0.15)': 'rgba(135,223,200,0.15)',
-        '#C0C0C0': '#A9D1C2',
-        '#5A6F83': '#2A5A64',
-        '#2A3A52': '#22525E',
+    // ─── Themes (4.1.0; Royal Navy replaced Sea Glass in 4.2.0) ──
+    // Code that colors things itself checks "isSunset" (which also covers Royal Navy) and passes each Sunset
+    // color through tc(): on Sunset it's unchanged, on Royal Navy it becomes that color's navy version.
+    // The CSS works the same way (each sunset rule has a navy twin right after it in app.css).
+    // Add a color here whenever a new isSunset ? '...' color is added, or it shows in sunset colors on Royal Navy.
+    const NAVY_COLORS = {
+        // shared Dark/Sunset gold and greys used by the main charts
+        '#D4AF37': '#FFC801',
+        'rgba(212,175,55,0.1)': 'rgba(255,200,1,0.1)',
+        'rgba(212,175,55,0.15)': 'rgba(255,200,1,0.15)',
+        '#C0C0C0': '#D9E8E3',
+        '#5A6F83': '#2A4A58',
+        '#2A3A52': '#114C5A',
         // Sunset colors
         '#000': '#000',
-        '#1A0404': '#091619',
-        '#2A0808': '#0F2429',
-        '#4ADE80': '#6FE3B0',
-        '#5A2018': '#22525E',
-        '#5CD080': '#6FD6A0',
-        '#6AB0E0': '#6AB8E0',
-        '#C08060': '#74ACA4',
-        '#C09070': '#7EB2AB',
-        '#D0A888': '#A4CEBE',
-        '#D0B090': '#A9D1C2',
-        '#E05050': '#E06060',
-        '#E08020': '#4EA6C6',
-        '#F0D0A0': '#C8E1D8',
-        '#F5C030': '#87DFC8',
-        'rgba(20,4,2,0.9)': 'rgba(7,16,18,0.9)',
-        'rgba(20,4,2,0.95)': 'rgba(7,16,18,0.95)',
-        'rgba(245,192,48,0.12)': 'rgba(135,223,200,0.12)',
-        'rgba(30,80,30,0.35)': 'rgba(40,110,80,0.35)',
-        'rgba(35,8,4,0.0)': 'rgba(12,28,32,0.0)',
-        'rgba(35,8,4,0.7)': 'rgba(12,28,32,0.7)',
-        'rgba(35,8,4,0.88)': 'rgba(12,28,32,0.88)',
-        'rgba(35,8,4,0.90)': 'rgba(12,28,32,0.90)',
-        'rgba(50,12,6,0.85)': 'rgba(17,40,46,0.85)',
-        'rgba(80,20,20,0.35)': 'rgba(110,30,30,0.35)'
+        '#1A0404': '#0F1E26',
+        '#2A0808': '#172B36',
+        '#4ADE80': '#5EE0A0',
+        '#5A2018': '#114C5A',
+        '#5CD080': '#5ED69A',
+        '#6AB0E0': '#7CC4E0',
+        '#C08060': '#93B3B1',
+        '#C09070': '#93B3B1',
+        '#D0A888': '#ACCAC0',
+        '#D0B090': '#B1CDC4',
+        '#E05050': '#F0675A',
+        '#E08020': '#FF9932',
+        '#F0D0A0': '#D9E8E3',
+        '#F5C030': '#FFC801',
+        'rgba(20,4,2,0.9)': 'rgba(8,14,17,0.9)',
+        'rgba(20,4,2,0.95)': 'rgba(8,14,17,0.95)',
+        'rgba(245,192,48,0.12)': 'rgba(255,208,38,0.12)',
+        'rgba(30,80,30,0.35)': 'rgba(30,110,70,0.35)',
+        'rgba(35,8,4,0.0)': 'rgba(14,25,31,0.0)',
+        'rgba(35,8,4,0.7)': 'rgba(14,25,31,0.7)',
+        'rgba(35,8,4,0.88)': 'rgba(14,25,31,0.88)',
+        'rgba(35,8,4,0.90)': 'rgba(14,25,31,0.90)',
+        'rgba(50,12,6,0.85)': 'rgba(20,36,44,0.85)',
+        'rgba(80,20,20,0.35)': 'rgba(120,35,30,0.35)'
     };
     function tc(c) {
-        return document.body.classList.contains('seaglass-theme') ? (SEAGLASS_COLORS[c] || c) : c;
+        return document.body.classList.contains('navy-theme') ? (NAVY_COLORS[c] || c) : c;
     }
 
     // ─── State ───────────────────────────────────────────────
@@ -453,7 +453,7 @@ now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', 
                 btn.style.color = '#4CAF50';
                 setTimeout(() => {
                     btn.innerHTML = orig;
-                    const isDark = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+                    const isDark = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
                     btn.style.background = tc('rgba(212,175,55,0.15)');
                     btn.style.borderColor = tc('#D4AF37');
                     btn.style.color = tc('#D4AF37');

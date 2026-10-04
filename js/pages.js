@@ -87,7 +87,7 @@
         const container = document.getElementById('nwSnapshotList');
         if (!container) return;
 
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
         const accent   = isSunset ? tc('#F5C030') : '#D4AF37';
         const cardBg   = isSunset ? tc('rgba(35,8,4,0.7)') : '#1A2A42';
@@ -216,8 +216,8 @@ return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         if (!canvas) return;
         if (debtTrendChartInst) { debtTrendChartInst.destroy(); debtTrendChartInst = null; }
 
-        const isDark   = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isDark   = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const tick  = '#C0C0C0';
         const grid  = '#5A6F83';
         const lineC = isSunset ? tc('#F5C030') : '#EF9A9A';
@@ -329,7 +329,7 @@ labels.push(d.toLocaleDateString('en-US', {month:'short'}) + " '" + String(d.get
     // ─── Debt Page (standalone) ──────────────────────────────────
     function updateDebtAccountsPage() {
         buildDebtTrendChart();
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
         const cardBg   = isSunset ? tc('rgba(35,8,4,0.7)') : '#1A2A42';
         const border   = isSunset ? tc('#5A2018') : '#2A3A52';
@@ -395,7 +395,7 @@ labels.push(d.toLocaleDateString('en-US', {month:'short'}) + " '" + String(d.get
         return (y && m) ? new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
     }
     function reColors() {
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         return {
             isSunset,
             cardBg: isSunset ? tc('rgba(35,8,4,0.7)') : '#1A2A42',
@@ -514,7 +514,7 @@ return d.toLocaleDateString('en-US', { month: 'short' }) + " '" + String(d.getFu
 
         if (debtChart) { debtChart.destroy(); debtChart = null; }
 
-        const isDark  = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isDark  = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const nwColor = tc('#D4AF37');
         const nwBg    = tc('rgba(212,175,55,0.15)');
         const tick    = tc('#C0C0C0');
@@ -600,7 +600,7 @@ return d.toLocaleDateString('en-US', { month: 'short' }) + " '" + String(d.getFu
             nwData.push(Math.round((invest - debt + getLoansOwed(m)) * scale));   // v3.4: + loans
         });
 
-        const isDark  = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isDark  = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const nwColor = tc('#D4AF37');
         const nwBg    = tc('rgba(212,175,55,0.1)');
         const tick    = tc('#C0C0C0');
@@ -870,7 +870,7 @@ const fmtMK = mk => new Date(mk + '-15').toLocaleDateString('en-US', { month: 'l
         const container = document.getElementById('investSnapshotList');
         if (!container) return;
 
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
         const accent  = isSunset ? tc('#F5C030') : '#D4AF37';
@@ -947,7 +947,7 @@ const fmtMK = mk => new Date(mk + '-02').toLocaleDateString('en-US', { month: 'l
         const container = document.getElementById('expenseSnapshotList');
         if (!container) return;
 
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
         const accent  = isSunset ? tc('#E08020') : '#D4AF37';
@@ -1014,7 +1014,7 @@ const entryRows = monthExpenses.slice().reverse().map(e =>
         const container = document.getElementById('debtSnapshotList');
         if (!container) return;
 
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
         const cardBg  = isSunset ? tc('#2A0808') : '#1A2A42';

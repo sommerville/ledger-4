@@ -7,10 +7,10 @@ button:focus,a:focus,input:focus,select:focus{outline:none}
 /* Prevent white flash — html gets theme class before body renders */
 html{overscroll-behavior:none;height:100%;background:#16213e}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#1e3c72 0%,#2a69ac 100%);min-height:100vh;padding:20px;touch-action:pan-y;overscroll-behavior:none}
-html.sunset-theme{background:#0E0208}html.seaglass-theme{background:#050B0D}
+html.sunset-theme{background:#0E0208}html.navy-theme{background:#0C1A22}
 /* 4.0.1: the theme class lands on <html> at once but on <body> only after unlock; until then keep the body dark (was the old blue default) */
 html.alaskan-theme body:not(.alaskan-theme):not(.sunset-theme){background:#0f1829}   /* 4.0.6: the startup navy (manifest, splash, CLAUDE screen) */
-html.sunset-theme body:not(.alaskan-theme):not(.sunset-theme){background:#0E0208}html.seaglass-theme body:not(.alaskan-theme):not(.seaglass-theme){background:#050B0D}
+html.sunset-theme body:not(.alaskan-theme):not(.sunset-theme){background:#0E0208}html.navy-theme body:not(.alaskan-theme):not(.navy-theme){background:#0C1A22}
 .container{max-width:800px;margin:0 auto;background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:visible}
 #notepadPage,
 /* ── Overview / Statement Page ── */
@@ -197,7 +197,7 @@ body.alaskan-theme .msg.error{background:#8B2E2E;border-left:4px solid #A03838;c
 /* ═══════════════════════════════════════════════════════════
            SUNSET THEME — Hawaiian Beach
            ═══════════════════════════════════════════════════════════ */
-body.sunset-theme{background:#0E0208;color:#F0D8C0;min-height:100vh;position:relative}body.seaglass-theme{background:#050B0D;color:#DDEDE7;min-height:100vh;position:relative}
+body.sunset-theme{background:#0E0208;color:#F0D8C0;min-height:100vh;position:relative}body.navy-theme{background:#0C1A22;color:#F1F6F4;min-height:100vh;position:relative}
 
 /* Animated sunset sky glow */
 body.sunset-theme::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 120% 55% at 65% 85%,rgba(240,180,40,0.45) 0%,transparent 50%),radial-gradient(ellipse 100% 45% at 65% 88%,rgba(220,90,20,0.5) 0%,transparent 45%),radial-gradient(ellipse 160% 60% at 50% 100%,rgba(160,20,10,0.6) 0%,transparent 55%),radial-gradient(ellipse 200% 40% at 20% 70%,rgba(180,40,10,0.25) 0%,transparent 40%),linear-gradient(180deg,#060110 0%,#1A0408 20%,#3A0C10 40%,#6A1A08 60%,#C04818 78%,#E08020 90%,#F5B828 100%);animation:sunsetPulse 12s ease-in-out infinite alternate}
@@ -209,62 +209,62 @@ body.sunset-theme::after{content:'';position:fixed;bottom:0;left:0;right:0;heigh
 60%{opacity:0.95;filter:brightness(1.04)}
 100%{opacity:1;filter:brightness(1)}
 }
-body.sunset-theme .container{background:linear-gradient(135deg,rgba(30,6,4,0.93) 0%,rgba(20,4,2,0.95) 100%);border:1px solid #5A1C10;box-shadow:0 8px 32px rgba(180,60,0,0.3);backdrop-filter:blur(2px)}body.seaglass-theme .container{background:linear-gradient(135deg,rgba(10,24,28,0.93) 0%,rgba(7,16,18,0.95) 100%);border:1px solid #204C57;box-shadow:0 8px 32px rgba(32,132,168,0.3);backdrop-filter:blur(2px)}
-body.sunset-theme .header{background:linear-gradient(135deg,#2A0808 0%,#140404 50%,#0E0204 100%);border-bottom:2px solid #E08020;box-shadow:0 2px 12px rgba(240,160,30,0.25)}body.seaglass-theme .header{background:linear-gradient(135deg,#0F2429 0%,#071114 50%,#050B0D 100%);border-bottom:2px solid #4EA6C6;box-shadow:0 2px 12px rgba(80,176,211,0.25)}
-body.sunset-theme .total-balance{color:#FFFFFF;text-shadow:0 2px 10px rgba(240,180,40,0.35)}body.seaglass-theme .total-balance{color:#FFFFFF;text-shadow:0 2px 10px rgba(125,220,195,0.35)}
-body.sunset-theme .balance-label{color:#C09070 !important;letter-spacing:0.5px;text-transform:uppercase;font-size:12px;opacity:1 !important}body.seaglass-theme .balance-label{color:#7EB2AB !important;letter-spacing:0.5px;text-transform:uppercase;font-size:12px;opacity:1 !important}
-body.sunset-theme h1{color:#F0D0A0}body.seaglass-theme h1{color:#C8E1D8}
-body.sunset-theme h2,body.sunset-theme h3{color:#E8C890}body.seaglass-theme h2, body.seaglass-theme h3{color:#CCF2E8}
-body.sunset-theme .header h1{color:#FFFFFF !important}body.seaglass-theme .header h1{color:#FFFFFF !important}
-body.sunset-theme .chart-controls button{background:rgba(60,12,8,0.85) !important;color:#C09070 !important;border:1px solid #5A2018 !important;font-weight:500}body.seaglass-theme .chart-controls button{background:rgba(20,49,56,0.85) !important;color:#7EB2AB !important;border:1px solid #22525E !important;font-weight:500}
-body.sunset-theme .chart-controls button:hover{color:#F5C030 !important;border-color:#F5C030 !important;background:rgba(80,20,8,0.9) !important}body.seaglass-theme .chart-controls button:hover{color:#87DFC8 !important;border-color:#87DFC8 !important;background:rgba(26,63,72,0.9) !important}
-body.sunset-theme .chart-controls button.active{background:linear-gradient(135deg,#E08020 0%,#C05010 100%) !important;color:#FFF8E8 !important;border-color:#E08020 !important;font-weight:600;box-shadow:0 4px 16px rgba(224,128,32,0.35)}body.seaglass-theme .chart-controls button.active{background:linear-gradient(135deg,#4EA6C6 0%,#3091B4 100%) !important;color:#F2F5F4 !important;border-color:#4EA6C6 !important;font-weight:600;box-shadow:0 4px 16px rgba(78,166,198,0.35)}
+body.sunset-theme .container{background:linear-gradient(135deg,rgba(30,6,4,0.93) 0%,rgba(20,4,2,0.95) 100%);border:1px solid #5A1C10;box-shadow:0 8px 32px rgba(180,60,0,0.3);backdrop-filter:blur(2px)}body.navy-theme .container{background:linear-gradient(135deg,rgba(12,22,27,0.93) 0%,rgba(8,14,17,0.95) 100%);border:1px solid #264554;box-shadow:0 8px 32px rgba(221,110,0,0.3);backdrop-filter:blur(2px)}
+body.sunset-theme .header{background:linear-gradient(135deg,#2A0808 0%,#140404 50%,#0E0204 100%);border-bottom:2px solid #E08020;box-shadow:0 2px 12px rgba(240,160,30,0.25)}body.navy-theme .header{background:linear-gradient(135deg,#172B36 0%,#091013 50%,#060A0D 100%);border-bottom:2px solid #FF9932;box-shadow:0 2px 12px rgba(255,155,56,0.25)}
+body.sunset-theme .total-balance{color:#FFFFFF;text-shadow:0 2px 10px rgba(240,180,40,0.35)}body.navy-theme .total-balance{color:#FFFFFF;text-shadow:0 2px 10px rgba(255,205,25,0.35)}
+body.sunset-theme .balance-label{color:#C09070 !important;letter-spacing:0.5px;text-transform:uppercase;font-size:12px;opacity:1 !important}body.navy-theme .balance-label{color:#93B3B1 !important;letter-spacing:0.5px;text-transform:uppercase;font-size:12px;opacity:1 !important}
+body.sunset-theme h1{color:#F0D0A0}body.navy-theme h1{color:#D9E8E3}
+body.sunset-theme h2,body.sunset-theme h3{color:#E8C890}body.navy-theme h2, body.navy-theme h3{color:#FFD53D}
+body.sunset-theme .header h1{color:#FFFFFF !important}body.navy-theme .header h1{color:#FFFFFF !important}
+body.sunset-theme .chart-controls button{background:rgba(60,12,8,0.85) !important;color:#C09070 !important;border:1px solid #5A2018 !important;font-weight:500}body.navy-theme .chart-controls button{background:rgba(24,44,54,0.85) !important;color:#93B3B1 !important;border:1px solid #114C5A !important;font-weight:500}
+body.sunset-theme .chart-controls button:hover{color:#F5C030 !important;border-color:#F5C030 !important;background:rgba(80,20,8,0.9) !important}body.navy-theme .chart-controls button:hover{color:#FFC801 !important;border-color:#FFC801 !important;background:rgba(32,57,70,0.9) !important}
+body.sunset-theme .chart-controls button.active{background:linear-gradient(135deg,#E08020 0%,#C05010 100%) !important;color:#FFF8E8 !important;border-color:#E08020 !important;font-weight:600;box-shadow:0 4px 16px rgba(224,128,32,0.35)}body.navy-theme .chart-controls button.active{background:linear-gradient(135deg,#FF9932 0%,#F97C00 100%) !important;color:#FFF8E8 !important;border-color:#FF9932 !important;font-weight:600;box-shadow:0 4px 16px rgba(255,148,42,0.35)}
 
 /* Action buttons */
-body.sunset-theme .action-btn{background:linear-gradient(135deg,#3A1008 0%,#280A06 100%);color:#F0D0A0;border:1px solid #5A2018;font-weight:600;letter-spacing:0.4px;box-shadow:0 4px 16px rgba(0,0,0,0.4)}body.seaglass-theme .action-btn{background:linear-gradient(135deg,#142F36 0%,#0E2126 100%);color:#C8E1D8;border:1px solid #22525E;font-weight:600;letter-spacing:0.4px;box-shadow:0 4px 16px rgba(0,0,0,0.4)}
-body.sunset-theme .action-btn:hover{background:linear-gradient(135deg,#5A1A0A 0%,#401208 100%);border-color:#F5C030;color:#F5C030;box-shadow:0 6px 20px rgba(245,192,48,0.25);transform:translateY(-2px)}body.seaglass-theme .action-btn:hover{background:linear-gradient(135deg,#1E4852 0%,#15343B 100%);border-color:#87DFC8;color:#87DFC8;box-shadow:0 6px 20px rgba(135,223,200,0.25);transform:translateY(-2px)}
-body.sunset-theme .action-btn.dark{background:linear-gradient(135deg,#1E0608 0%,#140404 100%);border:1px solid #3A1208;color:#C09070}body.seaglass-theme .action-btn.dark{background:linear-gradient(135deg,#0B1A1E 0%,#071114 100%);border:1px solid #142F36;color:#7EB2AB}
-body.sunset-theme .action-btn.dark:hover{background:linear-gradient(135deg,#2A0A0A 0%,#1E0606 100%);border-color:#F5C030;color:#F5C030}body.seaglass-theme .action-btn.dark:hover{background:linear-gradient(135deg,#10252B 0%,#0B1A1E 100%);border-color:#87DFC8;color:#87DFC8}
-body.sunset-theme .submit-btn{background:linear-gradient(135deg,#E08020 0%,#C05810 100%);border:none;color:#FFF8E8;font-weight:700;box-shadow:0 4px 16px rgba(224,128,32,0.4)}body.seaglass-theme .submit-btn{background:linear-gradient(135deg,#4EA6C6 0%,#3091B4 100%);border:none;color:#F2F5F4;font-weight:700;box-shadow:0 4px 16px rgba(78,166,198,0.4)}
-body.sunset-theme .submit-btn:hover{background:linear-gradient(135deg,#F09030 0%,#D06820 100%);box-shadow:0 6px 20px rgba(240,144,48,0.5)}body.seaglass-theme .submit-btn:hover{background:linear-gradient(135deg,#5FB6D5 0%,#449FC0 100%);box-shadow:0 6px 20px rgba(95,182,213,0.5)}
-body.sunset-theme .green-btn{background:linear-gradient(135deg,#C04010 0%,#A02A08 100%);border:none;color:#FFF0E0;font-weight:700;box-shadow:0 4px 16px rgba(192,64,16,0.4)}body.seaglass-theme .green-btn{background:linear-gradient(135deg,#4E827B 0%,#3F6963 100%);border:none;color:#EEF1F1;font-weight:700;box-shadow:0 4px 16px rgba(78,130,123,0.4)}
-body.sunset-theme .green-btn:hover{background:linear-gradient(135deg,#D05020 0%,#B03810 100%)}body.seaglass-theme .green-btn:hover{background:linear-gradient(135deg,#C3562D 0%,#487872 100%)}
-body.sunset-theme .file-label{background:linear-gradient(135deg,#C04010 0%,#A02A08 100%);border:none;color:#FFF0E0;font-weight:700}body.seaglass-theme .file-label{background:linear-gradient(135deg,#4E827B 0%,#3F6963 100%);border:none;color:#EEF1F1;font-weight:700}
-body.sunset-theme .file-label:hover{background:linear-gradient(135deg,#D05020 0%,#B03810 100%)}body.seaglass-theme .file-label:hover{background:linear-gradient(135deg,#C3562D 0%,#487872 100%)}
-body.sunset-theme .danger-btn{background:linear-gradient(135deg,#8B1010 0%,#6A0808 100%);border:none;color:#FFEEEE;font-weight:700}body.seaglass-theme .danger-btn{background:linear-gradient(135deg,#3A615C 0%,#22525E 100%);border:none;color:#F5F8F7;font-weight:700}
-body.sunset-theme .modal-box{background:linear-gradient(135deg,#200808 0%,#180606 100%);color:#F0D0A0;border:1px solid #5A2018;box-shadow:0 16px 48px rgba(0,0,0,0.6)}body.seaglass-theme .modal-box{background:linear-gradient(135deg,#0C1D21 0%,#091619 100%);color:#C8E1D8;border:1px solid #22525E;box-shadow:0 16px 48px rgba(0,0,0,0.6)}
+body.sunset-theme .action-btn{background:linear-gradient(135deg,#3A1008 0%,#280A06 100%);color:#F0D0A0;border:1px solid #5A2018;font-weight:600;letter-spacing:0.4px;box-shadow:0 4px 16px rgba(0,0,0,0.4)}body.navy-theme .action-btn{background:linear-gradient(135deg,#182B34 0%,#111E24 100%);color:#D9E8E3;border:1px solid #114C5A;font-weight:600;letter-spacing:0.4px;box-shadow:0 4px 16px rgba(0,0,0,0.4)}
+body.sunset-theme .action-btn:hover{background:linear-gradient(135deg,#5A1A0A 0%,#401208 100%);border-color:#F5C030;color:#F5C030;box-shadow:0 6px 20px rgba(245,192,48,0.25);transform:translateY(-2px)}body.navy-theme .action-btn:hover{background:linear-gradient(135deg,#24414F 0%,#1A2F39 100%);border-color:#FFC801;color:#FFC801;box-shadow:0 6px 20px rgba(255,208,38,0.25);transform:translateY(-2px)}
+body.sunset-theme .action-btn.dark{background:linear-gradient(135deg,#1E0608 0%,#140404 100%);border:1px solid #3A1208;color:#C09070}body.navy-theme .action-btn.dark{background:linear-gradient(135deg,#0D171C 0%,#091013 100%);border:1px solid #182B34;color:#93B3B1}
+body.sunset-theme .action-btn.dark:hover{background:linear-gradient(135deg,#2A0A0A 0%,#1E0606 100%);border-color:#F5C030;color:#F5C030}body.navy-theme .action-btn.dark:hover{background:linear-gradient(135deg,#132229 0%,#0D171C 100%);border-color:#FFC801;color:#FFC801}
+body.sunset-theme .submit-btn{background:linear-gradient(135deg,#E08020 0%,#C05810 100%);border:none;color:#FFF8E8;font-weight:700;box-shadow:0 4px 16px rgba(224,128,32,0.4)}body.navy-theme .submit-btn{background:linear-gradient(135deg,#FF9932 0%,#F97C00 100%);border:none;color:#FFF8E8;font-weight:700;box-shadow:0 4px 16px rgba(255,148,42,0.4)}
+body.sunset-theme .submit-btn:hover{background:linear-gradient(135deg,#F09030 0%,#D06820 100%);box-shadow:0 6px 20px rgba(240,144,48,0.5)}body.navy-theme .submit-btn:hover{background:linear-gradient(135deg,#FF9E3D 0%,#FF8C1A 100%);box-shadow:0 6px 20px rgba(255,158,61,0.5)}
+body.sunset-theme .green-btn{background:linear-gradient(135deg,#C04010 0%,#A02A08 100%);border:none;color:#FFF0E0;font-weight:700;box-shadow:0 4px 16px rgba(192,64,16,0.4)}body.navy-theme .green-btn{background:linear-gradient(135deg,#577976 0%,#47615F 100%);border:none;color:#FFF0E0;font-weight:700;box-shadow:0 4px 16px rgba(87,121,118,0.4)}
+body.sunset-theme .green-btn:hover{background:linear-gradient(135deg,#D05020 0%,#B03810 100%)}body.navy-theme .green-btn:hover{background:linear-gradient(135deg,#C3562D 0%,#516F6D 100%)}
+body.sunset-theme .file-label{background:linear-gradient(135deg,#C04010 0%,#A02A08 100%);border:none;color:#FFF0E0;font-weight:700}body.navy-theme .file-label{background:linear-gradient(135deg,#577976 0%,#47615F 100%);border:none;color:#FFF0E0;font-weight:700}
+body.sunset-theme .file-label:hover{background:linear-gradient(135deg,#D05020 0%,#B03810 100%)}body.navy-theme .file-label:hover{background:linear-gradient(135deg,#C3562D 0%,#516F6D 100%)}
+body.sunset-theme .danger-btn{background:linear-gradient(135deg,#8B1010 0%,#6A0808 100%);border:none;color:#FFEEEE;font-weight:700}body.navy-theme .danger-btn{background:linear-gradient(135deg,#415A58 0%,#294A5A 100%);border:none;color:#FFEEEE;font-weight:700}
+body.sunset-theme .modal-box{background:linear-gradient(135deg,#200808 0%,#180606 100%);color:#F0D0A0;border:1px solid #5A2018;box-shadow:0 16px 48px rgba(0,0,0,0.6)}body.navy-theme .modal-box{background:linear-gradient(135deg,#0E1A20 0%,#0B1318 100%);color:#D9E8E3;border:1px solid #114C5A;box-shadow:0 16px 48px rgba(0,0,0,0.6)}
 
 /* Modal header */
-body.sunset-theme .modal-header{border-bottom:1px solid #5A2018;background:linear-gradient(135deg,#2A0808 0%,#180606 100%)}body.seaglass-theme .modal-header{border-bottom:1px solid #22525E;background:linear-gradient(135deg,#0F2429 0%,#091619 100%)}
-body.sunset-theme .modal-header h2{color:#F5C030 !important;font-weight:600;letter-spacing:0.5px}body.seaglass-theme .modal-header h2{color:#87DFC8 !important;font-weight:600;letter-spacing:0.5px}
-body.sunset-theme .close-btn{color:#F5C030}body.seaglass-theme .close-btn{color:#87DFC8}
+body.sunset-theme .modal-header{border-bottom:1px solid #5A2018;background:linear-gradient(135deg,#2A0808 0%,#180606 100%)}body.navy-theme .modal-header{border-bottom:1px solid #114C5A;background:linear-gradient(135deg,#172B36 0%,#0B1318 100%)}
+body.sunset-theme .modal-header h2{color:#F5C030 !important;font-weight:600;letter-spacing:0.5px}body.navy-theme .modal-header h2{color:#FFC801 !important;font-weight:600;letter-spacing:0.5px}
+body.sunset-theme .close-btn{color:#F5C030}body.navy-theme .close-btn{color:#FFC801}
 body.sunset-theme input,
 /* ── Sunset: Selects ── */
-body.sunset-theme select{background:#2A0A08 !important;color:#F0D0A0 !important;border:1px solid #5A2018 !important}body.seaglass-theme input, /* ── Sunset: Selects ── */
-body.seaglass-theme select{background:#0F2429 !important;color:#C8E1D8 !important;border:1px solid #22525E !important}
-body.sunset-theme input:focus,body.sunset-theme select:focus{border-color:#F5C030 !important;box-shadow:0 0 12px rgba(245,192,48,0.25);outline:none}body.seaglass-theme input:focus, body.seaglass-theme select:focus{border-color:#87DFC8 !important;box-shadow:0 0 12px rgba(135,223,200,0.25);outline:none}
-body.sunset-theme select option{background:#2A0A08;color:#F0D0A0}body.seaglass-theme select option{background:#0F2429;color:#C8E1D8}
-body.sunset-theme input[type=range]{accent-color:#E08020}body.seaglass-theme input[type=range]{accent-color:#4EA6C6}
-body.sunset-theme input[type=checkbox]{accent-color:#E08020}body.seaglass-theme input[type=checkbox]{accent-color:#4EA6C6}
-body.sunset-theme .chart-container{background:rgba(20,4,2,0.7);border:1px solid #5A2018}body.seaglass-theme .chart-container{background:rgba(7,16,18,0.7);border:1px solid #22525E}
+body.sunset-theme select{background:#2A0A08 !important;color:#F0D0A0 !important;border:1px solid #5A2018 !important}body.navy-theme input, /* ── Sunset: Selects ── */
+body.navy-theme select{background:#122028 !important;color:#D9E8E3 !important;border:1px solid #114C5A !important}
+body.sunset-theme input:focus,body.sunset-theme select:focus{border-color:#F5C030 !important;box-shadow:0 0 12px rgba(245,192,48,0.25);outline:none}body.navy-theme input:focus, body.navy-theme select:focus{border-color:#FFC801 !important;box-shadow:0 0 12px rgba(255,208,38,0.25);outline:none}
+body.sunset-theme select option{background:#2A0A08;color:#F0D0A0}body.navy-theme select option{background:#122028;color:#D9E8E3}
+body.sunset-theme input[type=range]{accent-color:#E08020}body.navy-theme input[type=range]{accent-color:#FF9932}
+body.sunset-theme input[type=checkbox]{accent-color:#E08020}body.navy-theme input[type=checkbox]{accent-color:#FF9932}
+body.sunset-theme .chart-container{background:rgba(20,4,2,0.7);border:1px solid #5A2018}body.navy-theme .chart-container{background:rgba(8,14,17,0.7);border:1px solid #114C5A}
 
 /* Settings section */
-body.sunset-theme .settings-section{background:rgba(40,10,6,0.85);border:1px solid #5A2018}body.seaglass-theme .settings-section{background:rgba(14,33,38,0.85);border:1px solid #22525E}
-body.sunset-theme .settings-section h3{color:#F5C030}body.seaglass-theme .settings-section h3{color:#87DFC8}
-body.sunset-theme .settings-section p{color:#C09070}body.seaglass-theme .settings-section p{color:#7EB2AB}
+body.sunset-theme .settings-section{background:rgba(40,10,6,0.85);border:1px solid #5A2018}body.navy-theme .settings-section{background:rgba(17,30,36,0.85);border:1px solid #114C5A}
+body.sunset-theme .settings-section h3{color:#F5C030}body.navy-theme .settings-section h3{color:#FFC801}
+body.sunset-theme .settings-section p{color:#C09070}body.navy-theme .settings-section p{color:#93B3B1}
 
 /* ── Sunset: Month buttons ── */
 
-body.sunset-theme .bg-white-card,body.sunset-theme .bg-card-blue,body.sunset-theme .bg-card-blue-r12,body.sunset-theme .bg-card-blue-r12-14,body.sunset-theme .bg-card-blue-r12-p10,body.sunset-theme .u-card-blue,body.sunset-theme .bg-card-muted{background:rgba(40,10,6,0.85) !important}body.seaglass-theme .bg-white-card, body.seaglass-theme .bg-card-blue, body.seaglass-theme .bg-card-blue-r12, body.seaglass-theme .bg-card-blue-r12-14, body.seaglass-theme .bg-card-blue-r12-p10, body.seaglass-theme .u-card-blue, body.seaglass-theme .bg-card-muted{background:rgba(14,33,38,0.85) !important}
+body.sunset-theme .bg-white-card,body.sunset-theme .bg-card-blue,body.sunset-theme .bg-card-blue-r12,body.sunset-theme .bg-card-blue-r12-14,body.sunset-theme .bg-card-blue-r12-p10,body.sunset-theme .u-card-blue,body.sunset-theme .bg-card-muted{background:rgba(40,10,6,0.85) !important}body.navy-theme .bg-white-card, body.navy-theme .bg-card-blue, body.navy-theme .bg-card-blue-r12, body.navy-theme .bg-card-blue-r12-14, body.navy-theme .bg-card-blue-r12-p10, body.navy-theme .u-card-blue, body.navy-theme .bg-card-muted{background:rgba(17,30,36,0.85) !important}
 
-body.sunset-theme .col-dark,body.sunset-theme .col-muted,body.sunset-theme .col-dimmer{color:#C09070 !important}body.seaglass-theme .col-dark, body.seaglass-theme .col-muted, body.seaglass-theme .col-dimmer{color:#7EB2AB !important}
-body.sunset-theme .col-navy{color:#F5C030 !important}body.seaglass-theme .col-navy{color:#87DFC8 !important}
-body.sunset-theme .col-blue{color:#F5C030 !important}body.seaglass-theme .col-blue{color:#87DFC8 !important}
-body.sunset-theme .fire-title{color:#F0D0A0 !important}body.seaglass-theme .fire-title{color:#C8E1D8 !important}
+body.sunset-theme .col-dark,body.sunset-theme .col-muted,body.sunset-theme .col-dimmer{color:#C09070 !important}body.navy-theme .col-dark, body.navy-theme .col-muted, body.navy-theme .col-dimmer{color:#93B3B1 !important}
+body.sunset-theme .col-navy{color:#F5C030 !important}body.navy-theme .col-navy{color:#FFC801 !important}
+body.sunset-theme .col-blue{color:#F5C030 !important}body.navy-theme .col-blue{color:#FFC801 !important}
+body.sunset-theme .fire-title{color:#F0D0A0 !important}body.navy-theme .fire-title{color:#D9E8E3 !important}
 
-body.sunset-theme #calcFutureValue{color:#F5C030 !important}body.seaglass-theme #calcFutureValue{color:#87DFC8 !important}
-body.sunset-theme .bg-success{background:rgba(40,10,6,0.9) !important}body.seaglass-theme .bg-success{background:rgba(14,33,38,0.9) !important}
-body.sunset-theme #calcFutureValue,body.sunset-theme .col-green{color:#F5C030 !important}body.seaglass-theme #calcFutureValue, body.seaglass-theme .col-green{color:#87DFC8 !important}
+body.sunset-theme #calcFutureValue{color:#F5C030 !important}body.navy-theme #calcFutureValue{color:#FFC801 !important}
+body.sunset-theme .bg-success{background:rgba(40,10,6,0.9) !important}body.navy-theme .bg-success{background:rgba(17,30,36,0.9) !important}
+body.sunset-theme #calcFutureValue,body.sunset-theme .col-green{color:#F5C030 !important}body.navy-theme #calcFutureValue, body.navy-theme .col-green{color:#FFC801 !important}
 
 /* ── Sunset: Proj table ── */
 
@@ -272,38 +272,38 @@ body.sunset-theme #calcFutureValue,body.sunset-theme .col-green{color:#F5C030 !i
 
 /* Account items */
 
-body.sunset-theme strong{color:#F5C030}body.seaglass-theme strong{color:#87DFC8}
-body.sunset-theme button[onclick*="saveEdit"],body.sunset-theme button[onclick*="addEntryForMonth"],body.sunset-theme button[onclick*="addExpenseForMonth"],body.sunset-theme button[onclick*="saveDebtEntryForMonth"]{background:#E08020 !important;color:#180404 !important;font-weight:700}body.seaglass-theme button[onclick*="saveEdit"], body.seaglass-theme button[onclick*="addEntryForMonth"], body.seaglass-theme button[onclick*="addExpenseForMonth"], body.seaglass-theme button[onclick*="saveDebtEntryForMonth"]{background:#4EA6C6 !important;color:#081417 !important;font-weight:700}
-body.sunset-theme button[onclick*="deleteEntry"],body.sunset-theme button[onclick*="deleteExpense"]{background:#8B1010 !important;color:#FFFFFF !important;font-weight:700}body.seaglass-theme button[onclick*="deleteEntry"], body.seaglass-theme button[onclick*="deleteExpense"]{background:#3A615C !important;color:#FFFFFF !important;font-weight:700}
-body.sunset-theme button[onclick*="cancelEdit"],body.sunset-theme button[onclick*="hideAddForm"],body.sunset-theme button[onclick*="cancelEditExpense"]{background:#4A1A10 !important;color:#F0D0A0 !important;font-weight:600}body.seaglass-theme button[onclick*="cancelEdit"], body.seaglass-theme button[onclick*="hideAddForm"], body.seaglass-theme button[onclick*="cancelEditExpense"]{background:#1B414A !important;color:#C8E1D8 !important;font-weight:600}
-body.sunset-theme .msg.success{background:#5A2008;border-left:4px solid #E08020;color:#F5E8D0}body.seaglass-theme .msg.success{background:#1D4651;border-left:4px solid #4EA6C6;color:#CFF2E9}
-body.sunset-theme .msg.error{background:#5A0808;border-left:4px solid #C02020;color:#FFFFFF}body.seaglass-theme .msg.error{background:#1D4651;border-left:4px solid #548C85;color:#FFFFFF}
-body.sunset-theme [id^="edit-"],body.sunset-theme [id^="expense-edit-"],body.sunset-theme [id^="add-form-"],body.sunset-theme [id^="expense-add-form-"],body.sunset-theme [id^="debt-add-form-"]{background:rgba(40,10,6,0.9) !important}body.seaglass-theme [id^="edit-"], body.seaglass-theme [id^="expense-edit-"], body.seaglass-theme [id^="add-form-"], body.seaglass-theme [id^="expense-add-form-"], body.seaglass-theme [id^="debt-add-form-"]{background:rgba(14,33,38,0.9) !important}
-body.sunset-theme [id^="edit-"] label,body.sunset-theme [id^="expense-edit-"] label,body.sunset-theme [id^="add-form-"] label,body.sunset-theme [id^="expense-add-form-"] label,body.sunset-theme [id^="debt-add-form-"] label{color:#C09070 !important}body.seaglass-theme [id^="edit-"] label, body.seaglass-theme [id^="expense-edit-"] label, body.seaglass-theme [id^="add-form-"] label, body.seaglass-theme [id^="expense-add-form-"] label, body.seaglass-theme [id^="debt-add-form-"] label{color:#7EB2AB !important}
+body.sunset-theme strong{color:#F5C030}body.navy-theme strong{color:#FFC801}
+body.sunset-theme button[onclick*="saveEdit"],body.sunset-theme button[onclick*="addEntryForMonth"],body.sunset-theme button[onclick*="addExpenseForMonth"],body.sunset-theme button[onclick*="saveDebtEntryForMonth"]{background:#E08020 !important;color:#180404 !important;font-weight:700}body.navy-theme button[onclick*="saveEdit"], body.navy-theme button[onclick*="addEntryForMonth"], body.navy-theme button[onclick*="addExpenseForMonth"], body.navy-theme button[onclick*="saveDebtEntryForMonth"]{background:#FF9932 !important;color:#0A1216 !important;font-weight:700}
+body.sunset-theme button[onclick*="deleteEntry"],body.sunset-theme button[onclick*="deleteExpense"]{background:#8B1010 !important;color:#FFFFFF !important;font-weight:700}body.navy-theme button[onclick*="deleteEntry"], body.navy-theme button[onclick*="deleteExpense"]{background:#415A58 !important;color:#FFFFFF !important;font-weight:700}
+body.sunset-theme button[onclick*="cancelEdit"],body.sunset-theme button[onclick*="hideAddForm"],body.sunset-theme button[onclick*="cancelEditExpense"]{background:#4A1A10 !important;color:#F0D0A0 !important;font-weight:600}body.navy-theme button[onclick*="cancelEdit"], body.navy-theme button[onclick*="hideAddForm"], body.navy-theme button[onclick*="cancelEditExpense"]{background:#203A47 !important;color:#D9E8E3 !important;font-weight:600}
+body.sunset-theme .msg.success{background:#5A2008;border-left:4px solid #E08020;color:#F5E8D0}body.navy-theme .msg.success{background:#233F4D;border-left:4px solid #FF9932;color:#FFD53D}
+body.sunset-theme .msg.error{background:#5A0808;border-left:4px solid #C02020;color:#FFFFFF}body.navy-theme .msg.error{background:#233F4D;border-left:4px solid #5E827F;color:#FFFFFF}
+body.sunset-theme [id^="edit-"],body.sunset-theme [id^="expense-edit-"],body.sunset-theme [id^="add-form-"],body.sunset-theme [id^="expense-add-form-"],body.sunset-theme [id^="debt-add-form-"]{background:rgba(40,10,6,0.9) !important}body.navy-theme [id^="edit-"], body.navy-theme [id^="expense-edit-"], body.navy-theme [id^="add-form-"], body.navy-theme [id^="expense-add-form-"], body.navy-theme [id^="debt-add-form-"]{background:rgba(17,30,36,0.9) !important}
+body.sunset-theme [id^="edit-"] label,body.sunset-theme [id^="expense-edit-"] label,body.sunset-theme [id^="add-form-"] label,body.sunset-theme [id^="expense-add-form-"] label,body.sunset-theme [id^="debt-add-form-"] label{color:#C09070 !important}body.navy-theme [id^="edit-"] label, body.navy-theme [id^="expense-edit-"] label, body.navy-theme [id^="add-form-"] label, body.navy-theme [id^="expense-add-form-"] label, body.navy-theme [id^="debt-add-form-"] label{color:#93B3B1 !important}
 
 /* Proj-starting box */
 
-body.sunset-theme .bg-alaskan:not(#budgetPage *):not(#budgetComparison *):not(#budgetBreakdown *){background:rgba(35,8,4,0.88) !important;border-color:#5A2018 !important}body.seaglass-theme .bg-alaskan:not(#budgetPage *):not(#budgetComparison *):not(#budgetBreakdown *){background:rgba(12,28,32,0.88) !important;border-color:#22525E !important}
-body.sunset-theme .bg-deep-alaskan{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.seaglass-theme .bg-deep-alaskan{background:#071114 !important;border-color:#22525E !important;color:#C8E1D8 !important}
+body.sunset-theme .bg-alaskan:not(#budgetPage *):not(#budgetComparison *):not(#budgetBreakdown *){background:rgba(35,8,4,0.88) !important;border-color:#5A2018 !important}body.navy-theme .bg-alaskan:not(#budgetPage *):not(#budgetComparison *):not(#budgetBreakdown *){background:rgba(14,25,31,0.88) !important;border-color:#114C5A !important}
+body.sunset-theme .bg-deep-alaskan{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.navy-theme .bg-deep-alaskan{background:#091013 !important;border-color:#114C5A !important;color:#D9E8E3 !important}
 
-body.sunset-theme .bdr-alaskan{border-color:#5A2018 !important}body.seaglass-theme .bdr-alaskan{border-color:#22525E !important}
+body.sunset-theme .bdr-alaskan{border-color:#5A2018 !important}body.navy-theme .bdr-alaskan{border-color:#114C5A !important}
 
 /* Notepad textarea */
-body.sunset-theme #notepadText{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.seaglass-theme #notepadText{background:#071114 !important;border-color:#22525E !important;color:#C8E1D8 !important}
-body.sunset-theme #logbookPrevBtn,body.sunset-theme #logbookNextBtn{background:rgba(35,8,4,0.88) !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.seaglass-theme #logbookPrevBtn, body.seaglass-theme #logbookNextBtn{background:rgba(12,28,32,0.88) !important;border-color:#22525E !important;color:#C8E1D8 !important}
+body.sunset-theme #notepadText{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.navy-theme #notepadText{background:#091013 !important;border-color:#114C5A !important;color:#D9E8E3 !important}
+body.sunset-theme #logbookPrevBtn,body.sunset-theme #logbookNextBtn{background:rgba(35,8,4,0.88) !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.navy-theme #logbookPrevBtn, body.navy-theme #logbookNextBtn{background:rgba(14,25,31,0.88) !important;border-color:#114C5A !important;color:#D9E8E3 !important}
 
 /* Custom edit modal (metals/amount inline edit) */
-body.sunset-theme .settings-section{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important}body.seaglass-theme .settings-section{background:rgba(12,28,32,0.88) !important;border:1px solid #22525E !important}
-body.sunset-theme .settings-section h3{color:#F5C030 !important}body.seaglass-theme .settings-section h3{color:#87DFC8 !important}
-body.sunset-theme .action-btn{background:linear-gradient(135deg,#5A2010 0%,#3A1008 100%) !important;color:#F0D0A0 !important;border:1px solid #7A3018 !important}body.seaglass-theme .action-btn{background:linear-gradient(135deg,#204C57 0%,#142F36 100%) !important;color:#C8E1D8 !important;border:1px solid #2B6878 !important}
-body.sunset-theme .action-btn:hover{background:linear-gradient(135deg,#7A3020 0%,#5A2010 100%) !important;border-color:#F5C030 !important;color:#F5C030 !important}body.seaglass-theme .action-btn:hover{background:linear-gradient(135deg,#3A605B 0%,#204C57 100%) !important;border-color:#87DFC8 !important;color:#87DFC8 !important}
-body.sunset-theme .action-btn.dark{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important;color:#F0D0A0 !important}body.seaglass-theme .action-btn.dark{background:rgba(12,28,32,0.88) !important;border:1px solid #22525E !important;color:#C8E1D8 !important}
-body.sunset-theme .modal-header{border-bottom:1px solid #5A2018 !important;background:linear-gradient(135deg,rgba(20,4,2,0.98) 0%,rgba(10,2,1,0.99) 100%) !important}body.seaglass-theme .modal-header{border-bottom:1px solid #22525E !important;background:linear-gradient(135deg,rgba(7,16,18,0.98) 0%,rgba(3,8,9,0.99) 100%) !important}
+body.sunset-theme .settings-section{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important}body.navy-theme .settings-section{background:rgba(14,25,31,0.88) !important;border:1px solid #114C5A !important}
+body.sunset-theme .settings-section h3{color:#F5C030 !important}body.navy-theme .settings-section h3{color:#FFC801 !important}
+body.sunset-theme .action-btn{background:linear-gradient(135deg,#5A2010 0%,#3A1008 100%) !important;color:#F0D0A0 !important;border:1px solid #7A3018 !important}body.navy-theme .action-btn{background:linear-gradient(135deg,#264554 0%,#182B34 100%) !important;color:#D9E8E3 !important;border:1px solid #305669 !important}
+body.sunset-theme .action-btn:hover{background:linear-gradient(135deg,#7A3020 0%,#5A2010 100%) !important;border-color:#F5C030 !important;color:#F5C030 !important}body.navy-theme .action-btn:hover{background:linear-gradient(135deg,#415957 0%,#264554 100%) !important;border-color:#FFC801 !important;color:#FFC801 !important}
+body.sunset-theme .action-btn.dark{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important;color:#F0D0A0 !important}body.navy-theme .action-btn.dark{background:rgba(14,25,31,0.88) !important;border:1px solid #114C5A !important;color:#D9E8E3 !important}
+body.sunset-theme .modal-header{border-bottom:1px solid #5A2018 !important;background:linear-gradient(135deg,rgba(20,4,2,0.98) 0%,rgba(10,2,1,0.99) 100%) !important}body.navy-theme .modal-header{border-bottom:1px solid #114C5A !important;background:linear-gradient(135deg,rgba(8,14,17,0.98) 0%,rgba(4,7,9,0.99) 100%) !important}
 
 /* Any remaining inline color:#A0A0A0, color:#E0E0E0 in sunset context */
-body.sunset-theme .col-grey{color:#C09070 !important}body.seaglass-theme .col-grey{color:#7EB2AB !important}
-body.sunset-theme .col-silver{color:#F0D0A0 !important}body.seaglass-theme .col-silver{color:#C8E1D8 !important}
-body.sunset-theme .col-silver2{color:#F0D0A0 !important}body.seaglass-theme .col-silver2{color:#C8E1D8 !important}
+body.sunset-theme .col-grey{color:#C09070 !important}body.navy-theme .col-grey{color:#93B3B1 !important}
+body.sunset-theme .col-silver{color:#F0D0A0 !important}body.navy-theme .col-silver{color:#D9E8E3 !important}
+body.sunset-theme .col-silver2{color:#F0D0A0 !important}body.navy-theme .col-silver2{color:#D9E8E3 !important}
 
 /* ── Sunset: Account items ── */
 
@@ -313,36 +313,36 @@ body.sunset-theme .col-silver2{color:#F0D0A0 !important}body.seaglass-theme .col
 
 /* ── Sunset: Month totals ── */
 
-body.sunset-theme select{background:rgba(30,6,3,0.95) !important;color:#F0D0A0 !important;border:1px solid #5A2018 !important}body.seaglass-theme select{background:rgba(10,24,27,0.95) !important;color:#C8E1D8 !important;border:1px solid #22525E !important}
-body.sunset-theme select:focus{border-color:#F5C030 !important;box-shadow:0 0 12px rgba(245,192,48,0.2) !important;outline:none !important}body.seaglass-theme select:focus{border-color:#87DFC8 !important;box-shadow:0 0 12px rgba(135,223,200,0.2) !important;outline:none !important}
-body.sunset-theme select option{background:#200608 !important;color:#F0D0A0 !important}body.seaglass-theme select option{background:#0B1B1F !important;color:#C8E1D8 !important}
-body.sunset-theme #budgetPage .bg-card-blue,body.sunset-theme #budgetPage .u-card-blue,body.sunset-theme #budgetPage .bg-card-blue-r12,body.sunset-theme #budgetPage .bg-card-blue-r12-14,body.sunset-theme #budgetPage .bg-card-blue-r12-p10{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important}body.seaglass-theme #budgetPage .bg-card-blue, body.seaglass-theme #budgetPage .u-card-blue, body.seaglass-theme #budgetPage .bg-card-blue-r12, body.seaglass-theme #budgetPage .bg-card-blue-r12-14, body.seaglass-theme #budgetPage .bg-card-blue-r12-p10{background:rgba(12,28,32,0.88) !important;border:1px solid #22525E !important}
-body.sunset-theme #budgetPage label{color:#C09070 !important}body.seaglass-theme #budgetPage label{color:#7EB2AB !important}
-body.sunset-theme #budgetPage input[type=number]{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.seaglass-theme #budgetPage input[type=number]{background:#071114 !important;border-color:#22525E !important;color:#C8E1D8 !important}
-body.sunset-theme #customBudgetSection{background:rgba(35,8,4,0.88) !important;border:1px solid #F5C030 !important}body.seaglass-theme #customBudgetSection{background:rgba(12,28,32,0.88) !important;border:1px solid #87DFC8 !important}
-body.sunset-theme #customBudgetSection label{color:#C09070 !important}body.seaglass-theme #customBudgetSection label{color:#7EB2AB !important}
-body.sunset-theme #customBudgetSection input[type=number]{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.seaglass-theme #customBudgetSection input[type=number]{background:#071114 !important;border-color:#22525E !important;color:#C8E1D8 !important}
+body.sunset-theme select{background:rgba(30,6,3,0.95) !important;color:#F0D0A0 !important;border:1px solid #5A2018 !important}body.navy-theme select{background:rgba(12,21,26,0.95) !important;color:#D9E8E3 !important;border:1px solid #114C5A !important}
+body.sunset-theme select:focus{border-color:#F5C030 !important;box-shadow:0 0 12px rgba(245,192,48,0.2) !important;outline:none !important}body.navy-theme select:focus{border-color:#FFC801 !important;box-shadow:0 0 12px rgba(255,208,38,0.2) !important;outline:none !important}
+body.sunset-theme select option{background:#200608 !important;color:#F0D0A0 !important}body.navy-theme select option{background:#0E191E !important;color:#D9E8E3 !important}
+body.sunset-theme #budgetPage .bg-card-blue,body.sunset-theme #budgetPage .u-card-blue,body.sunset-theme #budgetPage .bg-card-blue-r12,body.sunset-theme #budgetPage .bg-card-blue-r12-14,body.sunset-theme #budgetPage .bg-card-blue-r12-p10{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important}body.navy-theme #budgetPage .bg-card-blue, body.navy-theme #budgetPage .u-card-blue, body.navy-theme #budgetPage .bg-card-blue-r12, body.navy-theme #budgetPage .bg-card-blue-r12-14, body.navy-theme #budgetPage .bg-card-blue-r12-p10{background:rgba(14,25,31,0.88) !important;border:1px solid #114C5A !important}
+body.sunset-theme #budgetPage label{color:#C09070 !important}body.navy-theme #budgetPage label{color:#93B3B1 !important}
+body.sunset-theme #budgetPage input[type=number]{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.navy-theme #budgetPage input[type=number]{background:#091013 !important;border-color:#114C5A !important;color:#D9E8E3 !important}
+body.sunset-theme #customBudgetSection{background:rgba(35,8,4,0.88) !important;border:1px solid #F5C030 !important}body.navy-theme #customBudgetSection{background:rgba(14,25,31,0.88) !important;border:1px solid #FFC801 !important}
+body.sunset-theme #customBudgetSection label{color:#C09070 !important}body.navy-theme #customBudgetSection label{color:#93B3B1 !important}
+body.sunset-theme #customBudgetSection input[type=number]{background:#140408 !important;border-color:#5A2018 !important;color:#F0D0A0 !important}body.navy-theme #customBudgetSection input[type=number]{background:#091013 !important;border-color:#114C5A !important;color:#D9E8E3 !important}
 
 /* ── Sunset: Calculator page ── */
-body.sunset-theme #calculatorPage label{color:#C09070 !important}body.seaglass-theme #calculatorPage label{color:#7EB2AB !important}
-body.sunset-theme #calculatorPage .col-navy{color:#C09070 !important}body.seaglass-theme #calculatorPage .col-navy{color:#7EB2AB !important}
-body.sunset-theme #calculatorPage [style*="font-size:24px"],body.sunset-theme #calculatorPage [style*="font-size:28px"]{color:#F5C030 !important}body.seaglass-theme #calculatorPage [style*="font-size:24px"], body.seaglass-theme #calculatorPage [style*="font-size:28px"]{color:#87DFC8 !important}
+body.sunset-theme #calculatorPage label{color:#C09070 !important}body.navy-theme #calculatorPage label{color:#93B3B1 !important}
+body.sunset-theme #calculatorPage .col-navy{color:#C09070 !important}body.navy-theme #calculatorPage .col-navy{color:#93B3B1 !important}
+body.sunset-theme #calculatorPage [style*="font-size:24px"],body.sunset-theme #calculatorPage [style*="font-size:28px"]{color:#F5C030 !important}body.navy-theme #calculatorPage [style*="font-size:24px"], body.navy-theme #calculatorPage [style*="font-size:28px"]{color:#FFC801 !important}
 
 /* ── Sunset: Logbook copy btn ── */
-body.sunset-theme #logbookCopyBtn{background:rgba(245,192,48,0.12) !important;border-color:#F5C030 !important;color:#F5C030 !important}body.seaglass-theme #logbookCopyBtn{background:rgba(135,223,200,0.12) !important;border-color:#87DFC8 !important;color:#87DFC8 !important}
+body.sunset-theme #logbookCopyBtn{background:rgba(245,192,48,0.12) !important;border-color:#F5C030 !important;color:#F5C030 !important}body.navy-theme #logbookCopyBtn{background:rgba(255,208,38,0.12) !important;border-color:#FFC801 !important;color:#FFC801 !important}
 
 /* ── Sunset: Tax rate input ── */
 
 /* ── Sunset: FIRE & Coast page ── */
-body.sunset-theme #firePage .bg-card-blue,body.sunset-theme #firePage .u-card-blue,body.sunset-theme #firePage .bg-card-blue-r12,body.sunset-theme #firePage .bg-card-blue-r12-14,body.sunset-theme #firePage .bg-card-blue-r12-p10{background:#2A0808 !important;border:1px solid #5A2018 !important}body.seaglass-theme #firePage .bg-card-blue, body.seaglass-theme #firePage .u-card-blue, body.seaglass-theme #firePage .bg-card-blue-r12, body.seaglass-theme #firePage .bg-card-blue-r12-14, body.seaglass-theme #firePage .bg-card-blue-r12-p10{background:#0F2429 !important;border:1px solid #22525E !important}
-body.sunset-theme #firePage .bdt-light{border-top-color:#5A2018 !important}body.seaglass-theme #firePage .bdt-light{border-top-color:#22525E !important}
-body.sunset-theme #firePage [style*="border-top:2px solid"]{border-top-color:#F5C030 !important}body.seaglass-theme #firePage [style*="border-top:2px solid"]{border-top-color:#87DFC8 !important}
+body.sunset-theme #firePage .bg-card-blue,body.sunset-theme #firePage .u-card-blue,body.sunset-theme #firePage .bg-card-blue-r12,body.sunset-theme #firePage .bg-card-blue-r12-14,body.sunset-theme #firePage .bg-card-blue-r12-p10{background:#2A0808 !important;border:1px solid #5A2018 !important}body.navy-theme #firePage .bg-card-blue, body.navy-theme #firePage .u-card-blue, body.navy-theme #firePage .bg-card-blue-r12, body.navy-theme #firePage .bg-card-blue-r12-14, body.navy-theme #firePage .bg-card-blue-r12-p10{background:#172B36 !important;border:1px solid #114C5A !important}
+body.sunset-theme #firePage .bdt-light{border-top-color:#5A2018 !important}body.navy-theme #firePage .bdt-light{border-top-color:#114C5A !important}
+body.sunset-theme #firePage [style*="border-top:2px solid"]{border-top-color:#F5C030 !important}body.navy-theme #firePage [style*="border-top:2px solid"]{border-top-color:#FFC801 !important}
 
-body.sunset-theme #firePage [style*="border:1px solid #ddd"]{border-color:#5A2018 !important}body.seaglass-theme #firePage [style*="border:1px solid #ddd"]{border-color:#22525E !important}
-body.sunset-theme #firePage h3.fire-title{color:#F5C030 !important}body.seaglass-theme #firePage h3.fire-title{color:#87DFC8 !important}
-body.sunset-theme #firePage .col-navy{color:#F5C030 !important}body.seaglass-theme #firePage .col-navy{color:#87DFC8 !important}
-body.sunset-theme #firePage .col-muted{color:#C08060 !important}body.seaglass-theme #firePage .col-muted{color:#74ACA4 !important}
-body.sunset-theme #firePage .col-dimmer{color:#A06040 !important}body.seaglass-theme #firePage .col-dimmer{color:#548C85 !important}
+body.sunset-theme #firePage [style*="border:1px solid #ddd"]{border-color:#5A2018 !important}body.navy-theme #firePage [style*="border:1px solid #ddd"]{border-color:#114C5A !important}
+body.sunset-theme #firePage h3.fire-title{color:#F5C030 !important}body.navy-theme #firePage h3.fire-title{color:#FFC801 !important}
+body.sunset-theme #firePage .col-navy{color:#F5C030 !important}body.navy-theme #firePage .col-navy{color:#FFC801 !important}
+body.sunset-theme #firePage .col-muted{color:#C08060 !important}body.navy-theme #firePage .col-muted{color:#93B3B1 !important}
+body.sunset-theme #firePage .col-dimmer{color:#A06040 !important}body.navy-theme #firePage .col-dimmer{color:#5E827F !important}
 
 /* ── Alaskan: FIRE & Coast page ── */
 body.alaskan-theme #firePage .bg-card-blue,body.alaskan-theme #firePage .u-card-blue,body.alaskan-theme #firePage .bg-card-blue-r12,body.alaskan-theme #firePage .bg-card-blue-r12-14,body.alaskan-theme #firePage .bg-card-blue-r12-p10{background:#1A2A42 !important;border:1px solid #2A3A52 !important}
@@ -355,23 +355,23 @@ body.alaskan-theme #firePage .col-muted{color:#7A8FA0 !important}
 /* ── Alaskan-lite: FIRE & Coast page ── */
 
 /* ── Sunset: Add goal form ── */
-body.sunset-theme [id^="addGoalForm"]{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important}body.seaglass-theme [id^="addGoalForm"]{background:rgba(12,28,32,0.88) !important;border:1px solid #22525E !important}
-body.sunset-theme [id^="addGoalForm"] label{color:#C09070 !important}body.seaglass-theme [id^="addGoalForm"] label{color:#7EB2AB !important}
-body.sunset-theme [id^="addGoalForm"] h3{color:#F5C030 !important}body.seaglass-theme [id^="addGoalForm"] h3{color:#87DFC8 !important}
+body.sunset-theme [id^="addGoalForm"]{background:rgba(35,8,4,0.88) !important;border:1px solid #5A2018 !important}body.navy-theme [id^="addGoalForm"]{background:rgba(14,25,31,0.88) !important;border:1px solid #114C5A !important}
+body.sunset-theme [id^="addGoalForm"] label{color:#C09070 !important}body.navy-theme [id^="addGoalForm"] label{color:#93B3B1 !important}
+body.sunset-theme [id^="addGoalForm"] h3{color:#F5C030 !important}body.navy-theme [id^="addGoalForm"] h3{color:#FFC801 !important}
 
 /* ── Sunset: Debt add form select/submit ── */
-body.sunset-theme [id^="debt-add-form-"] .submit-btn{box-shadow:none !important}body.seaglass-theme [id^="debt-add-form-"] .submit-btn{box-shadow:none !important}
-body.sunset-theme [id^="debt-add-form-"] select,body.sunset-theme [id^="edit-"] select,body.sunset-theme [id^="add-form-"] select,body.sunset-theme [id^="expense-add-form-"] select{background:#140408 !important;color:#F0D0A0 !important;border:1px solid #5A2018 !important}body.seaglass-theme [id^="debt-add-form-"] select, body.seaglass-theme [id^="edit-"] select, body.seaglass-theme [id^="add-form-"] select, body.seaglass-theme [id^="expense-add-form-"] select{background:#071114 !important;color:#C8E1D8 !important;border:1px solid #22525E !important}
+body.sunset-theme [id^="debt-add-form-"] .submit-btn{box-shadow:none !important}body.navy-theme [id^="debt-add-form-"] .submit-btn{box-shadow:none !important}
+body.sunset-theme [id^="debt-add-form-"] select,body.sunset-theme [id^="edit-"] select,body.sunset-theme [id^="add-form-"] select,body.sunset-theme [id^="expense-add-form-"] select{background:#140408 !important;color:#F0D0A0 !important;border:1px solid #5A2018 !important}body.navy-theme [id^="debt-add-form-"] select, body.navy-theme [id^="edit-"] select, body.navy-theme [id^="add-form-"] select, body.navy-theme [id^="expense-add-form-"] select{background:#091013 !important;color:#D9E8E3 !important;border:1px solid #114C5A !important}
 
-body.sunset-theme .bg-card-muted{background:rgba(35,8,4,0.85) !important}body.seaglass-theme .bg-card-muted{background:rgba(12,28,32,0.85) !important}
+body.sunset-theme .bg-card-muted{background:rgba(35,8,4,0.85) !important}body.navy-theme .bg-card-muted{background:rgba(14,25,31,0.85) !important}
 
-body.sunset-theme .bg-success{background:rgba(35,8,4,0.9) !important}body.seaglass-theme .bg-success{background:rgba(12,28,32,0.9) !important}
-body.sunset-theme .col-muted{color:#C09070 !important}body.seaglass-theme .col-muted{color:#7EB2AB !important}
-body.sunset-theme [style*="text-transform:uppercase"]{color:#C09070 !important}body.seaglass-theme [style*="text-transform:uppercase"]{color:#7EB2AB !important}
-body.sunset-theme h3{color:#F5C030 !important}body.seaglass-theme h3{color:#87DFC8 !important}
-body.sunset-theme label:has(input[type=checkbox]:not(:checked)){color:#C09070 !important}body.seaglass-theme label:has(input[type=checkbox]:not(:checked)){color:#7EB2AB !important}
-body.sunset-theme button[onclick*="Edit"],body.sunset-theme button[onclick*="showEditExpenseForm"]{background:rgba(35,8,4,0.85) !important;color:#F5C030 !important;border:1px solid #5A2018 !important}body.seaglass-theme button[onclick*="Edit"], body.seaglass-theme button[onclick*="showEditExpenseForm"]{background:rgba(12,28,32,0.85) !important;color:#87DFC8 !important;border:1px solid #22525E !important}
-body.sunset-theme button[onclick*="showEditExpenseForm"]:hover{background:rgba(60,15,5,0.95) !important}body.seaglass-theme button[onclick*="showEditExpenseForm"]:hover{background:rgba(19,47,53,0.95) !important}
+body.sunset-theme .bg-success{background:rgba(35,8,4,0.9) !important}body.navy-theme .bg-success{background:rgba(14,25,31,0.9) !important}
+body.sunset-theme .col-muted{color:#C09070 !important}body.navy-theme .col-muted{color:#93B3B1 !important}
+body.sunset-theme [style*="text-transform:uppercase"]{color:#C09070 !important}body.navy-theme [style*="text-transform:uppercase"]{color:#93B3B1 !important}
+body.sunset-theme h3{color:#F5C030 !important}body.navy-theme h3{color:#FFC801 !important}
+body.sunset-theme label:has(input[type=checkbox]:not(:checked)){color:#C09070 !important}body.navy-theme label:has(input[type=checkbox]:not(:checked)){color:#93B3B1 !important}
+body.sunset-theme button[onclick*="Edit"],body.sunset-theme button[onclick*="showEditExpenseForm"]{background:rgba(35,8,4,0.85) !important;color:#F5C030 !important;border:1px solid #5A2018 !important}body.navy-theme button[onclick*="Edit"], body.navy-theme button[onclick*="showEditExpenseForm"]{background:rgba(14,25,31,0.85) !important;color:#FFC801 !important;border:1px solid #114C5A !important}
+body.sunset-theme button[onclick*="showEditExpenseForm"]:hover{background:rgba(60,15,5,0.95) !important}body.navy-theme button[onclick*="showEditExpenseForm"]:hover{background:rgba(23,42,51,0.95) !important}
 
 /* Desktop dashboard variables for sunset */
 
@@ -401,9 +401,9 @@ body.sunset-theme button[onclick*="showEditExpenseForm"]:hover{background:rgba(6
 /* Calculator/Settings box theme support */
 body.alaskan-theme .bg-card-muted{background:rgba(30,30,30,0.8) !important}
 
-body.sunset-theme .bdt-light{border-top-color:#5A2018 !important}body.seaglass-theme .bdt-light{border-top-color:#22525E !important}
+body.sunset-theme .bdt-light{border-top-color:#5A2018 !important}body.navy-theme .bdt-light{border-top-color:#114C5A !important}
 
-body.sunset-theme .bdr-eee{border-color:#5A2018 !important}body.seaglass-theme .bdr-eee{border-color:#22525E !important}
+body.sunset-theme .bdr-eee{border-color:#5A2018 !important}body.navy-theme .bdr-eee{border-color:#114C5A !important}
 
 /* #856404 dark amber is invisible on sunset dark — metals box and elsewhere */
 
@@ -425,10 +425,10 @@ body.alaskan-theme #logbookCopyBtn{background:rgba(212,175,55,0.15);border-color
 body.alaskan-theme #logbookCopyBtn:active{transform:scale(0.95)}
 
 /* Logbook textarea container */
-body.sunset-theme #settingsAboutCard{background:rgba(40,10,6,0.5) !important;border-color:rgba(220,140,60,0.25) !important}body.seaglass-theme #settingsAboutCard{background:rgba(14,33,38,0.5) !important;border-color:rgba(101,173,200,0.25) !important}
+body.sunset-theme #settingsAboutCard{background:rgba(40,10,6,0.5) !important;border-color:rgba(220,140,60,0.25) !important}body.navy-theme #settingsAboutCard{background:rgba(17,30,36,0.5) !important;border-color:rgba(255,158,61,0.25) !important}
 
-body.sunset-theme #settingsAboutCard .about-claude-label{color:#F5C030 !important}body.seaglass-theme #settingsAboutCard .about-claude-label{color:#87DFC8 !important}
-body.sunset-theme #settingsAboutCard .about-claude-sub{color:#C09070 !important}body.seaglass-theme #settingsAboutCard .about-claude-sub{color:#7EB2AB !important}
+body.sunset-theme #settingsAboutCard .about-claude-label{color:#F5C030 !important}body.navy-theme #settingsAboutCard .about-claude-label{color:#FFC801 !important}
+body.sunset-theme #settingsAboutCard .about-claude-sub{color:#C09070 !important}body.navy-theme #settingsAboutCard .about-claude-sub{color:#93B3B1 !important}
 
 /* Expenses bar chart — tighter fit */
 .expenses-chart-wrap{height:auto !important;padding:10px 10px 4px !important;margin-bottom:12px !important}
@@ -438,7 +438,7 @@ body.sunset-theme #settingsAboutCard .about-claude-sub{color:#C09070 !important}
 /* Tax rate input in settings — theme aware */
 
 #overviewPage{background:linear-gradient(160deg,#0A1A2F 0%,#050F1A 100%)}
-body.sunset-theme #overviewPage{background:linear-gradient(160deg,#1A0606 0%,#0E0204 100%)}body.seaglass-theme #overviewPage{background:linear-gradient(160deg,#0A171A 0%,#050B0D 100%)}
+body.sunset-theme #overviewPage{background:linear-gradient(160deg,#1A0606 0%,#0E0204 100%)}body.navy-theme #overviewPage{background:linear-gradient(160deg,#0B1519 0%,#060A0D 100%)}
 #overviewPage.container{border-radius:0;box-shadow:none}
 .overview-header{background:linear-gradient(135deg,#0A1A2F 0%,#050F1A 100%);border-bottom:2px solid #D4AF37;padding:24px 20px 20px;color:#F0F0F0}
 .overview-header .firm-name{font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:0.6;margin-bottom:4px}
@@ -449,13 +449,13 @@ body.sunset-theme #overviewPage{background:linear-gradient(160deg,#1A0606 0%,#0E
 .overview-card .card-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#D4AF37;margin-bottom:8px}
 
 /* ── Sunset: Summary/Overview page ── */
-body.sunset-theme .overview-header{background:linear-gradient(135deg,rgba(12,3,1,0.98) 0%,rgba(6,1,0,0.99) 100%) !important;border-bottom:2px solid #F5C030 !important}body.seaglass-theme .overview-header{background:linear-gradient(135deg,rgba(4,9,11,0.98) 0%,rgba(2,4,5,0.99) 100%) !important;border-bottom:2px solid #87DFC8 !important}
-body.sunset-theme .overview-header .total-value{color:#F5C030 !important}body.seaglass-theme .overview-header .total-value{color:#87DFC8 !important}
-body.sunset-theme .overview-card{background:rgba(25,6,3,0.92) !important;border:1px solid #5A2018 !important;backdrop-filter:blur(4px)}body.seaglass-theme .overview-card{background:rgba(8,20,23,0.92) !important;border:1px solid #22525E !important;backdrop-filter:blur(4px)}
-body.sunset-theme .overview-card .card-title{color:#F5C030 !important}body.seaglass-theme .overview-card .card-title{color:#87DFC8 !important}
-body.sunset-theme .overview-row{border-bottom:1px solid rgba(245,192,48,0.08) !important;color:#F0D0A0 !important}body.seaglass-theme .overview-row{border-bottom:1px solid rgba(135,223,200,0.08) !important;color:#C8E1D8 !important}
-body.sunset-theme .overview-row .row-label{color:rgba(240,208,160,0.65) !important}body.seaglass-theme .overview-row .row-label{color:rgba(200,225,216,0.65) !important}
-body.sunset-theme .overview-row .row-value{color:#F0D0A0 !important}body.seaglass-theme .overview-row .row-value{color:#C8E1D8 !important}
+body.sunset-theme .overview-header{background:linear-gradient(135deg,rgba(12,3,1,0.98) 0%,rgba(6,1,0,0.99) 100%) !important;border-bottom:2px solid #F5C030 !important}body.navy-theme .overview-header{background:linear-gradient(135deg,rgba(5,8,10,0.98) 0%,rgba(2,4,5,0.99) 100%) !important;border-bottom:2px solid #FFC801 !important}
+body.sunset-theme .overview-header .total-value{color:#F5C030 !important}body.navy-theme .overview-header .total-value{color:#FFC801 !important}
+body.sunset-theme .overview-card{background:rgba(25,6,3,0.92) !important;border:1px solid #5A2018 !important;backdrop-filter:blur(4px)}body.navy-theme .overview-card{background:rgba(10,18,22,0.92) !important;border:1px solid #114C5A !important;backdrop-filter:blur(4px)}
+body.sunset-theme .overview-card .card-title{color:#F5C030 !important}body.navy-theme .overview-card .card-title{color:#FFC801 !important}
+body.sunset-theme .overview-row{border-bottom:1px solid rgba(245,192,48,0.08) !important;color:#F0D0A0 !important}body.navy-theme .overview-row{border-bottom:1px solid rgba(255,208,38,0.08) !important;color:#D9E8E3 !important}
+body.sunset-theme .overview-row .row-label{color:rgba(240,208,160,0.65) !important}body.navy-theme .overview-row .row-label{color:rgba(207,224,218,0.65) !important}
+body.sunset-theme .overview-row .row-value{color:#F0D0A0 !important}body.navy-theme .overview-row .row-value{color:#D9E8E3 !important}
 .overview-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px}
 .overview-row:last-child{border-bottom:none}
 .overview-row .row-label{color:rgba(255,255,255,0.6);font-size:13px}
@@ -484,7 +484,7 @@ h1 .info-btn{width:22px;height:22px;font-size:13px}
 #infoModal .modal-box{max-width:520px}
 .info-sec{margin-bottom:16px}
 .info-sec h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;color:#D4AF37}
-body.sunset-theme .info-sec h4{color:#F5C030}body.seaglass-theme .info-sec h4{color:#87DFC8}
+body.sunset-theme .info-sec h4{color:#F5C030}body.navy-theme .info-sec h4{color:#FFC801}
 .info-row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:13px}
 .info-row span:first-child{opacity:0.75}
 .info-row span:last-child{font-weight:700;text-align:right;white-space:nowrap}
@@ -564,7 +564,7 @@ body.sunset-theme .info-sec h4{color:#F5C030}body.seaglass-theme .info-sec h4{co
 /* ── Setup: Accounts & companies (v3.2) ── */
 #setupPage,#dataPage{--su-bg:#04090F;--su-panel:#0C1828;--su-panel2:#0F1E33;--su-line:#14223A;--su-border:#1A2A42;--su-border2:#2A3A52;--su-text:#E2E8F0;--su-strong:#F4EBD0;--su-muted:#9AA3B5;--su-accent:#D4AF37;--su-accent-soft:rgba(212,175,55,0.14);--su-accent-text:#E8C65A;--su-on-accent:#0A1A2F;--su-neg:#F87171;--su-pos:#4ADE80;--su-danger-bg:#B42318;
   position:fixed;inset:0;z-index:150;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--su-bg);color:var(--su-text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums}
-body.sunset-theme #setupPage,body.sunset-theme #dataPage{--su-bg:#0E0208;--su-panel:#180608;--su-panel2:#200A0C;--su-line:#2E0E0A;--su-border:#4A1810;--su-border2:#5A2018;--su-text:#F0D8C0;--su-strong:#FFF0DC;--su-muted:#C49C86;--su-accent:#F5C030;--su-accent-soft:rgba(245,192,48,0.14);--su-accent-text:#F5C030;--su-on-accent:#180404;--su-neg:#F07060;--su-pos:#F5A020;--su-danger-bg:#A01C0C}body.seaglass-theme #setupPage, body.seaglass-theme #dataPage{--su-bg:#050B0D;--su-panel:#091619;--su-panel2:#0D1E22;--su-line:#11282E;--su-border:#1B414A;--su-border2:#22525E;--su-text:#DDEDE7;--su-strong:#EBF0EF;--su-muted:#8EBCB6;--su-accent:#87DFC8;--su-accent-soft:rgba(135,223,200,0.14);--su-accent-text:#87DFC8;--su-on-accent:#081417;--su-neg:#E5786B;--su-pos:#53B4D7;--su-danger-bg:#406C66}
+body.sunset-theme #setupPage,body.sunset-theme #dataPage{--su-bg:#0E0208;--su-panel:#180608;--su-panel2:#200A0C;--su-line:#2E0E0A;--su-border:#4A1810;--su-border2:#5A2018;--su-text:#F0D8C0;--su-strong:#FFF0DC;--su-muted:#C49C86;--su-accent:#F5C030;--su-accent-soft:rgba(245,192,48,0.14);--su-accent-text:#F5C030;--su-on-accent:#180404;--su-neg:#F07060;--su-pos:#F5A020;--su-danger-bg:#A01C0C}body.navy-theme #setupPage, body.navy-theme #dataPage{--su-bg:#0C1A22;--su-panel:#13232C;--su-panel2:#172B36;--su-line:#14242C;--su-border:#0F4250;--su-border2:#114C5A;--su-text:#F1F6F4;--su-strong:#F1F6F4;--su-muted:#97B3B1;--su-accent:#FFC801;--su-accent-soft:rgba(255,208,38,0.14);--su-accent-text:#FFC801;--su-on-accent:#0A1216;--su-neg:#E5786B;--su-pos:#FF9E3D;--su-danger-bg:#486461}
 #setupPage *,#dataPage *{box-sizing:border-box}
 #setupPage button,#setupPage input,#setupPage select,#dataPage button,#dataPage input,#dataPage select,#dataPage textarea{font-family:inherit}
 /* ── Data page: the monthly logger (v3.3) — uses Setup's --su-* tokens ── */
@@ -772,7 +772,7 @@ body.bk-banner-on #homeSlide2{padding-top:var(--bk-banner-h,64px)}
 #homeTitle{font-size:28px;font-weight:700;color:#fff;letter-spacing:-0.5px;line-height:1.15;font-family:-apple-system,sans-serif;margin-bottom:2px}
 #homeTitle img{width:100%;max-width:310px;height:auto;display:block;}
 body.alaskan-theme #homeTitle{color:#D4AF37}
-body.sunset-theme #homeTitle{color:#F5C030}body.seaglass-theme #homeTitle{color:#87DFC8}
+body.sunset-theme #homeTitle{color:#F5C030}body.navy-theme #homeTitle{color:#FFC801}
 
 /* ── Page 2 header ───────────────────────────────────── */
 
@@ -801,7 +801,7 @@ body.sunset-theme #homeTitle{color:#F5C030}body.seaglass-theme #homeTitle{color:
 .home-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.28);transition:all 0.3s ease}
 .home-dot.active{background:rgba(255,255,255,0.88);width:20px;border-radius:4px}
 body.alaskan-theme .home-dot.active{background:#D4AF37}
-body.sunset-theme .home-dot.active{background:#F5C030}body.seaglass-theme .home-dot.active{background:#87DFC8}
+body.sunset-theme .home-dot.active{background:#F5C030}body.navy-theme .home-dot.active{background:#FFC801}
 
 /* ── Dock ────────────────────────────────────────────── */
 #homeDock{display:flex;justify-content:space-around;margin:0 18px;margin-bottom:max(env(safe-area-inset-bottom,0px) + 12px,20px);padding:12px 10px;border-radius:26px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.13);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);position:relative;z-index:1;flex-shrink:0}
@@ -849,11 +849,14 @@ body.sunset-theme .home-dot.active{background:#F5C030}body.seaglass-theme .home-
 .home-app.just-swapped{animation:iconSwap 0.22s cubic-bezier(0.34,1.56,0.64,1) both !important}
 #homeDock .home-app{animation:iconPop 0.36s cubic-bezier(0.34,1.56,0.64,1) 0.36s both}
 
-/* ── 4.1.0: Sea Glass theme ("Deep Tide") ──
-   Every rule above marked seaglass-theme is the sunset rule just before it with its colors translated
-   (made by local/tools/seaglass/buildcss.py + colormap.py). The background and the shoreline below are its own. */
-body.seaglass-theme::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 25% -8%,rgba(170,235,220,0.20) 0%,transparent 60%),radial-gradient(ellipse 70% 35% at 85% -4%,rgba(120,190,235,0.14) 0%,transparent 55%),radial-gradient(circle 70px at 14% 66%,rgba(135,223,200,0.10),transparent),radial-gradient(circle 55px at 84% 58%,rgba(91,143,217,0.10),transparent),radial-gradient(circle 40px at 62% 78%,rgba(217,168,90,0.08),transparent),linear-gradient(180deg,#041217 0%,#06222A 35%,#09343B 62%,#0D4549 82%,#11504F 100%);animation:seaglassDrift 14s ease-in-out infinite alternate}
-@keyframes seaglassDrift{0%{filter:brightness(1)}100%{filter:brightness(1.12)}}
-body.seaglass-theme::after{content:'';position:fixed;bottom:0;left:0;right:0;height:220px;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpath d='M0,120 C120,100 240,140 360,118 C480,96 600,132 720,112 C840,92 960,128 1080,108 C1200,90 1320,120 1440,102 L1440,220 L0,220 Z' fill='%230F4A4E' opacity='0.55'/%3E%3Cpath d='M0,150 C110,132 220,166 330,148 C440,130 550,162 660,144 C770,126 880,158 990,140 C1100,122 1210,152 1320,136 C1380,128 1420,134 1440,130 L1440,220 L0,220 Z' fill='%230B3B40' opacity='0.8'/%3E%3Cpath d='M0,150 C110,132 220,166 330,148 C440,130 550,162 660,144 C770,126 880,158 990,140 C1100,122 1210,152 1320,136 C1380,128 1420,134 1440,130' fill='none' stroke='%23BFEDE0' stroke-width='2' opacity='0.35'/%3E%3Cpath d='M0,180 C120,168 240,192 360,178 C480,164 600,190 720,176 C840,162 960,186 1080,174 C1200,162 1320,182 1440,170 L1440,220 L0,220 Z' fill='%232B2A22' opacity='0.95'/%3E%3Cpath d='M0,196 C160,188 320,204 480,194 C640,184 800,202 960,192 C1120,182 1280,198 1440,190 L1440,220 L0,220 Z' fill='%233A372C'/%3E%3Cellipse cx='210' cy='199' rx='16' ry='7' fill='%2387DFC8' opacity='0.75'/%3E%3Cellipse cx='540' cy='205' rx='11' ry='5' fill='%235B8FD9' opacity='0.7'/%3E%3Cellipse cx='880' cy='198' rx='14' ry='6' fill='%23DDEDE7' opacity='0.6'/%3E%3Cellipse cx='1130' cy='204' rx='10' ry='5' fill='%23D9A85A' opacity='0.65'/%3E%3Cellipse cx='1330' cy='197' rx='13' ry='6' fill='%2387DFC8' opacity='0.6'/%3E%3C/svg%3E") no-repeat bottom center / 100% 100%}
-html.seaglass-theme{background:#041217}
-html.seaglass-theme body:not(.alaskan-theme):not(.sunset-theme):not(.seaglass-theme){background:#0f1829}
+/* ── 4.2.0: Royal Navy theme (replaced Sea Glass) ──
+   Palette: Oceanic Noir #172B36 · Nocturnal #114C5A · Forsythia #FFC801 · Deep Saffron #FF9932 · Arctic Powder #F1F6F4 · Mystic Mint #D9E8E3.
+   Every rule above marked navy-theme is the sunset rule just before it with its colors translated
+   (made by local/tools/navy/build_navy.py + nmap.py). The background below is its own.
+   The body is see-through on this theme (the color sits on <html>) so the background glow shows; the home
+   screen card is see-through too. */
+html.navy-theme{background:#0C1A22!important}
+html body.navy-theme{background:transparent!important}
+html body.navy-theme::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 110% 45% at 50% -10%,rgba(17,76,90,0.55) 0%,transparent 60%),radial-gradient(ellipse 90% 35% at 15% 105%,rgba(17,76,90,0.45) 0%,transparent 60%),radial-gradient(ellipse 70% 25% at 85% 100%,rgba(255,200,1,0.06) 0%,transparent 60%),linear-gradient(180deg,#0E1F29 0%,#122631 40%,#152C38 75%,#11303A 100%)}
+html body.navy-theme #homePage{background:transparent!important;background-image:none!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important}
+html.navy-theme body:not(.alaskan-theme):not(.sunset-theme):not(.navy-theme){background:#0f1829!important}

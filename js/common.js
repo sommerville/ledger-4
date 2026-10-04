@@ -46,7 +46,7 @@
         closeModal('settingsModal');
     }
     function buildChart() {
-        const isDark = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isDark = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isAnyDark = isDark;
 
         const lineColor = tc('#D4AF37');
@@ -140,7 +140,7 @@
         const data = getChartData();
 
         // Determine colors based on theme
-        const isDarkWing2 = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isDarkWing2 = document.body.classList.contains('alaskan-theme') || (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isAnyDark2 = isDarkWing2;
 
         let lineColor = isDarkWing2 ? tc('#D4AF37') : '#C87820';

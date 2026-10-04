@@ -320,7 +320,7 @@
         const ctx = document.getElementById('expensesChart');
         if (!ctx) return;
 
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark = document.body.classList.contains('alaskan-theme') || isSunset;
 
         const barColor   = isSunset ? tc('#E08020') : '#D4AF37';

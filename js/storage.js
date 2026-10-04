@@ -315,15 +315,16 @@
 
     function setTheme(theme) {
         // Remove all theme classes
-        document.body.classList.remove('alaskan-theme', 'sunset-theme', 'seaglass-theme');
+        document.body.classList.remove('alaskan-theme', 'sunset-theme', 'navy-theme', 'seaglass-theme');
 
-        // Apply selected theme (Dark, Sunset, Sea Glass 4.1.0)
+        // Apply selected theme (Dark, Sunset, Royal Navy 4.2.0)
+        if (theme === 'seaglass') theme = 'navy';   // 4.2.0: Sea Glass was replaced by Royal Navy
         if (theme === 'alaskan') {
             document.body.classList.add('alaskan-theme');
         } else if (theme === 'sunset') {
             document.body.classList.add('sunset-theme');
-        } else if (theme === 'seaglass') {
-            document.body.classList.add('seaglass-theme');
+        } else if (theme === 'navy') {
+            document.body.classList.add('navy-theme');
         } else {
             // Default to dark if unrecognized
             document.body.classList.add('alaskan-theme');
@@ -335,10 +336,10 @@
         if (darkWingRadio) darkWingRadio.checked = (theme === 'alaskan');
         const sunsetRadio = document.getElementById('themeSunset');
         if (sunsetRadio) sunsetRadio.checked = (theme === 'sunset');
-        const seaglassRadio = document.getElementById('themeSeaglass');
-        if (seaglassRadio) seaglassRadio.checked = (theme === 'seaglass');
+        const navyRadio = document.getElementById('themeNavy');
+        if (navyRadio) navyRadio.checked = (theme === 'navy');
         // 4.1.0: keep <html> in step too (the startup script set it from the saved theme)
-        document.documentElement.classList.remove('alaskan-theme', 'sunset-theme', 'seaglass-theme');
+        document.documentElement.classList.remove('alaskan-theme', 'sunset-theme', 'navy-theme', 'seaglass-theme');
         document.documentElement.classList.add(theme + '-theme');
 
         // Save preference

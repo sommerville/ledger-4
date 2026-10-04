@@ -88,7 +88,7 @@
         document.getElementById('incomeMonthlyAvg').textContent = `Monthly Avg: ${fmt(monthlyAvg)}`;
 
         // Theme-aware text colour for monthly avg line
-        const _isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const _isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const _isDark   = document.body.classList.contains('alaskan-theme');
         const avgEl     = document.getElementById('incomeMonthlyAvg');
         if (avgEl) avgEl.style.color = _isSunset ? tc('#F0D0A0') : '#A0B8CC';
@@ -104,7 +104,7 @@
         const ctx = document.getElementById('incomeChart');
         if (!ctx) return;
 
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme');
 
         // Single bar color per theme — consistent regardless of active view filter
@@ -212,7 +212,7 @@ const lbl = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
         const container = document.getElementById('incomeSnapshotList');
         if (!container) return;
 
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme') || isSunset;
 
         const accent  = isSunset ? tc('#F5C030') : '#D4AF37';
@@ -327,7 +327,7 @@ function renderIncomeStats() {
         const startStr = moKey(new Date(today.getFullYear(), today.getMonth() - 12, 1));
 
         // Theme
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('seaglass-theme'));
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const isDark   = document.body.classList.contains('alaskan-theme');
         const accent   = isSunset ? tc('#F5C030') : '#D4AF37';
         const cardBg   = isSunset ? tc('#2A0808') : '#1A2A42';
