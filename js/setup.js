@@ -579,7 +579,7 @@
         if (amt == null) return;
         const mk = /^\d{4}-\d{2}$/.test(d.asOf || '') && d.asOf <= suMk() ? d.asOf : suMk();
         const date = mk + '-15', ts = Date.now();
-        if (kind === 'account') { entries.push({ date, accountId: item.id, amount: amt, ts }); entries.sort((a, b) => a.date.localeCompare(b.date)); saveEntries(); }
+        if (kind === 'account') { entries.push({ date, accountId: item.id, amount: amt, ts, editedAt: ts }); entries.sort((a, b) => a.date.localeCompare(b.date)); saveEntries(); }
         else { debtEntries.push({ date, amount: amt, accountId: item.id, accountName: item.name, accountType: item.type, ts }); debtEntries.sort((a, b) => a.date.localeCompare(b.date)); saveDebtEntries(); }
     }
 

@@ -177,6 +177,14 @@
     }
     let ddLastTs = 0;
     function ddTs() { ddLastTs = Math.max(Date.now(), ddLastTs + 1); return ddLastTs; }   // unique, increasing
+    // 4.6.0: editedAt = when a saved value last really changed (ms), for the estimate bot: account balances
+    // (entries, incl. metals) and contributions (retirementContribs, coastContribs) only. Set when one is made and
+    // when a save changes its value, never by a save that leaves it the same. ts stays the entry's id.
+    const DD_EDITED = new Set(['accounts', 'retirement', 'coast']);
+    function ddSetVal(obj, key, val) {
+        if (obj[key] != null && obj[key] !== '' && Number(obj[key]) === val) return false;
+        obj[key] = val; obj.editedAt = Date.now(); return true;
+    }
 
     // Unsaved typing, per section — switching months or leaving asks first; the section shows "Unsaved"
     const ddDirty = new Set();
@@ -1178,7 +1186,8 @@
                 const label = (row.querySelector('span:not(.dd-x-btn)') || {}).textContent || 'entry';
                 removals.push({ section: sectionId, obj, label: label.replace(/\s+/g, ' ').trim() });
             } else {
-                if (sectionId === 'retirement') obj.totalAmount = val; else obj.amount = val;
+                const key = sectionId === 'retirement' ? 'totalAmount' : 'amount';
+                if (DD_EDITED.has(sectionId)) ddSetVal(obj, key, val); else obj[key] = val;
                 touched.add(sectionId); saved++;
             }
         });
@@ -1232,6 +1241,7 @@
             typeClears.forEach(({ obj, typeKey }) => {
                 if (obj.amounts) delete obj.amounts[typeKey];
                 obj.totalAmount = Object.values(obj.amounts || {}).reduce((a, v) => a + (v || 0), 0);
+                obj.editedAt = Date.now();
                 if (!Object.keys(obj.amounts || {}).length) removals.push({ section: 'retirement', obj, label: null });
                 touched.add('retirement');
             });
@@ -1285,7 +1295,7 @@
                 const aidRaw = (selects[0] && selects[0].value) || row.dataset.accountId;
                 if (!aidRaw) return;
                 const acct = accounts.find(a => String(a.id) === String(aidRaw));
-                entries.push({ date: dateStr, accountId: acct ? acct.id : aidRaw, amount, ts: ddTs() });
+                entries.push({ date: dateStr, accountId: acct ? acct.id : aidRaw, amount, ts: ddTs(), editedAt: Date.now() });
                 touched.add('accounts'); saved++;
             } else if (sectionId === 'bulkdebt') {
                 const aid = selects[0] && selects[0].value;
@@ -1301,7 +1311,7 @@
                 const acct     = coastAccounts.find(a => String(a.id) === String(acctId));
                 const acctName = row.dataset.accountName || (acct ? acct.institution : (selEl ? (selEl.options[selEl.selectedIndex] || {}).text : ''));
                 coastContribs.push({ id: 'cc_'+ddTs(), date: dateStr, accountId: acctId, accountName: acctName,
-                                     institution: acct ? acct.institution : acctName, amount, note: '', ts: ddTs() });
+                                     institution: acct ? acct.institution : acctName, amount, note: '', ts: ddTs(), editedAt: Date.now() });
                 touched.add('coast'); saved++;
             }
         });
@@ -1344,7 +1354,7 @@
                 if (!c) {
                     if (!(val > 0) || !src) return;
                     c = { id: 'rc_' + ddTs() + '_' + (bonus ? 'b' : card.dataset.pcIdx), date: entry.date, sourceId: src.id,
-                          sourceName: src.label || src.institution, amounts: {}, totalAmount: 0, ts: ddTs() };
+                          sourceName: src.label || src.institution, amounts: {}, totalAmount: 0, ts: ddTs(), editedAt: Date.now() };
                     retirementContribs.push(c);
                     made[sourceId] = c;
                 }
@@ -1352,8 +1362,8 @@
                 if (bonus) { if (!c.linkedBonusTs) c.linkedBonusTs = entry.ts; }
                 else if (!c.linkedPayTs) c.linkedPayTs = entry.ts;   // keep its date; just tie it to this paycheck
                 c.amounts = c.amounts || {};
-                if (src && src.contribTypes && src.contribTypes.length) Object.keys(c.amounts).forEach(k => { if (!src.contribTypes.includes(k)) delete c.amounts[k]; });
-                c.amounts[typeKey] = val;
+                if (src && src.contribTypes && src.contribTypes.length) Object.keys(c.amounts).forEach(k => { if (!src.contribTypes.includes(k)) { delete c.amounts[k]; c.editedAt = Date.now(); } });
+                if (c.amounts[typeKey] !== val) { c.amounts[typeKey] = val; c.editedAt = Date.now(); }
                 c.totalAmount = Object.values(c.amounts).reduce((a, b) => a + (b || 0), 0);
                 touched.add('retirement'); saved++;
             });
@@ -1378,8 +1388,8 @@
                     const metalVal = ((!isNaN(goz) ? goz : (mUpdate.gold || 0)) * gp) + ((!isNaN(soz) ? soz : (mUpdate.silver || 0)) * sp);
                     metalsAccts.forEach(acct => {
                         const exist = entries.find(e => String(e.accountId) === String(acct.id) && e.date.slice(0,7) === mk);
-                        if (exist) exist.amount = metalVal;
-                        else entries.push({ date: mk + '-01', amount: metalVal, accountId: acct.id, accountName: acct.name, accountType: 'metals', institution: acct.institution || '', ts: ddTs() });
+                        if (exist) ddSetVal(exist, 'amount', metalVal);
+                        else entries.push({ date: mk + '-01', amount: metalVal, accountId: acct.id, accountName: acct.name, accountType: 'metals', institution: acct.institution || '', ts: ddTs(), editedAt: Date.now() });
                     });
                     touched.add('accounts');
                 }
