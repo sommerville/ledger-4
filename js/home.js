@@ -21,6 +21,8 @@
         homevalue:  `<img src="icons/home/real-estate.png" alt="Real Estate" width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,
         loans:      `<img src="icons/home/loans.png"      alt="Loans"       width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,   // v3.4
         goals:      `<img src="icons/home/goals.png"      alt="Goals"       width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,   // 3.8
+        monthreview:`<img src="icons/home/month-review.svg" alt="Month in Review" width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,   // 4.7.0
+        yearreview: `<img src="icons/home/year-review.svg"  alt="Year in Review"  width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,   // 4.7.0
 
     };
     // Page 1 icon definitions (persisted order)
@@ -41,7 +43,9 @@
 { id:'budget',   label:'Budget',            cls:'icon-budget',   fn:"openCalculator('budget')" },
 { id:'loans',    label:'Loans',             cls:'icon-loans',    fn:"openLoans()" },   // v3.4
 { id:'goals',    label:'Goals',             cls:'icon-goals',    fn:"openGoals()" },   // 3.8
-        null, null, null,   // v3.0: Ret. Plan moved to the desktop planner
+{ id:'monthreview', label:'Month in Review', cls:'icon-monthreview', fn:"openMonthReview()" },   // 4.7.0: was a link inside Summary
+{ id:'yearreview',  label:'Year in Review',  cls:'icon-yearreview',  fn:"openYearReview()" },    // 4.7.0
+        null,   // v3.0: Ret. Plan moved to the desktop planner
     ];
 
     // Current page index (0 or 1)

@@ -100,9 +100,12 @@
         const minSwipe = 65;
         const minVelocity = 0.35;
 
-        // 4.3.0: Month in Review — a sideways swipe steps months; nothing else (so it can't close Summary)
+        // 4.7.0: Month/Year in Review — sideways steps months/years, swipe up closes to the home screen
         if (mirIsOpen()) {
-            if (absX > absY * 1.5 && absX >= minSwipe) mirStep(swipeDistanceX > 0 ? -1 : 1);
+            if (absX > absY * 1.5 && absX >= minSwipe) { mirStep(swipeDistanceX > 0 ? -1 : 1); return; }
+            const rv = document.getElementById('monthReview');
+            const atBottom = !rv || rv.scrollTop + rv.clientHeight >= rv.scrollHeight - 2;
+            if (atBottom && swipeDistanceY < -80 && absY > absX * 1.5) mirCloseToHome();
             return;
         }
         // Overview/logbook overlay close-swipes (still needed for the overlays themselves)
@@ -112,7 +115,9 @@
             return;
         }
         if (notepadIsOpen) {
-            // No swipe-to-close for logbook — use the close button
+            // No swipe-to-close for logbook — use the close button.
+            // 4.7.0: a sideways swipe moves between entries (left = next/newer, right = previous/older)
+            if (absX > absY * 1.5 && absX >= minSwipe) logbookSwipe(swipeDistanceX < 0 ? 1 : -1);
             return;
         }
 
@@ -131,7 +136,6 @@
     // ─── Overview / Statement Page ───────────────────────────
     function openOverview() {
         try { buildOverview(); } catch(e) { console.error('buildOverview error:', e); }
-        styleReviewLink();   // 4.3.0: the Month in Review link takes the theme's accent
         const page = document.getElementById('overviewPage');
         page.style.display = 'block';
         // Force reflow so CSS transition fires reliably
@@ -141,55 +145,92 @@
     }
 
     function closeOverview() {
-        closeMonthReview();   // 4.3.0
         const page = document.getElementById('overviewPage');
         page.style.transform = 'translateY(-100%)';
         setTimeout(() => { page.style.display = 'none'; }, 350);
         overviewIsOpen = false;
     }
 
-    // ─── Month in Review (4.3.0) ─────────────────────────────
-    // Summary → Month in Review. One complete month at a time, starting with last month; ‹ › or a sideways swipe
-    // steps through the months that have data. Balances use the same math as the Net Worth / Investments monthly
-    // snapshots (each account's latest value on or before the month), the savings rate is LC.savingsRate, and
-    // every amount goes through fmt(), so Demo Mode scales it.
-    let mirMk = null;
+    // ─── Month & Year in Review (4.7.0) ──────────────────────
+    // Two home-screen widgets (were a link inside Summary in 4.3.0). Full-screen, sized to fit one screen, no logbook
+    // note. ‹ › or a sideways swipe steps months/years; swipe up (or ×, or Back) closes to the home screen.
+    // Year in Review starts on the current year as Year to Date. Balances use the same math as the Net Worth /
+    // Investments monthly snapshots (each account's latest value on or before the month), the savings rate is
+    // LC.savingsRate, and every amount goes through fmt(), so Demo Mode scales it. Colors come from retTheme()/tc().
+    let mirMode = 'month';   // 'month' | 'year'
+    let mirMk = null;        // 'YYYY-MM' when mode is month
+    let mirYr = null;        // 'YYYY' when mode is year
     function mirIsOpen() { const el = document.getElementById('monthReview'); return !!(el && el.style.display !== 'none'); }
+    function mirDates() {
+        return [entries, incomeEntries, expenses, retirementContribs, coastContribs, debtEntries]
+            .flatMap(list => (list || []).map(e => e && e.date)).filter(Boolean);
+    }
     function mirMonths() {
         const cur = moKey(new Date());
-        const all = [entries, incomeEntries, expenses, retirementContribs, coastContribs, debtEntries]
-            .flatMap(list => (list || []).map(e => e && e.date && e.date.slice(0, 7)));
-        return [...new Set(all.filter(Boolean))].filter(m => m < cur).sort();
+        return [...new Set(mirDates().map(d => d.slice(0, 7)))].filter(m => m < cur).sort();
     }
-    function openMonthReview() {
-        const ms = mirMonths();
-        if (!ms.length) { alert('No complete month logged yet.'); return; }
-        if (!mirMk || !ms.includes(mirMk)) mirMk = ms[ms.length - 1];
+    function mirYears() {
+        const cur = String(new Date().getFullYear());
+        return [...new Set(mirDates().map(d => d.slice(0, 4)))].filter(y => y <= cur).sort();
+    }
+    function mirKeys() { return mirMode === 'year' ? mirYears() : mirMonths(); }
+    function mirKey() { return mirMode === 'year' ? mirYr : mirMk; }
+    function openMonthReview() { mirOpen('month'); }
+    function openYearReview()  { mirOpen('year'); }
+    function mirOpen(mode) {
+        mirMode = mode;
+        const ks = mirKeys();
+        if (!ks.length) { alert(mode === 'year' ? 'Nothing logged yet.' : 'No complete month logged yet.'); return; }
+        if (mode === 'year') { if (!mirYr || !ks.includes(mirYr)) mirYr = ks[ks.length - 1]; }
+        else                 { if (!mirMk || !ks.includes(mirMk)) mirMk = ks[ks.length - 1]; }
         renderMonthReview();
         const el = document.getElementById('monthReview');
+        el.style.transition = 'none';
+        el.style.transform = 'translateY(100%)';
         el.style.display = 'block';
         el.scrollTop = 0;
-        history.pushState({ idx: 0 }, '', '');   // Back closes the review, not Summary
+        void el.offsetHeight;
+        el.style.transition = 'transform 0.32s cubic-bezier(0.4,0,0.2,1)';
+        el.style.transform = 'translateY(0)';
+        history.pushState({ idx: 0 }, '', '');   // Back closes the review, not the app
     }
-    function closeMonthReview() {
+    function closeMonthReview(animate) {
         const el = document.getElementById('monthReview');
-        if (el) el.style.display = 'none';
+        if (!el || el.style.display === 'none') return;
+        if (!animate) { el.style.display = 'none'; return; }
+        el.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+        el.style.transform = 'translateY(-100%)';
+        setTimeout(() => { el.style.display = 'none'; el.style.transform = ''; }, 300);
+    }
+    // × and swipe up: close, and use up the history entry opening it pushed (so Back later doesn't land on nothing)
+    function mirCloseToHome() {
+        closeMonthReview(true);
+        skipNextPopstate = true;
+        history.back();
     }
     function mirStep(dir) {
-        const ms = mirMonths(), i = ms.indexOf(mirMk), j = i + dir;
-        if (j < 0 || j >= ms.length) return;
-        mirMk = ms[j];
+        const ks = mirKeys(), i = ks.indexOf(mirKey()), j = i + dir;
+        if (j < 0 || j >= ks.length) return;
+        if (mirMode === 'year') mirYr = ks[j]; else mirMk = ks[j];
         renderMonthReview();
         document.getElementById('monthReview').scrollTop = 0;
     }
     function renderMonthReview() {
         const el = document.getElementById('monthReview');
         if (!el) return;
-        const T = retTheme(), mk = mirMk, prevMk = LC.addMonths(mk, -1);
-        const neg = '#EF5350';
+        const T = retTheme();
+        const neg = T.isSunset ? tc('#E05050') : '#EF5350';   // the red the rest of each theme uses
+        const isYear = mirMode === 'year';
+        const now = new Date(), curYr = String(now.getFullYear());
+        const key = mirKey();
+        // Period: a month, or a year (the current year runs Jan → this month: Year to Date)
+        const isYTD   = isYear && key === curYr;
+        const startMk = isYear ? (Number(key) - 1) + '-12' : LC.addMonths(key, -1);   // balance at the start = end of the month before
+        const endMk   = isYear ? (isYTD ? moKey(now) : key + '-12') : key;
+        const inP = e => e && e.date && (isYear ? e.date.slice(0, 4) === key : e.date.slice(0, 7) === key);
+
         const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-        const inMk = e => e && e.date && e.date.slice(0, 7) === mk;
-        const sum = (list, f) => (list || []).filter(inMk).reduce((s, e) => s + (f(e) || 0), 0);
+        const sum = (list, f) => (list || []).filter(inP).reduce((s, e) => s + (f(e) || 0), 0);
         const signed = n => (n >= 0 ? '+' : '−') + fmt(Math.abs(n));
         const tone = n => n >= 0 ? T.greenClr : neg;
         const pct = (n, base) => base > 0 ? (n >= 0 ? '+' : '−') + Math.abs(n / base * 100).toFixed(1) + '%' : '';
@@ -201,58 +242,73 @@
         const ret      = sum(retirementContribs, e => e.totalAmount || e.amount);
         const coast    = sum(coastContribs, e => e.amount);
         const rate     = LC.savingsRate({ ret, coast }, takeHome);
-        const bills    = (expenses || []).filter(inMk);
+        const bills    = (expenses || []).filter(inP);
         const spent    = bills.reduce((s, e) => s + (e.amount || 0), 0);
-        const top      = bills.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 3);
-        const p0 = investAt(prevMk), p1 = investAt(mk), n0 = worthAt(prevMk), n1 = worthAt(mk);
+        // Top 3: single bills for a month; biggest payees (summed) for a year
+        let top;
+        if (isYear) {
+            const by = {};
+            bills.forEach(b => { const n = b.companyName || b.serviceType || 'Bill'; by[n] = (by[n] || 0) + (b.amount || 0); });
+            top = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, a]) => ({ n, a }));
+        } else {
+            top = bills.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 3).map(b => ({ n: b.companyName || b.serviceType || 'Bill', a: b.amount || 0 }));
+        }
+        const p0 = investAt(startMk), p1 = investAt(endMk), n0 = worthAt(startMk), n1 = worthAt(endMk);
         const added  = ret + coast;
         const market = (p1 - p0) - added;
         const reached = [];
         if (typeof GOAL_TRACKS !== 'undefined' && typeof goalState === 'function') {
-            GOAL_TRACKS.forEach(t => (goalState(t.id).done || []).filter(d => d.mk === mk)
+            GOAL_TRACKS.forEach(t => (goalState(t.id).done || []).filter(d => d.mk && (isYear ? d.mk.slice(0, 4) === key : d.mk === key))
                 .forEach(d => reached.push(`${t.emoji} ${esc(t.name)} passed ${t.id === 'incomeMonthly' ? fmt(d.target) + '/mo' : fmt(d.target)}`)));
         }
-        let note = monthNotes[mk] || '';
-        if (note && demoMode && typeof ddDemoText === 'function') note = ddDemoText(note);
 
-        const ms = mirMonths(), i = ms.indexOf(mk);
-        const name = new Date(mk + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        const arrow = (dir, on) => `<button type="button" onclick="mirStep(${dir})" ${on ? '' : 'disabled'} aria-label="${dir < 0 ? 'Earlier month' : 'Later month'}" style="width:38px;height:38px;border-radius:10px;border:1px solid ${T.borderClr};background:${T.cardBg};color:${on ? T.accent : T.borderClr};font-size:20px;line-height:1;cursor:${on ? 'pointer' : 'default'}">${dir < 0 ? '‹' : '›'}</button>`;
-        const row = (l, r, c) => `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:${T.mutedClr}">${l}</span><span style="color:${c || T.textClr};font-weight:600">${r}</span></div>`;
-        const card = (title, body) => `<div style="background:${T.cardBg};border:1px solid ${T.borderClr};border-radius:14px;padding:12px 14px;margin-bottom:10px"><div style="font-size:10px;letter-spacing:2px;color:${T.accent};font-weight:700;margin-bottom:4px">${title}</div>${body}</div>`;
-        const big = (v, sub) => `<div style="font-size:24px;font-weight:800;color:${T.textClr}">${v}</div>${sub ? `<div style="font-size:11px;color:${T.mutedClr};margin-bottom:4px">${sub}</div>` : ''}`;
-        const tile = (label, v, sub, c) => `<div style="background:${T.cardBg};border:1px solid ${T.borderClr};border-radius:14px;padding:12px"><div style="font-size:10px;letter-spacing:1.5px;color:${T.mutedClr};font-weight:700">${label}</div><div style="font-size:18px;font-weight:800;color:${c};margin-top:3px">${v}</div><div style="font-size:11px;color:${T.mutedClr}">${sub}</div></div>`;
+        const ks = mirKeys(), i = ks.indexOf(key);
+        const name = isYear ? key : new Date(key + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        const sub  = isYear ? (isYTD ? 'Year to date · Jan 1 – ' + now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Full year') : '';
+        const unit = isYear ? 'year' : 'month';
+        const nMonths = isYear ? (isYTD ? now.getMonth() + 1 : 12) : 1;
 
-        el.style.background = 'rgba(0,0,0,0.55)';
-        el.innerHTML = `<div style="margin:24px 14px 30px;padding:18px 16px 14px;border-radius:20px;background:${T.inputBg};border:1px solid ${T.borderClr};box-shadow:0 20px 50px rgba(0,0,0,0.5);font-family:-apple-system,BlinkMacSystemFont,sans-serif">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                <div style="font-size:11px;letter-spacing:3px;color:${T.accent};font-weight:700;margin-top:6px">MONTH IN REVIEW</div>
-                <button type="button" onclick="closeMonthReview()" aria-label="Close" style="background:none;border:none;color:${T.mutedClr};font-size:28px;line-height:1;cursor:pointer;padding:0 2px">×</button>
+        // Sizes scale with screen height so the whole review fits on one screen
+        const fs = (min, vh, max) => `clamp(${min}px,${vh}vh,${max}px)`;
+        const arrow = (dir, on) => `<button type="button" onclick="mirStep(${dir})" ${on ? '' : 'disabled'} aria-label="${dir < 0 ? 'Earlier ' + unit : 'Later ' + unit}" style="width:38px;height:38px;flex:none;border-radius:10px;border:1px solid ${T.borderClr};background:${T.cardBg};color:${on ? T.accent : T.borderClr};font-size:20px;line-height:1;cursor:${on ? 'pointer' : 'default'}">${dir < 0 ? '‹' : '›'}</button>`;
+        const row = (l, r, c, indent) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:${fs(1, 0.35, 4)} 0;font-size:${fs(11, 1.6, 13)}"><span style="color:${T.mutedClr};${indent ? 'padding-left:12px;' : ''}white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l}</span><span style="color:${c || T.textClr};font-weight:600;white-space:nowrap">${r}</span></div>`;
+        const label = t => `<div style="font-size:${fs(9, 1.2, 10)};letter-spacing:1.5px;color:${T.accent};font-weight:700;margin-bottom:2px">${t}</div>`;
+        const card = (title, body, grow) => `<div style="background:${T.cardBg};border:1px solid ${T.borderClr};border-radius:14px;padding:${fs(8, 1.3, 12)} 14px;${grow ? 'flex:1 1 auto;' : 'flex:none;'}min-height:0;overflow:hidden">${label(title)}${body}</div>`;
+        const tile = (title, v, s, c) => `<div style="background:${T.cardBg};border:1px solid ${T.borderClr};border-radius:14px;padding:${fs(8, 1.3, 12)} 12px;min-width:0">${label(title)}<div style="font-size:${fs(16, 2.4, 20)};font-weight:800;color:${c};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v}</div><div style="font-size:${fs(10, 1.4, 11)};color:${T.mutedClr};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s || '&nbsp;'}</div></div>`;
+        const rule = `<div style="border-top:1px solid ${T.borderClr};margin:2px 0"></div>`;
+
+        el.className = 'container';
+        el.style.background = T.inputBg;   // solid, so the home screen doesn't show through
+        el.innerHTML = `<div style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:${fs(6, 1.1, 10)};padding:calc(env(safe-area-inset-top,0px) + ${fs(10, 2, 18)}) 14px calc(env(safe-area-inset-bottom,0px) + 8px);font-family:-apple-system,BlinkMacSystemFont,sans-serif">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex:none">
+                <div style="font-size:11px;letter-spacing:3px;color:${T.accent};font-weight:700">${isYear ? 'YEAR' : 'MONTH'} IN REVIEW</div>
+                <button type="button" onclick="mirCloseToHome()" aria-label="Close" style="background:none;border:none;color:${T.mutedClr};font-size:28px;line-height:1;cursor:pointer;padding:0 2px">×</button>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none">
                 ${arrow(-1, i > 0)}
-                <div style="font-size:22px;font-weight:800;color:${T.textClr};text-align:center;flex:1">${name}</div>
-                ${arrow(1, i < ms.length - 1)}
+                <div style="flex:1;text-align:center;min-width:0">
+                    <div style="font-size:${fs(18, 2.8, 22)};font-weight:800;color:${T.textClr}">${name}</div>
+                    ${sub ? `<div style="font-size:11px;color:${isYTD ? T.accent : T.mutedClr};font-weight:600;margin-top:1px">${sub}</div>` : ''}
+                </div>
+                ${arrow(1, i < ks.length - 1)}
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-                ${tile('PORTFOLIO', signed(p1 - p0), pct(p1 - p0, p0) || '&nbsp;', tone(p1 - p0))}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none">
+                ${tile('PORTFOLIO', signed(p1 - p0), pct(p1 - p0, p0), tone(p1 - p0))}
                 ${tile('NET WORTH', signed(n1 - n0), fmt(n1), tone(n1 - n0))}
+                ${tile('EARNED', fmt(takeHome), isYear && takeHome ? fmt(takeHome / nMonths) + '/mo avg' : (gross ? fmt(gross) + ' gross' : 'take-home'), T.textClr)}
+                ${tile('SAVED', fmt(added), rate !== null ? Math.round(rate * 100) + '% savings rate' : '', T.valClr)}
             </div>
-            ${card('EARNED', big(fmt(takeHome), 'take-home') + (gross ? row('Gross pay', fmt(gross)) : ''))}
-            ${card('SAVED', big(fmt(added), rate !== null ? Math.round(rate * 100) + '% savings rate' : '') + row('Retirement (incl. match)', fmt(ret)) + row('Coast', fmt(coast)))}
-            ${card('BILLS PAID', big(fmt(spent), bills.length + (bills.length === 1 ? ' bill' : ' bills') + ' logged') + top.map(b => row(esc(b.companyName || b.serviceType || 'Bill'), fmt(b.amount || 0))).join(''))}
-            ${card('WHERE THE PORTFOLIO MOVE CAME FROM', row('Start of month', fmt(p0)) + row('You added', '+' + fmt(added)) + row('The market', signed(market), tone(market)) + `<div style="border-top:1px solid ${T.borderClr};margin-top:4px"></div>` + row('End of month', fmt(p1)))}
-            ${reached.length ? card('GOALS REACHED', reached.map(r => `<div style="padding:4px 0;font-size:13px;color:${T.textClr}">✓ ${r}</div>`).join('')) : ''}
-            ${note ? card('YOUR NOTE', `<div style="font-size:13px;line-height:1.5;color:${T.textClr};font-style:italic">“${esc(note)}”</div>`) : ''}
+            ${card('BILLS PAID', `<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:${fs(16, 2.4, 20)};font-weight:800;color:${T.textClr}">${fmt(spent)}</span><span style="font-size:11px;color:${T.mutedClr}">${bills.length} ${bills.length === 1 ? 'bill' : 'bills'}${isYear && bills.length ? ' · ' + fmt(spent / nMonths) + '/mo' : ''}</span></div>` + top.map(b => row(esc(b.n), fmt(b.a))).join(''))}
+            ${card('WHERE THE PORTFOLIO MOVE CAME FROM',
+                row('Start of ' + unit, fmt(p0)) +
+                row('You added', '+' + fmt(added)) +
+                row('↳ Retirement (incl. match)', fmt(ret), T.mutedClr, true) +
+                row('↳ Coast', fmt(coast), T.mutedClr, true) +
+                row('The market', signed(market), tone(market)) + rule +
+                row(isYTD ? 'Today' : 'End of ' + unit, fmt(p1)))}
+            ${reached.length ? card('GOALS REACHED', reached.map(r => `<div style="padding:2px 0;font-size:${fs(11, 1.6, 13)};color:${T.textClr};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✓ ${r}</div>`).join(''), true) : '<div style="flex:1 1 0"></div>'}
+            <div style="flex:none;text-align:center;font-size:10px;letter-spacing:1px;color:${T.mutedClr};opacity:0.8">⌃ swipe up to close</div>
         </div>`;
-    }
-    function styleReviewLink() {
-        const b = document.getElementById('ovReviewLink');
-        if (!b) return;
-        const T = retTheme();
-        b.style.borderColor = T.accent + '55';
-        b.style.background  = T.accent + '14';
-        b.style.color       = T.accent;
     }
 
     function buildOverview() {
@@ -678,6 +734,23 @@ tsBar.textContent = '🕐 ' + d.toLocaleDateString('en-US', {weekday:'short', ye
         logbookRender();
     }
 
+    // 4.7.0: swipe between entries, with a short slide so it's clear the entry changed
+    function logbookSwipe(dir) {
+        const before = logbookCurrentIdx;
+        if (dir > 0) {
+            if (logbookCurrentIdx === -1) return;   // already on New Entry, the end of the book
+            logbookNext();
+        } else {
+            if (logbookCurrentIdx === 0) return;
+            logbookPrev();
+        }
+        if (logbookCurrentIdx === before) return;
+        const ta = document.getElementById('notepadText');
+        if (!ta || !ta.animate) return;
+        ta.animate([{ transform: `translateX(${dir > 0 ? 40 : -40}px)`, opacity: 0.2 }, { transform: 'translateX(0)', opacity: ta.style.opacity || 1 }],
+                   { duration: 220, easing: 'ease-out' });
+    }
+
     function saveNotepad() {
         logbookLoad();
         const text = document.getElementById('notepadText').value.trim();
@@ -717,7 +790,7 @@ tsBar.textContent = '🕐 ' + d.toLocaleDateString('en-US', {weekday:'short', ye
 
     // Prevent browser pull-to-refresh on the overview/swipe pages when they are open
     document.addEventListener('touchmove', e => {
-        if (overviewIsOpen || notepadIsOpen) {
+        if (overviewIsOpen || notepadIsOpen || mirIsOpen()) {   // 4.7.0: review too
             // Allow scroll within those pages but prevent document scroll
             const target = e.target;
             const overviewPage = document.getElementById('overviewPage');
@@ -965,8 +1038,8 @@ el.addEventListener('animationend', () => el.classList.remove('page-entering'), 
     window.addEventListener('popstate', (e) => {
         e.preventDefault();
         if (skipNextPopstate) { skipNextPopstate = false; return; }
-        // 4.3.0: Back closes Month in Review and stays on Summary
-        if (mirIsOpen()) { closeMonthReview(); return; }
+        // 4.7.0: Back closes Month/Year in Review
+        if (mirIsOpen()) { closeMonthReview(true); return; }
         // v15.2.1: Back closes an open info panel and stays on the page
         if (typeof infoIsOpen === 'function' && infoIsOpen()) {
             closeInfo();
