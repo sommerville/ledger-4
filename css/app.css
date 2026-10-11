@@ -824,6 +824,8 @@ body.sunset-theme .home-dot.active{background:#F5C030}body.navy-theme .home-dot.
 .icon-data{background:transparent}
 .icon-log{background:transparent}
 .icon-settings{background:transparent}
+.icon-monthreview{background:transparent}
+.icon-yearreview{background:transparent}
 
 /* ── Entry animations ────────────────────────────────── */
 @keyframes iconPop{0%{opacity:0;transform:scale(0.55) translateY(14px)}

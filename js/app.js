@@ -117,7 +117,20 @@
         if (notepadIsOpen) {
             // No swipe-to-close for logbook — use the close button.
             // 4.7.0: a sideways swipe moves between entries (left = next/newer, right = previous/older)
-            if (absX > absY * 1.5 && absX >= minSwipe) logbookSwipe(swipeDistanceX < 0 ? 1 : -1);
+            // 4.7.1: not while typing in the entry (tap outside it first), so selecting text never flips the page
+            const typing = document.activeElement && document.activeElement.id === 'notepadText';
+            if (!typing && absX > absY * 1.5 && absX >= minSwipe) logbookSwipe(swipeDistanceX < 0 ? 1 : -1);
+            return;
+        }
+        // 4.7.1: Data page — sideways steps the month (same as the ‹ › arrows), swipe up at the bottom closes it.
+        // Both go through the page's own guards, so unsaved typing is never lost without asking.
+        if (navStack[navStack.length - 1] === 'data' && document.getElementById('dataPage')) {
+            const ae = document.activeElement;
+            if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;   // typing in a field: leave the swipe alone
+            if (absX > absY * 1.5 && absX >= minSwipe) { ddStep(swipeDistanceX < 0 ? 1 : -1); return; }
+            const dp = document.getElementById('dataPage');
+            const atBottom = dp.scrollTop + dp.clientHeight >= dp.scrollHeight - 2;
+            if (atBottom && swipeDistanceY < -80 && absY > absX * 1.5) ddClose();
             return;
         }
 
