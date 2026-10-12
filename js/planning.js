@@ -356,6 +356,10 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         document.getElementById('calcFutureValue').textContent = fmt(futureValue);
         document.getElementById('calcTotalContrib').textContent = fmt(totalContributions);
         document.getElementById('calcTotalInterest').textContent = fmt(totalInterest);
+        // 4.7.5: what the future value would pay a year (and a month) at the 4% rule (LC.WR, the app's withdrawal rate)
+        const fourPct = futureValue * LC.WR;
+        document.getElementById('calcFourPct').textContent = fmt(fourPct) + '/yr';
+        document.getElementById('calcFourPctMo').textContent = fmt(fourPct / 12) + '/mo';
     }
 
     // ─── Budget Calculator Toggle ────────────────────────────
