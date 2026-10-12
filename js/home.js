@@ -22,7 +22,7 @@
         loans:      `<img src="icons/home/loans.png"      alt="Loans"       width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,   // v3.4
         goals:      `<img src="icons/home/goals.png"      alt="Goals"       width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,   // 3.8
         monthreview:`<img src="icons/home/month-review.png" alt="Month in Review" width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,   // 4.7.0
-        yearreview: `<img src="icons/home/year-review.svg"  alt="Year in Review"  width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,   // 4.7.0
+        yearreview: `<img src="icons/home/year-review.png" alt="Year in Review"  width="88" height="88" style="width:88px;height:88px;object-fit:contain;">`,   // 4.7.0
 
     };
     // Page 1 icon definitions (persisted order)

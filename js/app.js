@@ -266,20 +266,31 @@
         } else {
             top = bills.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 3).map(b => ({ n: b.companyName || b.serviceType || 'Bill', a: b.amount || 0 }));
         }
-        const p0 = investAt(startMk), p1 = investAt(endMk), n0 = worthAt(startMk), n1 = worthAt(endMk);
+        // Starting month (4.7.3): the first month on record has no balance before it, so its "change" would just be
+        // the money already there. That month shows a starting point instead; the first year measures from the
+        // end of that month, and goals already met at the start aren't listed as reached.
+        const firstMk = mirDates().map(d => d.slice(0, 7)).sort()[0];
+        const isFirst = !isYear && key === firstMk;
+        const fromFirst = isYear && firstMk && firstMk.slice(0, 4) === key && firstMk.slice(5) !== '12';
+        const baseMk = fromFirst ? firstMk : startMk;
+        const inFirst = e => e && e.date && e.date.slice(0, 7) === firstMk;
+        const firstRet   = fromFirst ? (retirementContribs || []).filter(inFirst).reduce((a, e) => a + ((e.totalAmount || e.amount) || 0), 0) : 0;
+        const firstCoast = fromFirst ? (coastContribs || []).filter(inFirst).reduce((a, e) => a + (e.amount || 0), 0) : 0;
+        const firstAdded = firstRet + firstCoast;
+        const p0 = investAt(baseMk), p1 = investAt(endMk), n0 = worthAt(baseMk), n1 = worthAt(endMk);
         const added  = ret + coast;
-        const market = (p1 - p0) - added;
+        const market = (p1 - p0) - (added - firstAdded);
         const reached = [];
-        if (typeof GOAL_TRACKS !== 'undefined' && typeof goalState === 'function') {
-            GOAL_TRACKS.forEach(t => (goalState(t.id).done || []).filter(d => d.mk && (isYear ? d.mk.slice(0, 4) === key : d.mk === key))
+        if (!isFirst && typeof GOAL_TRACKS !== 'undefined' && typeof goalState === 'function') {
+            GOAL_TRACKS.forEach(t => (goalState(t.id).done || []).filter(d => d.mk && d.mk !== firstMk && (isYear ? d.mk.slice(0, 4) === key : d.mk === key))
                 .forEach(d => reached.push(`${t.emoji} ${esc(t.name)} passed ${t.id === 'incomeMonthly' ? fmt(d.target) + '/mo' : fmt(d.target)}`)));
         }
 
         const ks = mirKeys(), i = ks.indexOf(key);
         const name = isYear ? key : new Date(key + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        const sub  = isYear ? (isYTD ? 'Year to date · Jan 1 – ' + now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Full year') : '';
+        const sub  = isYear ? (isYTD ? 'Year to date · Jan 1 – ' + now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : (fromFirst ? 'First year on record' : 'Full year')) : (isFirst ? 'First month on record' : '');
         const unit = isYear ? 'year' : 'month';
-        const nMonths = isYear ? (isYTD ? now.getMonth() + 1 : 12) : 1;
+        const nMonths = isYear ? (isYTD ? now.getMonth() + 1 : 12) - (firstMk && firstMk.slice(0, 4) === key ? Number(firstMk.slice(5)) - 1 : 0) : 1;   // the first year counts from its first month
 
         // Sizes scale with screen height so the whole review fits on one screen
         const fs = (min, vh, max) => `clamp(${min}px,${vh}vh,${max}px)`;
@@ -306,17 +317,21 @@
                 ${arrow(1, i < ks.length - 1)}
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none">
-                ${tile('PORTFOLIO', signed(p1 - p0), pct(p1 - p0, p0), tone(p1 - p0))}
-                ${tile('NET WORTH', signed(n1 - n0), fmt(n1), tone(n1 - n0))}
+                ${isFirst ? tile('PORTFOLIO', fmt(p1), 'starting balance', T.textClr) : tile('PORTFOLIO', signed(p1 - p0), pct(p1 - p0, p0), tone(p1 - p0))}
+                ${isFirst ? tile('NET WORTH', fmt(n1), 'starting point', T.textClr) : tile('NET WORTH', signed(n1 - n0), fmt(n1), tone(n1 - n0))}
                 ${tile('EARNED', fmt(takeHome), isYear && takeHome ? fmt(takeHome / nMonths) + '/mo avg' : (gross ? fmt(gross) + ' gross' : 'take-home'), T.textClr)}
                 ${tile('SAVED', fmt(added), rate !== null ? Math.round(rate * 100) + '% savings rate' : '', T.valClr)}
             </div>
             ${card('BILLS PAID', `<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:${fs(16, 2.4, 20)};font-weight:800;color:${T.textClr}">${fmt(spent)}</span><span style="font-size:11px;color:${T.mutedClr}">${bills.length} ${bills.length === 1 ? 'bill' : 'bills'}${isYear && bills.length ? ' · ' + fmt(spent / nMonths) + '/mo' : ''}</span></div>` + top.map(b => row(esc(b.n), fmt(b.a))).join(''))}
-            ${card('WHERE THE PORTFOLIO MOVE CAME FROM',
-                row('Start of ' + unit, fmt(p0)) +
-                row('You added', '+' + fmt(added)) +
-                row('↳ Retirement (incl. match)', fmt(ret), T.mutedClr, true) +
-                row('↳ Coast', fmt(coast), T.mutedClr, true) +
+            ${isFirst ? card('STARTING POINT',
+                row('Portfolio', fmt(p1)) +
+                row('Net worth', fmt(n1)) +
+                row('You added this month', '+' + fmt(added))) :
+              card('WHERE THE PORTFOLIO MOVE CAME FROM',
+                row(fromFirst ? 'Start (end of ' + new Date(firstMk + '-15').toLocaleString('en-US', { month: 'short' }) + ', first month)' : 'Start of ' + unit, fmt(p0)) +
+                row('You added', '+' + fmt(added - firstAdded)) +
+                row('↳ Retirement (incl. match)', fmt(ret - firstRet), T.mutedClr, true) +
+                row('↳ Coast', fmt(coast - firstCoast), T.mutedClr, true) +
                 row('The market', signed(market), tone(market)) + rule +
                 row(isYTD ? 'Today' : 'End of ' + unit, fmt(p1)))}
             ${reached.length ? card('GOALS REACHED', reached.map(r => `<div style="padding:2px 0;font-size:${fs(11, 1.6, 13)};color:${T.textClr};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✓ ${r}</div>`).join(''), true) : '<div style="flex:1 1 0"></div>'}

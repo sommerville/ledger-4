@@ -202,13 +202,13 @@
         setTimeout(() => {
             const logo = document.getElementById('splashLogo');
             if (logo) { logo.style.opacity = '1'; logo.style.transform = 'scale(1)'; }
-        }, 150);
+        }, 30);   // 4.7.4: right after the phone's own splash (was 150 ms, from 60% size with a bounce: a blank beat, then a pop)
 
         // Phase 2 — tap msg blinks
         setTimeout(() => {
             const tap = document.getElementById('splashTapMsg');
             if (tap) { tap.style.opacity = '1'; tap.style.animation = 'splashBlink 1.6s ease-in-out infinite'; }
-        }, 1800);
+        }, 1000);   // 4.7.4: the crest settles faster now (was 1800)
     }
 
     function splashTap() {
@@ -236,37 +236,39 @@
         setTimeout(() => {
             const sym = document.getElementById('claudeSymbol');
             if (sym) { sym.style.animation = 'claudePulse 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards, claudeGlow 2s ease-in-out 0.7s infinite'; }
-        }, 150);
+        }, 450);   // 4.7.4: after the crest's 0.5 s fade (was 150: the star showed through the crest)
 
         // Phase 2 — label types in letter by letter
         setTimeout(() => {
             const lbl = document.getElementById('claudeLabel');
             if (!lbl) return;
+            // 4.7.4: every letter is laid out from the start and revealed in turn, so the word doesn't
+            // re-center (and shift) as each letter is typed
+            lbl.innerHTML = 'CLAUDE'.split('').map(c => `<span style="visibility:hidden">${c}</span>`).join('');
             lbl.style.opacity = '1';
-            const word = 'CLAUDE';
-            lbl.textContent = '';
+            const letters = lbl.children;
             let i = 0;
             const typer = setInterval(() => {
-                lbl.textContent += word[i];
+                letters[i].style.visibility = 'visible';
                 i++;
-                if (i >= word.length) clearInterval(typer);
+                if (i >= letters.length) clearInterval(typer);
             }, 80);
-        }, 700);
+        }, 1000);
 
         // Phase 3 — loading bar sweeps across
         setTimeout(() => {
             const bar = document.getElementById('claudeBar');
             if (bar) { bar.style.transition = 'width 1.2s cubic-bezier(0.4,0,0.2,1)'; bar.style.width = '100%'; }
-        }, 1100);
+        }, 1400);
 
         // Phase 4 — "powered by" fades up
         setTimeout(() => {
             const pw = document.getElementById('claudePowered');
             if (pw) { pw.style.animation = 'claudeFadeUp 0.6s ease forwards'; }
-        }, 1500);
+        }, 1800);
 
-        // Auto-advance after 2.6s
-        setTimeout(() => { claudeSplashDismiss(); }, 2600);
+        // Auto-advance after 2.9s
+        setTimeout(() => { claudeSplashDismiss(); }, 2900);
     }
 
     function claudeSplashTap() {
