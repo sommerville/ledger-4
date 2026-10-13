@@ -142,6 +142,7 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 .pp-num{display:flex;align-items:center;gap:3px;font-size:13px;color:var(--muted);justify-content:flex-end}
 .pp-num input,.pp-f input,.pp-f select,.pp-bonus input{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 7px;font:inherit;font-size:13px;font-variant-numeric:tabular-nums}
 .pp-num input{width:66px;text-align:right}
+.pp-num.wide input{width:96px}   /* 4.9.0: dollar amounts in the budget, Social Security and bridge cards */
 .pp-solve{display:flex;gap:14px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:13px}
 .pp-solve .btn{white-space:nowrap;padding:8px 16px}
 .pp-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
@@ -198,7 +199,7 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <aside>
-    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.6.0</span></div>
+    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.11.0</span></div>
     <nav id="nav"></nav>
     <div class="side-foot">
       <button onclick="toggleTheme()">🎨 Switch theme</button>
@@ -326,7 +327,9 @@ function load(b) {
   const ex = new Date(b.exportedAt || Date.now());
   ASOF = isNaN(ex) ? new Date() : ex;
   const st = loadSettings();
-  EXTRAS_ON = st.extrasOn !== false;   // v3.1: estimated yearly costs switch (planner setting, default on)
+  BR = brFrom(st);   // 4.9.0: bridge plan (planner setting)
+  SS = ssFrom(st);   // 4.8.0: Social Security (planner setting)
+  BUDGET = budgetFrom(st, b);   // 4.7.0: the retirement budget (planner setting; was the 3.1 estimates on/off switch)
   TAX_PCT = typeof st.taxRate === 'number' ? st.taxRate : b.taxRatePct;   // v3.1: tax rate lives here; first run uses the phone's
   MC_LAST = null;
   THEME = normTheme(st.theme || b.theme);   // 4.5.0: Royal Navy (a phone's old 'seaglass' opens as navy)
@@ -427,7 +430,7 @@ function saveSettings(patch) {
 function resetSettings() {
   if (!confirm('Reset all planner settings (goal, retirement age, rates, elections) to the defaults from your backup?')) return;
   try { localStorage.removeItem(SETTINGS_KEY); } catch (e) {}
-  RP = null; PS = null; PULSE_RANGE = 12; GROWTH_RANGE = 24; GROWTH_RET = false; FLOW_RANGE = 24; window._fireRet = undefined; window._fireStop = undefined; EXTRAS_ON = true; MC = null; MC_LAST = null; if (D) TAX_PCT = D.taxRatePct;
+  RP = null; PS = null; PULSE_RANGE = 12; GROWTH_RANGE = 24; GROWTH_RET = false; FLOW_RANGE = 24; window._fireRet = undefined; window._fireStop = undefined; if (D) BUDGET = budgetFrom({}, D); SS = ssFrom({}); BR = brFrom({}); MC = null; MC_LAST = null; if (D) TAX_PCT = D.taxRatePct;
   if (D) show(VIEW);
 }
 const RP_KEYS = ['goal', 'r1', 'retireAge', 'r2', 'freed', 'r3', 'tax3', 'exp3', 'wr4', 'tax4', 'r4'];
@@ -479,20 +482,89 @@ function loansOwed(uptoMk) { return LC.loansOwed(D.loanPeople, D.loanEvents, upt
 
 const trackedExp = () => LC.trackedSpending(D.expenses, asOfMk());     // 3.7.1
 const mortgageExp = () => LC.mortgageSpending(D.expenses, asOfMk());
-/* v3.1: ESTIMATED YEARLY COSTS — groceries/fuel/dining + health insurance, which the phone
-   doesn't log as bills. One on/off switch on the Retirement Plan page, remembered as a planner
-   setting (ldp_settings.extrasOn). Amounts come from the backup if an older phone exported them,
-   otherwise the defaults (DEF_LIVING / DEF_HEALTH). The phone itself uses logged bills only (3.1). */
-let EXTRAS_ON = true;
-const livingAmt = () => EXTRAS_ON ? D.untrackedLiving : 0;
-const healthAmt = () => EXTRAS_ON ? D.healthInsurance : 0;
-const annualSpending = () => trackedExp() + livingAmt() + healthAmt();
-const spendSub = () => EXTRAS_ON ? 'bills + living + health' : 'logged bills only';
-function setExtras(on) {
-  EXTRAS_ON = !!on; saveSettings({ extrasOn: EXTRAS_ON });
+/* 4.7.0: RETIREMENT BUDGET — what a year of retirement costs, a planner setting (ldp_settings.budget).
+   Logged bills without the mortgage + the mortgage only if it isn't paid off first (the plan pays it off in
+   Phase 2B, so it's out by default) + its escrow (property tax + home insurance carry on after payoff; estimated
+   from the mortgage rate you enter) + groceries/fuel/everyday, health insurance and other, which the phone doesn't
+   log. Math: LC.retirementBudget / LC.escrowEstimate. Replaces the 3.1 estimates on/off switch (off = living and
+   health start at 0). The phone uses logged bills only. */
+let BUDGET = { living: DEF_LIVING, health: DEF_HEALTH, other: 0, keepMortgage: false, rate: null, escrow: null };
+function budgetFrom(st, b) {
+  const old = st.budget || {}, off = st.extrasOn === false;
+  const num = (v, d) => typeof v === 'number' && isFinite(v) ? v : d;
+  return { living: num(old.living, off ? 0 : b.untrackedLiving), health: num(old.health, off ? 0 : b.healthInsurance),
+           other: num(old.other, 0), keepMortgage: !!old.keepMortgage, rate: num(old.rate, null), escrow: num(old.escrow, null) };
+}
+const escrowAuto = () => { const m = erMortgage(); return Math.round(LC.escrowEstimate(m.payment, m.principal, m.balance, BUDGET.rate)); };
+const budgetLines = () => LC.retirementBudget({ bills: trackedExp() - mortgageExp(), mortgage: mortgageExp(), keepMortgage: BUDGET.keepMortgage,
+  escrow: BUDGET.escrow == null ? escrowAuto() : BUDGET.escrow, living: BUDGET.living, health: BUDGET.health, other: BUDGET.other });
+const livingAmt = () => BUDGET.living;
+const healthAmt = () => BUDGET.health;
+const annualSpending = () => budgetLines().total;
+const spendSub = () => 'retirement budget';
+// The most the household could have spent in the last 12 months: take-home − coast saving (if checking stayed flat)
+const spendCeiling = () => Math.max(0, takeHomeT12() - t12Savings().coast);
+function setBudget(k, v) {
+  if (k === 'keepMortgage') BUDGET.keepMortgage = !!v;
+  else if (v === '' || v == null) BUDGET[k] = (k === 'rate' || k === 'escrow') ? null : 0;
+  else BUDGET[k] = Math.max(0, +v || 0);
+  saveSettings({ budget: BUDGET });
   if (RP) RP.autoGoal = rpAutoGoal();
   MC_LAST = null;   // a run with the old spending no longer applies
   show(VIEW);
+}
+/* 4.8.0: SOCIAL SECURITY — a planner setting (ldp_settings.ss), today's dollars. Yours from your ssa.gov
+   estimates at 62 / 67 / 70 and the age you claim; your spouse's is the larger of her own benefit (her ssa.gov
+   age-67 estimate) and the spousal benefit (half of yours at 67, cut if she claims before 67), which starts only
+   once you've both claimed. Math: LC.ssAtAge / LC.spousalAtAge. Shown as income in Phase 4. */
+let SS = { me: { at62: null, at67: null, at70: null, claim: 70 }, sp: { at67: null, born: null, claim: 67 } };
+function ssFrom(st) {
+  const o = st.ss || {}, num = (v, d) => typeof v === 'number' && isFinite(v) ? v : d;
+  const me = o.me || {}, sp = o.sp || {};
+  return { me: { at62: num(me.at62, null), at67: num(me.at67, null), at70: num(me.at70, null), claim: num(me.claim, 70) },
+           sp: { at67: num(sp.at67, null), born: num(sp.born, null), claim: num(sp.claim, 67) } };
+}
+function setSS(who, k, v) {
+  SS[who][k] = v === '' || v == null ? (k === 'claim' ? (who === 'me' ? 70 : 67) : null) : +v;
+  saveSettings({ ss: SS });
+  if (RP) rpUpdate(); else show(VIEW);
+}
+// Monthly benefits and the age (yours) each one starts at
+function ssPlan() {
+  const mine = LC.ssAtAge(SS.me, SS.me.claim), own = LC.ssAtAge(SS.sp, SS.sp.claim), spousal = LC.spousalAtAge(SS.me.at67, SS.sp.claim);
+  const gap = SS.sp.born ? SS.sp.born - BIRTHDAY.getFullYear() : 0;   // she's this many years younger
+  const herStartOwn = SS.sp.claim + gap, useSpousal = spousal > own;
+  const her = Math.max(own, spousal), herStart = useSpousal ? Math.max(herStartOwn, SS.me.claim) : herStartOwn;
+  return { mine, mineStart: SS.me.claim, her, herStart, own, spousal, useSpousal, gap, known: SS.me.at67 > 0 };
+}
+// Yearly Social Security (today's dollars, before tax) at your age
+const ssYearAt = (age, P = ssPlan()) => 12 * ((age >= P.mineStart ? P.mine : 0) + (SS.sp.born && age >= P.herStart ? P.her : 0));
+/* 4.9.0: BRIDGE PLAN — Roth conversion ladder + the other bridge money + ACA health insurance by income,
+   a planner setting (ldp_settings.br). Year by year from the retirement age to 59½ (health insurance to 65):
+   convert a set amount from pre-tax to Roth each year; spending comes from taxable, then Roth basis (contributions
+   and after-tax money, free any time), then conversions at least 5 years old. Health insurance = the plan's full
+   price − the ACA credit for that year's income (conversion + taxable gains and dividends). Today's dollars.
+   Math: LC.bridgePlan / LC.acaCredit / LC.fedTax. Personal figures live only in the setting. */
+let BR = { conv: 30000, trad: 70, basis: 0, gain: 50, div: 1.5, fpl: null, bench: null, plan: null, rules: '2026' };
+function brFrom(st) {
+  const o = st.br || {}, num = (v, d) => typeof v === 'number' && isFinite(v) ? v : d;
+  return { conv: num(o.conv, 30000), trad: num(o.trad, 70), basis: num(o.basis, 0), gain: num(o.gain, 50), div: num(o.div, 1.5),
+           fpl: num(o.fpl, null), bench: num(o.bench, null), plan: num(o.plan, null), rules: o.rules === 'enhanced' ? 'enhanced' : '2026' };
+}
+function setBR(k, v) {
+  if (k === 'rules') BR.rules = v === 'enhanced' ? 'enhanced' : '2026';
+  else if (v === '' || v == null) BR[k] = ['fpl', 'bench', 'plan'].includes(k) ? null : brFrom({})[k];
+  else BR[k] = Math.max(0, +v || 0);
+  saveSettings({ br: BR });
+  if (RP) { if (k === 'rules') show(VIEW); else rpUpdate(); } else show(VIEW);
+}
+function bridgeFor(o) {
+  const L = budgetLines(), aca = BR.bench > 0 && BR.fpl > 0;
+  const nonTax = Math.max(0, o.p2aEnd - o.taxableAtP2);
+  return LC.bridgePlan({ age: RP.retireAge, endAge: 59.5, taxable: o.taxableAtP2, pretax: nonTax * BR.trad / 100, rothBasis: BR.basis,
+    conversion: BR.conv, growth: RP.r3, spend: aca ? L.total - L.health : L.total, gainShare: BR.gain, divYield: BR.div,
+    fpl: aca ? BR.fpl : 0, benchmarkMo: aca ? BR.bench : 0, planMo: aca ? BR.plan : 0, rules: BR.rules,
+    after595Magi: o.withdraw * BR.trad / 100 });
 }
 // 3.7.1: { ret, coast, match, retMo, coastMo, matchMo, totalMo } — LC.t12Savings
 function t12Savings() { return LC.t12Savings(D.retirementContribs, D.coastContribs, asOfMk()); }
@@ -505,7 +577,7 @@ let TAX_PCT = 25;
 const taxDiv = () => LC.taxDivisor(TAX_PCT);
 // Full / Coast FIRE with this planner's spending (estimates on or off) and tax rate — LC.fullFire / LC.coastFire (3.7.1)
 const fullFireT = () => LC.fullFire(annualSpending(), TAX_PCT, WR);
-const coastFireT = () => LC.coastFire(annualSpending(), mortgageExp(), TAX_PCT, WR);
+const coastFireT = () => LC.coastFire(annualSpending(), budgetLines().mortgage, TAX_PCT, WR);   // 4.7.0: the budget's mortgage (0 once paid off)
 function setTax(v) {
   v = Math.min(60, Math.max(0, +v || 0));
   TAX_PCT = v; saveSettings({ taxRate: v });
@@ -1252,7 +1324,8 @@ function rpCompute() {
   o.taxAt595 = t4;
   o.totalAt595 = o.retAt595 + t4 + o.surplusEnd;
   o.withdraw = o.totalAt595 * s.wr4 / 100; o.net4 = o.withdraw * (1 - s.tax4 / 100);
-  o.p4Rows = []; { let x = o.totalAt595; for (let y = 0; y <= 10; y++) { if (y > 0) x = Math.max(0, x * (1 + r4) - o.withdraw); o.p4Rows.push({ age: 59.5 + y, bal: x, income: x * s.wr4 / 100 * (1 - s.tax4 / 100) }); } }
+  o.bridge = bridgeFor(o);   // 4.9.0: every bridge layer + ACA
+  o.p4Rows = []; { const P = ssPlan(); let x = o.totalAt595; for (let y = 0; y <= 31; y++) { if (y > 0) x = Math.max(0, x * (1 + r4) - o.withdraw); const age = 59.5 + y; if (age > 90.5) break; o.p4Rows.push({ age, bal: x, income: x * s.wr4 / 100 * (1 - s.tax4 / 100), ss: ssYearAt(Math.floor(age), P) }); } }   // 4.8.0: to 90, with Social Security
   return o;
 }
 
@@ -1267,7 +1340,8 @@ function renderRetPlan() {
   const tile = (id, l, sub = '') => `<div class="rp-tile"><div class="l">${l}</div><div class="v num" id="rp-${id}">—</div><div class="s" id="rp-${id}-s">${sub}</div></div>`;
   document.getElementById('views').innerHTML = `
     <div class="asof" style="margin-bottom:12px">Your four-phase early-retirement plan. Your goal, ages and rates are remembered in this browser; mortgage figures refresh from each backup.</div>
-    ${extrasCard()}
+    <div class="card rp-phase"><div class="card-h"><h3>🗺️ The road to retirement</h3></div><div id="rp-road"></div></div>
+    ${budgetCard()}
     <div class="kpis" id="rp-kpis"></div>
     ${card('rp', 'The plan by age', '<div class="chart tall"><canvas id="c-rp"></canvas></div><div class="note">Shaded bands are the phases. Nominal dollars; steady returns.</div>')}
     <div class="grid g2" style="margin-top:14px">
@@ -1297,7 +1371,7 @@ function renderRetPlan() {
         ${rpSlider('r3', 'Growth rate (taxable)', 3, 12, 0.5)}
         ${rpSlider('tax3', 'Tax gross-up', 0, 40, 1, v => v + '%')}
         <div class="pp-fields">${rpNum('exp3', 'Annual spending override', '', 'auto: ' + $(annualSpending()))}</div>
-        <div class="rp-tiles">${tile('p3start', 'Taxable at retirement')}${tile('p3spend', 'Spending (grossed up)')}${tile('p3covers', 'Covers the bridge?')}${tile('p3end', 'Taxable left at 59½')}</div>
+        <div class="rp-tiles">${tile('p3start', 'Taxable at retirement')}${tile('p3spend', 'Spending (grossed up)')}${tile('p3covers', 'Taxable alone covers it?')}${tile('p3end', 'Taxable left at 59½')}</div>
         <div class="tbl-wrap" id="rp-p3rows" style="max-height:220px;margin-top:8px"></div>
       </div>
     </div>
@@ -1308,22 +1382,105 @@ function renderRetPlan() {
         <div class="tbl-wrap" id="rp-p4rows" style="max-height:330px"></div>
       </div>
     </div>
+    ${bridgeCard()}
+    ${ssCard()}
     ${mcCard()}`;
   rpUpdate();
 }
-// v3.1: planning assumptions for the whole planner — estimated yearly costs switch + tax rate
-function extrasCard() {
-  const chip = (on, l) => `<button class="chip ${EXTRAS_ON === on ? 'on' : ''}" onclick="setExtras(${on})">${l}</button>`;
-  const est = D.untrackedLiving + D.healthInsurance;
-  return `<div class="card" style="margin-bottom:14px"><div class="card-h"><h3>Planning assumptions <button class="info" onclick="openInfo('spending')">i</button></h3></div>
+// 4.9.0: bridge plan card (inputs; numbers fill in from bridgeRender on every update)
+function bridgeCard() {
+  const inp = (k, v, ph, step = 1, unit = '') => `<div class="pp-num wide"><input type="number" min="0" step="${step}" value="${v == null ? '' : v}" placeholder="${ph}" onchange="setBR('${k}',this.value)">${unit}</div>`;
+  const row = (label, sub, right) => `<div class="pp-row" style="grid-template-columns:1fr auto"><label>${label}<span>${sub}</span></label>${right}</div>`;
+  const chip = (v, l) => `<button class="chip ${BR.rules === v ? 'on' : ''}" onclick="setBR('rules','${v}')">${l}</button>`;
+  return `<div class="card rp-phase"><div class="card-h"><h3>🪜 Bridge plan — Roth ladder + health insurance</h3><button class="info" onclick="openInfo('bridge')">i</button></div>
+    <div class="grid g3" style="margin:0">
+      <div><div class="muted-s" style="font-weight:600;margin-bottom:4px">Roth conversion ladder</div>
+        ${row('Convert per year', 'pre-tax → Roth each January; each one can be spent 5 years later', inp('conv', BR.conv, '30000', 1000))}
+        ${row('Pre-tax share', 'of your retirement accounts at retirement (Traditional 401(k) + IRA)', inp('trad', BR.trad, '70', 1, '%'))}
+        ${row('Roth basis', 'Roth contributions + after-tax 401(k) money you can take out any time', inp('basis', BR.basis, '0', 1000))}</div>
+      <div><div class="muted-s" style="font-weight:600;margin-bottom:4px">Income from the taxable accounts</div>
+        ${row('Gain share of withdrawals', 'part of each taxable withdrawal that is gain (counts as income)', inp('gain', BR.gain, '50', 1, '%'))}
+        ${row('Dividend yield', 'taxable accounts, counts as income', inp('div', BR.div, '1.5', 0.1, '%'))}</div>
+      <div><div class="muted-s" style="font-weight:600;margin-bottom:4px">ACA health insurance (both of you, full price / month)</div>
+        ${row('Benchmark silver plan', 'second-lowest silver, from healthcare.gov', inp('bench', BR.bench, 'needed', 1))}
+        ${row('The plan you’d buy', 'blank = the benchmark', inp('plan', BR.plan, 'benchmark', 1))}
+        ${row('Poverty line for 2 (Alaska)', 'HHS guideline; the cliff is 400% of it', inp('fpl', BR.fpl, 'needed', 1))}
+        <div class="pp-row" style="grid-template-columns:1fr auto"><label>Subsidy rules<span>2026: cliff at 400% · 2021–25: no cliff</span></label><div class="chips">${chip('2026', '2026')}${chip('enhanced', '2021–25')}</div></div></div>
+    </div>
+    <div class="rp-tiles">${[['brCovered', 'Bridge covered?'], ['brLadder', 'Converted by 59½'], ['brHealth', 'Health insurance'], ['brEnd', 'At 59½']].map(([id, l]) => `<div class="rp-tile"><div class="l">${l}</div><div class="v num" id="rp-${id}">—</div><div class="s" id="rp-${id}-s"></div></div>`).join('')}</div>
+    <div id="rp-brNote" class="note"></div>
+    <div class="tbl-wrap" id="rp-brRows" style="max-height:300px;margin-top:8px"></div>
+  </div>`;
+}
+function bridgeRender(o) {
+  const e = id => document.getElementById('rp-' + id); if (!e('brCovered')) return;
+  const B = o.bridge, set = (id, v, sub) => { e(id).innerHTML = v; e(id + '-s').innerHTML = sub; };
+  const aca = BR.bench > 0 && BR.fpl > 0, bridgeRows = B.rows.filter(r => !r.after);
+  set('brCovered', B.covered ? '<span class="pos">✓ Yes</span>' : `<span class="neg">⚠ Short ${$k(B.short)}</span>`,
+    B.covered ? `taxable ${$k(bridgeRows.reduce((t, r) => t + r.fromTaxable, 0))} · Roth basis ${$k(bridgeRows.reduce((t, r) => t + r.fromBasis, 0))} · ladder ${$k(bridgeRows.reduce((t, r) => t + r.fromLadder, 0))}` : `runs short at ${B.firstShortAge}`);
+  set('brLadder', $k(B.converted), B.converted ? `federal tax ${$(B.tax)} · first one usable at ${B.firstAccess}` : 'no conversions');
+  set('brHealth', aca ? $(B.health / Math.max(1, B.rows.filter(r => r.fplPct != null).length)) + '/yr' : '—',
+    aca ? `average to 65 after ${$k(B.credit)} of credits${B.cliffYrs ? ` · <span class="neg">${B.cliffYrs} yr over the cliff</span>` : ''}${B.medicaidYrs ? ` · <span class="neg">${B.medicaidYrs} yr in the Medicaid range</span>` : ''}` : 'enter the benchmark plan + poverty line');
+  set('brEnd', $k(B.taxableAt595 + B.pretaxAt595 + B.rothAt595), `taxable ${$k(B.taxableAt595)} · pre-tax ${$k(B.pretaxAt595)} · Roth ${$k(B.rothAt595)}`);
+  e('brNote').innerHTML = `Spending each year = the retirement budget ${aca ? 'without its health line, plus the ACA cost below,' : '(enter the ACA figures to price health insurance by income)'} plus the conversion's federal tax (2026 brackets after the $32,200 deduction; gains and dividends assumed in the 0% band). The surplus pot (buffer) isn't touched. From 59½ to 65 the income is your Phase 4 pre-tax withdrawals. Today's dollars.`;
+  const pc = r => r.fplPct == null ? '—' : `<span class="${r.overCliff || r.medicaid ? 'neg' : ''}">${Math.round(r.fplPct)}%${r.overCliff ? ' cliff' : r.medicaid ? ' Medicaid' : ''}</span>`;
+  e('brRows').innerHTML = `<table><thead><tr><th>Age</th><th class="r">Convert</th><th class="r">Tax</th><th class="r">Income</th><th class="r">% poverty line</th><th class="r">ACA credit</th><th class="r">Health cost</th><th class="r">From taxable</th><th class="r">Roth basis</th><th class="r">Ladder</th><th class="r">Short</th></tr></thead><tbody>${B.rows.map(r => `<tr${r.after ? ' class="muted-s"' : ''}><td>${r.age}${r.after ? ' ·' : ''}</td><td class="r num">${r.conv ? $(r.conv) : '—'}</td><td class="r num">${r.tax ? $(r.tax) : '—'}</td><td class="r num">${$(r.magi)}</td><td class="r num">${aca ? pc(r) : '—'}</td><td class="r num">${aca ? $(r.credit) : '—'}</td><td class="r num">${aca ? $(r.health) : '—'}</td><td class="r num">${r.after ? '' : $(r.fromTaxable)}</td><td class="r num">${r.after ? '' : (r.fromBasis ? $(r.fromBasis) : '—')}</td><td class="r num">${r.after ? '' : (r.fromLadder ? $(r.fromLadder) : '—')}</td><td class="r num ${r.short ? 'neg' : ''}">${r.short ? $(r.short) : ''}</td></tr>`).join('')}</tbody></table>`;
+}
+// 4.8.0: Social Security card (inputs; the numbers fill in from ssRender on every update)
+function ssCard() {
+  const inp = (who, k, v, ph, step = 1) => `<div class="pp-num wide"><input type="number" min="0" step="${step}" value="${v == null ? '' : v}" placeholder="${ph}" onchange="setSS('${who}','${k}',this.value)"></div>`;
+  const row = (label, sub, right) => `<div class="pp-row" style="grid-template-columns:1fr auto"><label>${label}<span>${sub}</span></label>${right}</div>`;
+  const claim = (who, v) => `<div class="pp-row rp-row"><label>Claim at</label><input type="range" min="62" max="70" step="1" value="${v}" oninput="this.parentElement.querySelector('b').textContent=this.value" onchange="setSS('${who}','claim',this.value)"><b class="num">${v}</b></div>`;
+  return `<div class="card rp-phase"><div class="card-h"><h3>🏛️ Social Security</h3><button class="info" onclick="openInfo('ss')">i</button></div>
     <div class="grid g2" style="margin:0">
-      <div><div class="pp-row" style="grid-template-columns:1fr auto"><label>Estimated yearly costs<span>groceries, fuel, dining ${$(D.untrackedLiving)} + health insurance ${$(D.healthInsurance)}</span></label><div class="chips">${chip(true, 'On')}${chip(false, 'Off')}</div></div>
-        <div class="note" style="margin-top:2px">${EXTRAS_ON ? `On: added to spending everywhere in the planner.` : `Off: logged bills only, like the phone.`}
-        Annual spending used: <b class="num">${$(annualSpending())}</b> (${$(trackedExp())} bills${EXTRAS_ON ? ' + ' + $(est) + ' estimates' : ''}).</div></div>
-      <div><div class="pp-row" style="grid-template-columns:1fr auto"><label>Tax rate on withdrawals<span>grosses up spending so withdrawals cover the tax</span></label>
-          <div class="pp-num"><input type="number" min="0" max="60" step="1" value="${TAX_PCT}" onchange="setTax(this.value)">%</div></div>
-        <div class="note" style="margin-top:2px">Used for Full FIRE, Coast FIRE, the Full FIRE goal button and Monte Carlo. Phases 3 and 4 have their own tax sliders. The phone keeps its own saved rate.</div></div>
-    </div></div>`;
+      <div><div class="muted-s" style="font-weight:600;margin-bottom:4px">You · from your ssa.gov statement (per month)</div>
+        ${row('At 62', 'leave blank to use 70% of the age-67 amount', inp('me', 'at62', SS.me.at62, 'auto'))}
+        ${row('At 67 (full retirement age)', 'the one that matters', inp('me', 'at67', SS.me.at67, 'needed'))}
+        ${row('At 70', 'leave blank to use 124% of the age-67 amount', inp('me', 'at70', SS.me.at70, 'auto'))}
+        ${claim('me', SS.me.claim)}</div>
+      <div><div class="muted-s" style="font-weight:600;margin-bottom:4px">Your spouse · her own record (per month)</div>
+        ${row('Her benefit at 67', 'from her ssa.gov statement; blank = spousal benefit only', inp('sp', 'at67', SS.sp.at67, '0'))}
+        ${row('Her birth year', 'to line her age up with yours', inp('sp', 'born', SS.sp.born, 'year'))}
+        ${claim('sp', SS.sp.claim)}</div>
+    </div>
+    <div class="rp-tiles">${['ssMine', 'ssHer', 'ssBoth'].map(id => `<div class="rp-tile"><div class="l">${{ ssMine: 'Yours', ssHer: 'Hers', ssBoth: 'Household, once both claim' }[id]}</div><div class="v num" id="rp-${id}">—</div><div class="s" id="rp-${id}-s"></div></div>`).join('')}</div>
+    <div class="note">Today's dollars, before tax (up to 85% of it can be taxable). Shown as income in the Phase 4 table and counted in Monte Carlo (it pays part of each year from its start age).</div>
+  </div>`;
+}
+function ssRender() {
+  const e = id => document.getElementById('rp-' + id); if (!e('ssMine')) return;
+  const P = ssPlan(), set = (id, v, sub) => { e(id).innerHTML = v; e(id + '-s').innerHTML = sub; };
+  if (!P.known) { ['ssMine', 'ssHer', 'ssBoth'].forEach(id => set(id, '—', id === 'ssMine' ? 'enter your age-67 benefit' : '')); return; }
+  set('ssMine', $(P.mine) + '/mo', `from age ${P.mineStart} · ${$(P.mine * 12)}/yr`);
+  set('ssHer', SS.sp.born ? $(P.her) + '/mo' : '—', SS.sp.born ? `${P.useSpousal ? 'spousal (half of yours, ' + (SS.sp.claim < 67 ? 'cut for claiming at ' + SS.sp.claim : 'at 67') + ')' : 'her own record'} · from your age ${P.herStart}` : 'enter her birth year');
+  set('ssBoth', SS.sp.born ? $(P.mine + P.her) + '/mo' : $(P.mine) + '/mo', `${$((P.mine + (SS.sp.born ? P.her : 0)) * 12)}/yr · from your age ${SS.sp.born ? Math.max(P.mineStart, P.herStart) : P.mineStart}`);
+}
+// 4.7.0: the retirement budget + the tax rate, for the whole planner
+function budgetCard() {
+  const L = budgetLines(), ceil = spendCeiling();
+  const inp = (k, v, ph) => `<div class="pp-num wide"><input type="number" min="0" step="100" value="${v == null ? '' : Math.round(v)}" placeholder="${ph || ''}" onchange="setBudget('${k}',this.value)"></div>`;
+  const row = (label, sub, right) => `<div class="pp-row" style="grid-template-columns:1fr auto"><label>${label}<span>${sub}</span></label>${right}</div>`;
+  const chip = (on, l) => `<button class="chip ${BUDGET.keepMortgage === on ? 'on' : ''}" onclick="setBudget('keepMortgage',${on})">${l}</button>`;
+  return `<div class="card" style="margin-bottom:14px"><div class="card-h"><h3>🧾 Retirement budget <button class="info" onclick="openInfo('spending')">i</button></h3>
+      <div class="num" style="font-size:20px;font-weight:700">${$(L.total)}<span class="muted-s" style="font-size:12px;font-weight:400"> / yr · ${$(L.total / 12)} / mo</span></div></div>
+    <div class="grid g2" style="margin:0">
+      <div>
+        ${row('Logged bills', `last 12 months without the mortgage (${t12Label()})`, `<b class="num">${$(L.bills)}</b>`)}
+        ${row('Mortgage', BUDGET.keepMortgage ? `still paying ${$(mortgageExp())}/yr in retirement` : 'paid off before retirement (Phase 2B)', `<div class="chips">${chip(false, 'Paid off')}${chip(true, 'Still paying')}</div>`)}
+        ${BUDGET.keepMortgage ? '' : row('Property tax + home insurance', `escrow, carries on after payoff${BUDGET.escrow == null ? (BUDGET.rate ? ` · auto: <b class="num">${$(L.escrow)}</b>/yr from the ${BUDGET.rate}% rate (type a number to override)` : ' · enter the mortgage rate to estimate it') : ' · your number (clear it for auto)'}`, inp('escrow', BUDGET.escrow, 'auto'))}
+        ${BUDGET.keepMortgage ? '' : row('Mortgage rate', 'for the escrow estimate (payment − principal − interest)', `<div class="pp-num"><input type="number" min="0" max="15" step="0.001" value="${BUDGET.rate == null ? '' : BUDGET.rate}" onchange="setBudget('rate',this.value)">%</div>`)}
+      </div>
+      <div>
+        ${row('Groceries, fuel, dining, everyday', 'not logged on the phone', inp('living', BUDGET.living))}
+        ${row('Health insurance', 'yearly premiums · the Bridge plan prices it by income instead once its ACA figures are in', inp('health', BUDGET.health))}
+        ${row('Travel, fun, other', 'anything else a year of retirement costs', inp('other', BUDGET.other))}
+      </div>
+    </div>
+    <div class="note" style="margin-top:6px">Used everywhere in the planner (Full and Coast FIRE, the Phase 1 goal button, Phases 3 and 4, Monte Carlo), grossed up for tax there.
+      <b>Reality check:</b> last 12 months you took home ${$(takeHomeT12())} and put ${$(t12Savings().coast)} into coast, so at most about <b class="num">${$(ceil)}</b> went to spending (less if checking grew or you made one-time purchases).${ceil > L.total ? ` This budget is ${$(ceil - L.total)} under that.` : ''}</div>
+    <div class="pp-row" style="grid-template-columns:1fr auto;margin-top:10px"><label>Tax rate on withdrawals<span>grosses up spending so withdrawals cover the tax · Full FIRE, Coast FIRE, the goal button and Monte Carlo (Phases 3 and 4 have their own sliders)</span></label>
+      <div class="pp-num"><input type="number" min="0" max="60" step="1" value="${TAX_PCT}" onchange="setTax(this.value)">%</div></div>
+  </div>`;
 }
 function rpUpdate() {
   saveSettings({ rp: Object.fromEntries(RP_KEYS.map(k => [k, RP[k]])) });
@@ -1349,14 +1506,89 @@ function rpUpdate() {
   document.getElementById('rp-p3rows').innerHTML = o.p3Rows.length ? `<table><thead><tr><th>Age</th><th class="r">Taxable balance</th><th class="r">Spent</th></tr></thead><tbody>${o.p3Rows.map(r => `<tr><td>${r.age <= 59.5 ? r.age : '59½'}</td><td class="r num ${r.bal <= 0 ? 'neg' : ''}">${r.bal <= 0 ? 'Depleted' : $(r.bal)}</td><td class="r num muted-s">${$(r.spent)}</td></tr>`).join('')}</tbody></table>` : '';
   set('p4total', $k(o.totalAt595), `401(k)/IRA ${$k(o.retAt595)} + taxable ${$k(o.taxAt595)} + surplus ${$k(o.surplusEnd)}`);
   set('p4annual', $(o.net4)); set('p4monthly', $(o.net4 / 12));
-  document.getElementById('rp-p4rows').innerHTML = `<table><thead><tr><th>Age</th><th class="r">Portfolio</th><th class="r">Spendable / yr</th></tr></thead><tbody>${o.p4Rows.map(r => `<tr><td>${r.age % 1 === 0 ? r.age : r.age.toFixed(1)}</td><td class="r num">${$(r.bal)}</td><td class="r num">${$(r.income)}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('rp-p4rows').innerHTML = `<table><thead><tr><th>Age</th><th class="r">Portfolio</th><th class="r">Spendable / yr</th><th class="r">Social Security</th><th class="r">Total / yr</th></tr></thead><tbody>${o.p4Rows.map(r => `<tr><td>${r.age % 1 === 0 ? r.age : r.age.toFixed(1)}</td><td class="r num">${$(r.bal)}</td><td class="r num">${$(r.income)}</td><td class="r num ${r.ss ? '' : 'muted-s'}">${r.ss ? $(r.ss) : '—'}</td><td class="r num"><b>${$(r.income + r.ss)}</b></td></tr>`).join('')}</tbody></table>`;
+  ssRender();
+  bridgeRender(o);
   document.getElementById('rp-kpis').innerHTML =
     kpi('Phase 1 goal', p1Done && o.p1Done ? 'Reached' : isFinite(o.p1Months) ? erDate(o.p1Months) : '50+ yrs', `${$k(s.goal)} · age ${isFinite(o.p1Months) ? Math.floor(o.age + o.p1Months / 12) : '—'}`, 'rp1') +
     kpi('Early retirement', 'Age ' + s.retireAge, `${erDate(o.p2aEndMonths)} · ${$k(o.p2aEnd)}`, 'rp2a') +
     kpi('Mortgage paid off', hasM && isFinite(o.payoffMonths) ? erDate((isFinite(o.p1Months) ? o.p1Months : 0) + o.payoffMonths) : '—', hasM ? $(o.paydown) + '/mo paydown' : '', 'rp2b') +
-    kpi('Bridge to 59½', o.depleted ? `<span class="neg">Short ${$k(o.shortBy)}</span>` : 'Covered', o.depleted ? `need ${$k(o.bridgeNeed)} taxable at ${RP.retireAge}, have ${$k(o.taxableAtP2)}` : `${$k(o.p3End)} taxable left at 59½`, 'rp3') +
+    kpi('Bridge to 59½', o.bridge.covered ? 'Covered' : `<span class="neg">Short ${$k(o.bridge.short)}</span>`, o.bridge.covered ? `taxable + Roth basis + ladder · ${$k(o.bridge.converted)} converted` : `runs short at ${o.bridge.firstShortAge}`, 'rp3') +
     kpi('Income at 59½', $(o.net4 / 12) + '/mo', `${$k(o.totalAt595)} at ${s.wr4}% · after ${s.tax4}% tax`, 'rp4');
+  roadRender(o);
   rpChart(o);
+}
+/* 4.11.0: THE ROAD TO RETIREMENT — the plan's stops on a winding road (Darrin's idea): the stretch already
+   travelled is solid gold, the rest dotted. Stops, in date order: Phase 1 goal, mortgage paid off, retire,
+   59½, Social Security; small markers for the first usable Roth conversion and Medicare at 65. Phase 1 progress
+   is the portfolio ÷ the goal; later legs by time. Drawn from the same numbers as the rest of the page. */
+function roadRender(o) {
+  const el = document.getElementById('rp-road'); if (!el) return;
+  const s = RP, age = o.age, P = ssPlan(), B = o.bridge;
+  const p1 = isFinite(o.p1Months) ? o.p1Months : null, hasM = o.payoffMonths != null && isFinite(o.payoffMonths);
+  const mo = a => Math.max(0, (a - age) * 12);
+  // the road starts where the records start; Phase 1 progress is measured from there
+  const firstMk = (D.entries || []).map(e => e && e.date).filter(Boolean).sort()[0];
+  const startVal = firstMk ? investTotal(firstMk.slice(0, 7)) : 0;
+  const startLbl = firstMk ? new Date(firstMk.slice(0, 7) + '-15').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : erDate(0);
+  const stops = [{ m: 0, label: 'Started tracking', sub: `${startLbl} · ${$k(startVal)}`, color: '#f5c518', start: true }];
+  if (p1 != null) stops.push({ m: p1, label: `${$k(s.goal)} · Phase 1 done`, sub: `${erDate(p1)} · age ${Math.floor(age + p1 / 12)}`, color: '#f5c518' });
+  if (hasM) { const m = (p1 || 0) + o.payoffMonths; stops.push({ m, label: 'Mortgage paid off', sub: `${erDate(m)} · age ${Math.floor(age + m / 12)}`, color: '#6ea8fe' }); }
+  stops.push({ m: o.p2aEndMonths, label: 'Retire · the bridge begins', sub: `${erDate(o.p2aEndMonths)} · age ${s.retireAge} · ${$k(o.p2aEnd)}`, color: '#3fc7a0' });
+  stops.push({ m: mo(59.5), label: 'Everything unlocks', sub: `age 59½ · ${$k(o.totalAt595)}`, color: '#c98500' });
+  if (P.known) { const a = SS.sp.born ? Math.max(P.mineStart, P.herStart) : P.mineStart; stops.push({ m: mo(Math.min(P.mineStart, a)), label: 'Social Security', sub: `age ${P.mineStart} · ${$((P.mine + (SS.sp.born ? P.her : 0)))}/mo`, color: '#d55181' }); }
+  stops.sort((a, b) => a.m - b.m);
+  const marks = [];
+  if (B && B.firstAccess) marks.push({ m: mo(B.firstAccess), label: `First Roth conversion usable · ${B.firstAccess}` });
+  marks.push({ m: mo(65), label: 'Medicare · 65' });
+
+  // geometry: stops spread evenly, alternating low / high, joined by smooth curves
+  const W = 1360, H = 400, x0 = 70, x1 = W - 90, yLo = 300, yHi = 130, n = stops.length;
+  stops.forEach((t, i) => { t.x = n > 1 ? x0 + (x1 - x0) * i / (n - 1) : x0; t.y = i % 2 ? yHi : yLo; });
+  const seg = i => { const a = stops[i], b = stops[i + 1], dx = (b.x - a.x) / 2; return [a.x, a.y, a.x + dx, a.y, b.x - dx, b.y, b.x, b.y]; };
+  const bez = (c, t) => { const u = 1 - t; return [u*u*u*c[0] + 3*u*u*t*c[2] + 3*u*t*t*c[4] + t*t*t*c[6], u*u*u*c[1] + 3*u*u*t*c[3] + 3*u*t*t*c[5] + t*t*t*c[7]]; };
+  const segD = c => `M ${c[0]} ${c[1]} C ${c[2]} ${c[3]}, ${c[4]} ${c[5]}, ${c[6]} ${c[7]}`;
+  const segs = stops.slice(0, -1).map((_, i) => seg(i));
+  const full = segs.map((c, i) => (i ? '' : `M ${c[0]} ${c[1]} `) + `C ${c[2]} ${c[3]}, ${c[4]} ${c[5]}, ${c[6]} ${c[7]}`).join(' ');
+  // where along the road today is: Phase 1 by money, later legs by time
+  const legAt = m => { for (let i = 0; i < segs.length; i++) if (m < stops[i + 1].m || i === segs.length - 1) return i; return 0; };
+  const fracIn = (i, m) => { const a = stops[i].m, b = stops[i + 1].m; return b > a ? Math.min(1, Math.max(0, (m - a) / (b - a))) : 1; };
+  let nowLeg = 0, nowF = 0;
+  if (p1 != null && p1 > 0 && stops[1] && stops[1].label.includes('Phase 1')) { nowLeg = 0; nowF = Math.min(0.995, Math.max(0, (o.current - startVal) / Math.max(1, s.goal - startVal))); }
+  else if (p1 != null) {   // goal reached: today sits on the leg whose dates surround now (by time)
+    const i = legAt(0.0001); nowLeg = i; nowF = fracIn(i, 0.0001);
+  }
+  const travelled = segs.slice(0, nowLeg).map(segD).join(' ');
+  // partial curve for the current leg: split the cubic at nowF (de Casteljau)
+  const split = (c, t) => { const L = (a, b) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    const P0 = [c[0], c[1]], P1 = [c[2], c[3]], P2 = [c[4], c[5]], P3 = [c[6], c[7]];
+    const A = L(P0, P1), Bp = L(P1, P2), C = L(P2, P3), D = L(A, Bp), E = L(Bp, C), F = L(D, E);
+    return [P0[0], P0[1], A[0], A[1], D[0], D[1], F[0], F[1]]; };
+  const part = segs.length && nowF > 0 ? split(segs[nowLeg], nowF) : null;
+  const dot = part ? [part[6], part[7]] : [stops[0].x, stops[0].y];
+
+  const lbl = (t, i) => { const up = t.y === yHi, y = up ? t.y - 42 : t.y + 38, anchor = i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle', x = i === 0 ? t.x - 12 : i === n - 1 ? t.x + 14 : t.x;
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}" fill="var(--text)" font-weight="700" font-size="13">${esc(t.label)}</text><text x="${x}" y="${y + 17}" text-anchor="${anchor}" fill="var(--muted)" font-size="11">${esc(t.sub)}</text>`; };
+  const markSvg = marks.map(k => { const i = legAt(k.m); if (!segs[i]) return ''; const [x, y] = bez(segs[i], fracIn(i, k.m));
+    return `<circle cx="${x}" cy="${y}" r="5" fill="var(--panel2)" stroke="var(--muted)"/><text x="${x + 12}" y="${y + 4}" fill="var(--muted)" font-size="10">${esc(k.label)}</text>`; }).join('');
+  const bar = (label, f, txt, color) => `<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span class="muted-s">${label}</span><span style="flex:1;min-width:80px;height:8px;border-radius:4px;background:var(--border);overflow:hidden"><span style="display:block;height:100%;width:${Math.round(Math.min(1, Math.max(0, f)) * 100)}%;background:${color}"></span></span><span class="num">${txt}</span></div>`;
+  const mDebt = (() => { const de = (D.debtEntries || []).filter(e => e && e.accountType === 'mortgage').sort((a, b) => a.date.localeCompare(b.date)); return de.length ? { first: de[0].amount, firstDate: de[0].date } : null; })();
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="The road to retirement">
+      <defs><filter id="roadGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <path d="${full}" fill="none" stroke="var(--border)" stroke-width="16" stroke-linecap="round"/>
+      <path d="${full}" fill="none" stroke="var(--muted)" stroke-width="3" stroke-dasharray="2 12" stroke-linecap="round"/>
+      ${travelled ? `<path d="${travelled}" fill="none" stroke="#f5c518" stroke-width="5" stroke-linecap="round"/>` : ''}
+      ${part ? `<path d="${segD(part)}" fill="none" stroke="#f5c518" stroke-width="5" stroke-linecap="round"/>` : ''}
+      ${markSvg}
+      ${stops.map((t, i) => `<circle cx="${t.x}" cy="${t.y}" r="${t.start ? 9 : 13}" fill="${t.start ? t.color : 'var(--panel)'}" stroke="${t.color}" stroke-width="3"/>${lbl(t, i)}`).join('')}
+      <circle cx="${dot[0]}" cy="${dot[1]}" r="8" fill="#f5c518" filter="url(#roadGlow)"/>
+    </svg>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 22px;margin-top:4px">
+      ${bar('Phase 1', o.current / (s.goal || 1), `${(o.current / (s.goal || 1) * 100).toFixed(1)}% · ${o.current >= s.goal ? 'done' : $k(s.goal - o.current) + ' to go'}`, '#f5c518')}
+      ${mDebt && o.payoffMonths != null ? bar('Mortgage', 1 - (s.mBal || 0) / (mDebt.first || 1), `${$k(s.mBal || 0)} left`, '#6ea8fe') : ''}
+      ${bar('To retirement', o.current / (o.p2aEnd || 1), `${$k(o.current)} of ${$k(o.p2aEnd)}`, '#3fc7a0')}
+      <div style="font-size:12px"><span class="muted-s">Time to retirement</span> <span class="num">${erYr(o.p2aEndMonths / 12)} to go</span></div>
+    </div>`;
 }
 // Portfolio by age across the phases, sampled monthly then shown yearly
 function rpChart(o) {
@@ -1403,30 +1635,25 @@ function rpChart(o) {
    Assumptions are remembered (ldp_settings.mc); results are not saved.
    ═══════════════════════════════════════════════════════════════════════════ */
 let MC = null, MC_LAST = null;
-const MC_DEFAULTS = { life: 95, ret: 7, vol: 15, infl: 3, inflVol: 1 };
-function mcState() { if (!MC) MC = Object.assign({}, MC_DEFAULTS, loadSettings().mc || {}); return MC; }
-function mcSeeds() {
-  const sv = t12Savings();
-  return { age: ageAt(ASOF), port: investTotal(), retire: RP ? +RP.retireAge : 48,
-           contrib: sv.ret + sv.coast, spend: annualSpending() / taxDiv() };
-}
-function mcRandN(mean, sd) { const u1 = Math.random() || 1e-12, u2 = Math.random(); return mean + Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * sd; }
-function mcSimulate(seed, a, n = 10000) {
-  const ret = a.ret / 100, vol = a.vol / 100, inf = a.infl / 100, infV = a.inflVol / 100, ends = [];
-  let ok = 0;
-  for (let i = 0; i < n; i++) {
-    let port = seed.port, age = seed.age, exp = seed.spend, alive = true;
-    while (age < seed.retire) { port = port * (1 + mcRandN(ret, vol)) + seed.contrib; exp *= 1 + mcRandN(inf, infV); age++; }
-    while (age < a.life) {
-      const r = mcRandN(ret, vol), f = mcRandN(inf, infV);
-      port -= exp;                                   // withdraw at the start of the year
-      if (port <= 0) { port = 0; alive = false; break; }
-      port *= 1 + r; exp *= 1 + f; age++;
-    }
-    if (alive) ok++; ends.push(port);
+/* 4.10.0: MONTE CARLO — the simulation lives in LC.monteCarlo (repeatable). Working and retired years have their
+   own return and volatility; Social Security (from its card) pays part of each year from its start age, growing with
+   inflation; a cash buffer (years of spending) is set aside at retirement, spent after down years and refilled after
+   up years. Each run also shows the same futures without the buffer and without Social Security. An old saved
+   single return/volatility carries over to both. */
+const MC_DEFAULTS = { life: 95, retW: 7, volW: 15, retR: 6, volR: 12, infl: 3, inflVol: 1, bufYrs: 2, cash: 3 };
+function mcState() {
+  if (!MC) {
+    const st = loadSettings().mc || {};
+    MC = Object.assign({}, MC_DEFAULTS, 'ret' in st && !('retW' in st) ? { retW: st.ret, retR: st.ret, volW: st.vol, volR: st.vol } : {}, st);
+    delete MC.ret; delete MC.vol;
   }
-  ends.sort((x, y) => x - y);
-  return { rate: ok / n * 100, median: ends[Math.floor(n / 2)], p10: ends[Math.floor(n * 0.1)], p90: ends[Math.floor(n * 0.9)] };
+  return MC;
+}
+function mcSeeds() {
+  const sv = t12Savings(), P = ssPlan();
+  const ss = P.known ? [{ fromAge: P.mineStart, perYear: P.mine * 12 }].concat(SS.sp.born && P.her > 0 ? [{ fromAge: P.herStart, perYear: P.her * 12 }] : []) : [];
+  return { age: ageAt(ASOF), port: investTotal(), retire: RP ? +RP.retireAge : 48,
+           contrib: sv.ret + sv.coast, spend: annualSpending() / taxDiv(), ss, bufferYears: mcState().bufYrs, cashRate: mcState().cash };
 }
 function mcNum(key, label, step = 0.5) {
   return `<label class="pp-f"><span>${label}</span><input type="number" step="${step}" value="${mcState()[key]}" onchange="MC['${key}']=+this.value;saveSettings({mc:{...MC}});mcRender()"></label>`;
@@ -1439,37 +1666,47 @@ function mcCard() {
         <div class="pp-group">From your backup and this plan</div>
         <div id="mc-seeds"></div>
         <div class="pp-group">Assumptions</div>
-        <div class="pp-fields">${mcNum('life', 'Life expectancy', 1)}${mcNum('ret', 'Average return %')}${mcNum('vol', 'Return volatility %')}${mcNum('infl', 'Inflation %', 0.1)}${mcNum('inflVol', 'Inflation volatility %', 0.1)}</div>
-        <div class="pp-solve"><button class="btn" onclick="mcRun()">Run 10,000 simulations</button><span class="muted-s">Run again after changing the plan or the switch.</span></div>
+        <div class="pp-fields">${mcNum('life', 'Life expectancy', 1)}${mcNum('infl', 'Inflation %', 0.1)}${mcNum('inflVol', 'Inflation volatility %', 0.1)}
+          ${mcNum('retW', 'Return while working %')}${mcNum('volW', 'Volatility while working %')}
+          ${mcNum('retR', 'Return in retirement %')}${mcNum('volR', 'Volatility in retirement %')}
+          ${mcNum('bufYrs', 'Cash buffer (years of spending)', 0.5)}${mcNum('cash', 'Cash buffer earns %', 0.1)}</div>
+        <div class="pp-solve"><button class="btn" onclick="mcRun()">Run 10,000 simulations</button><span class="muted-s">Run again after changing the plan or the budget.</span></div>
       </div>
       <div id="mc-result"></div>
     </div></div>`;
 }
 function mcRun() {
-  const seed = mcSeeds(), a = { ...mcState() };
-  MC_LAST = { ...mcSimulate(seed, a), seed, a, runAt: new Date() };
+  const seed = mcSeeds(), a = { ...mcState() }, n = 10000, rs = 20261012;
+  MC_LAST = { ...LC.monteCarlo(seed, a, n, rs), noBuffer: LC.monteCarlo({ ...seed, bufferYears: 0 }, a, n, rs).rate,
+              noSS: seed.ss.length ? LC.monteCarlo({ ...seed, ss: [] }, a, n, rs).rate : null, seed, a, runAt: new Date() };
   mcRender();
 }
 function mcRender() {
   const el = document.getElementById('mc-seeds'); if (!el) return;
   const s = mcSeeds();
+  const ssTxt = s.ss.length ? s.ss.map(x => `${$(x.perYear)}/yr from ${x.fromAge}`).join(' + ') : 'none (enter it in the Social Security card)';
   el.innerHTML = `<table><tbody>
     <tr><td>Age now → retire → life expectancy</td><td class="r num">${s.age} → ${s.retire} → ${mcState().life}</td></tr>
     <tr><td>Portfolio today</td><td class="r num">${$(s.port)}</td></tr>
     <tr><td>Saving per year until retirement</td><td class="r num">${$(s.contrib)}</td></tr>
-    <tr><td>Spending per year in retirement</td><td class="r num">${$(s.spend)}</td></tr></tbody></table>
-    <div class="note">Spending = annual spending ${$(annualSpending())} (${spendSub()}) ÷ (1 − ${TAX_PCT}% tax). Retirement age comes from Phase 2A. Saving = last 12 months of retirement + coast.</div>`;
+    <tr><td>Spending per year in retirement</td><td class="r num">${$(s.spend)}</td></tr>
+    <tr><td>Social Security (your age)</td><td class="r num">${ssTxt}</td></tr>
+    <tr><td>Cash buffer at retirement</td><td class="r num">${s.bufferYears ? s.bufferYears + ' yrs ≈ ' + $(s.spend * s.bufferYears) + ' today' : 'none'}</td></tr></tbody></table>
+    <div class="note">Spending = the retirement budget ${$(annualSpending())} ÷ (1 − ${TAX_PCT}% tax). Retirement age comes from Phase 2A. Saving = last 12 months of retirement + coast. Social Security is today's dollars and grows with inflation.</div>`;
   const r = MC_LAST, box = document.getElementById('mc-result');
   if (!r) { box.innerHTML = `<div class="note" style="margin-top:28px">Not run yet for this backup. Press <b>Run 10,000 simulations</b>.</div>`; return; }
-  const stale = r.seed.retire !== s.retire || Math.round(r.seed.spend) !== Math.round(s.spend) || ['life', 'ret', 'vol', 'infl', 'inflVol'].some(k => r.a[k] !== mcState()[k]);
-  const cls = r.rate >= 75 ? 'pos' : r.rate < 50 ? 'neg' : '';
+  const keys = Object.keys(MC_DEFAULTS);
+  const stale = r.seed.retire !== s.retire || Math.round(r.seed.spend) !== Math.round(s.spend) || JSON.stringify(r.seed.ss) !== JSON.stringify(s.ss) || keys.some(k => r.a[k] !== mcState()[k]);
+  const cls = x => x >= 75 ? 'pos' : x < 50 ? 'neg' : '';
   box.innerHTML = `<div class="rp-tiles" style="margin-top:0">
-      <div class="rp-tile" style="grid-column:1/-1"><div class="l">Success rate</div><div class="v num ${cls}" style="font-size:34px">${r.rate.toFixed(1)}%</div>
+      <div class="rp-tile" style="grid-column:1/-1"><div class="l">Success rate</div><div class="v num ${cls(r.rate)}" style="font-size:34px">${r.rate.toFixed(1)}%</div>
         <div class="s">In ${r.rate.toFixed(1)}% of 10,000 runs the money lasted to age ${r.a.life}.</div></div>
+      <div class="rp-tile"><div class="l">Without the buffer</div><div class="v num ${cls(r.noBuffer)}">${r.noBuffer.toFixed(1)}%</div><div class="s">${r.a.bufYrs ? (r.rate - r.noBuffer >= 0 ? '+' : '') + (r.rate - r.noBuffer).toFixed(1) + ' pts from the buffer' : 'no buffer set'}</div></div>
+      <div class="rp-tile"><div class="l">Without Social Security</div><div class="v num ${r.noSS == null ? '' : cls(r.noSS)}">${r.noSS == null ? '—' : r.noSS.toFixed(1) + '%'}</div><div class="s">${r.noSS == null ? 'not entered' : '+' + (r.rate - r.noSS).toFixed(1) + ' pts from Social Security'}</div></div>
       <div class="rp-tile"><div class="l">Median at ${r.a.life}</div><div class="v num">${$k(r.median)}</div></div>
       <div class="rp-tile"><div class="l">Bad luck (10th pct)</div><div class="v num">${$k(r.p10)}</div></div>
       <div class="rp-tile"><div class="l">Good luck (90th pct)</div><div class="v num">${$k(r.p90)}</div></div></div>
-    <div class="note">${stale ? '<b>⚠ The plan or assumptions changed since this run.</b> Run it again. ' : ''}Run ${r.runAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}. Results aren't saved; ending balances are in future (inflated) dollars.</div>`;
+    <div class="note">${stale ? '<b>⚠ The plan or assumptions changed since this run.</b> Run it again. ' : ''}Run ${r.runAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}. Same inputs always give the same answer. Results aren't saved; ending balances are in future (inflated) dollars. ${r.a.bufYrs ? `The buffer was used in ${r.bufferUsedPct.toFixed(0)}% of runs.` : ''}</div>`;
 }
 
 /* ═══ NAV ═══════════════════════════════════════════════════════════════════ */
@@ -1653,12 +1890,15 @@ expenses() {
       <div class="card"><div class="card-h"><h3>By company — last 12 months</h3></div><table><thead><tr><th>Company</th><th class="r">Total</th><th class="r">Avg / mo</th></tr></thead><tbody>
         ${byCo.map(([c, v]) => `<tr><td>${esc(c)}</td><td class="r num">${$(v)}</td><td class="r num">${$(v / 12)}</td></tr>`).join('')}
         <tr class="tot"><td>Total</td><td class="r num">${$(tot)}</td><td class="r num">${$(tot / 12)}</td></tr></tbody></table></div>
-      <div class="card"><div class="card-h"><h3>Estimated yearly costs · ${EXTRAS_ON ? 'on' : 'off'}</h3></div><table><tbody>
-        <tr><td>Tracked bills (last 12 mo)</td><td class="r num">${$(trackedExp())}</td></tr>
-        <tr><td>Groceries, fuel, dining &amp; other living</td><td class="r num">${EXTRAS_ON ? $(D.untrackedLiving) : '<span class="muted-s">Off — </span>' + $(0)}</td></tr>
-        <tr><td>Health insurance</td><td class="r num">${EXTRAS_ON ? $(D.healthInsurance) : '<span class="muted-s">Off — </span>' + $(0)}</td></tr>
-        <tr class="tot"><td>Annual spending used for FIRE</td><td class="r num">${$(annualSpending())}</td></tr></tbody></table>
-        <div class="note">Turn the estimates on or off on the Retirement Plan page. The phone uses logged bills only.</div></div>
+      <div class="card"><div class="card-h"><h3>Retirement budget</h3></div><table><tbody>
+        ${(L => `<tr><td>Logged bills without the mortgage (last 12 mo)</td><td class="r num">${$(L.bills)}</td></tr>
+        <tr><td>Mortgage ${BUDGET.keepMortgage ? '(still paying)' : '(paid off first)'}</td><td class="r num">${$(L.mortgage)}</td></tr>
+        ${BUDGET.keepMortgage ? '' : `<tr><td>Property tax + home insurance (escrow)</td><td class="r num">${$(L.escrow)}</td></tr>`}
+        <tr><td>Groceries, fuel, dining, everyday</td><td class="r num">${$(L.living)}</td></tr>
+        <tr><td>Health insurance</td><td class="r num">${$(L.health)}</td></tr>
+        <tr><td>Travel, fun, other</td><td class="r num">${$(L.other)}</td></tr>
+        <tr class="tot"><td>Annual spending used for FIRE</td><td class="r num">${$(L.total)}</td></tr>`)(budgetLines())}</tbody></table>
+        <div class="note">Set the budget on the Retirement Plan page. The phone uses logged bills only.</div></div>
     </div>`;
   mkChart('c-exp', { type: 'bar', data: { labels: months.map(mkLabel), datasets: sets.map(s => barDs(s.label, s.data, s.color)) },
     options: baseOpts({ scales: { x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } },
@@ -1783,11 +2023,44 @@ function goalsCard(inv, moSave) {
 function openInfo(k) {
   const S = annualSpending(), inv = investTotal(), T = investTotal(null, a => a.type === 'taxable'), sv = t12Savings(), M = mortgageExp();
   const P = {
-    spending: ['Annual spending', `tracked bills (${t12Label()})  ${$(trackedExp())}
-+ living (estimate)           ${EXTRAS_ON ? $(D.untrackedLiving) : 'off — ' + $(0)}
-+ health insurance (estimate) ${EXTRAS_ON ? $(D.healthInsurance) : 'off — ' + $(0)}
-= annual spending             ${$(S)}`, ['Bills = expense entries in the last 12 complete months before the export date.', 'Living and health insurance are estimates the phone doesn\'t log. Turn them on or off on the Retirement Plan page (Estimated yearly costs).', 'The phone\'s own FIRE numbers use logged bills only.']],
-    mc: ['Monte Carlo', `10,000 runs. Each year, return and inflation are drawn at random\n(normal distribution: return ${mcState().ret}% ± ${mcState().vol}%, inflation ${mcState().infl}% ± ${mcState().inflVol}%).\n\nworking years (now → retirement age):\n  portfolio × (1 + return) + yearly saving\n  spending × (1 + inflation)\nretired years (→ life expectancy):\n  portfolio − spending   (withdraw first)\n  then × (1 + return); spending × (1 + inflation)\n\nsuccess = never hits $0 before life expectancy\nrate    = successes ÷ 10,000`, ['Spending = annual spending ÷ (1 − tax), so withdrawals cover the tax. It includes the estimated yearly costs only when they are on.', 'Retirement age comes from Phase 2A; saving = last 12 months of retirement + coast contributions, not raised with inflation.', 'No Social Security or pensions. Each year is independent (no streaks of bad years).', 'Same simulation the phone used before 3.1.']],
+    spending: ['Retirement budget', (L => `logged bills, no mortgage (${t12Label()})  ${$(L.bills)}
++ mortgage (${BUDGET.keepMortgage ? 'still paying' : 'paid off first'})       ${$(L.mortgage)}
++ property tax + insurance (escrow)  ${$(L.escrow)}
++ groceries, fuel, everyday          ${$(L.living)}
++ health insurance                   ${$(L.health)}
++ travel, fun, other                 ${$(L.other)}
+= annual spending                    ${$(L.total)}`)(budgetLines()), ['Bills = expense entries in the last 12 complete months before the export date, without the mortgage.', 'The plan pays the mortgage off in Phase 2B, so by default it is out of retirement spending; its escrow (property tax + home insurance) stays in. Escrow ≈ (payment − principal − balance × rate ÷ 12) × 12.', 'Living, health and other are your estimates; set them on the Retirement Plan page.', 'Reality check: take-home − coast saving over the last 12 months is the most you could have spent.']],
+    bridge: ['Bridge plan', `each year from your retirement age to 59½:
+  convert      = the set amount, pre-tax → Roth
+  tax          = federal tax on it (2026 joint brackets after the $32,200 deduction)
+  income       = convert + taxable dividends + the gain part of taxable withdrawals
+  health cost  = plan price × 12 − ACA credit
+                 credit = benchmark × 12 − your share % × income
+                 (2026: 2.10%–9.96%, none above 400% of the poverty line;
+                  2021–25 rules: 0%–8.5%, no cliff; under 138%: Medicaid)
+  need         = budget without health + health cost + tax
+  paid from    = taxable → Roth basis → conversions 5+ years old
+from 59½ to 65: income = your Phase 4 pre-tax withdrawals (health cost only)`, ['A conversion can be spent tax- and penalty-free 5 years after it is made.', 'The surplus pot (your buffer) is not used here.', 'Today\'s dollars. The income settles in a few passes because health cost depends on income and income on withdrawals.']],
+    ss: ['Social Security', (P => `yours  = ssa.gov estimate at your claim age (${SS.me.claim})
+         straight line between the 62 / 67 / 70 figures
+       = ${$(P.mine)}/mo
+hers   = the larger of
+         her own at ${SS.sp.claim}             ${$(P.own)}/mo
+         spousal: ½ × your age-67 ${$(SS.me.at67 || 0)}, cut for each month before 67
+                                  ${$(P.spousal)}/mo
+       = ${$(P.her)}/mo`)(ssPlan()), ['Missing 62 / 70 figures: 70% and 124% of the age-67 benefit (full retirement age 67).', 'Spousal cut: 25/36 of 1% a month for the first 36 months early, 5/12 of 1% after (32.5% of your age-67 benefit at 62). No credits for waiting past 67, and it starts only once you have claimed too.', "Today's dollars, before tax. Monte Carlo counts it from each claim age, growing with inflation."]],
+    mc: ['Monte Carlo', `10,000 runs (repeatable). Each year, return and inflation are drawn at random (bell curve).
+
+working years (now → retirement age):
+  portfolio × (1 + return ${mcState().retW}% ± ${mcState().volW}%) + yearly saving
+  spending grows with inflation ${mcState().infl}% ± ${mcState().inflVol}%
+at retirement: set aside ${mcState().bufYrs} yrs of spending as cash (earns ${mcState().cash}%)
+each retired year:
+  need = spending − Social Security (from each claim age, grows with inflation)
+  after a down year: pay from the cash buffer first
+  otherwise: pay from the portfolio; after an up year, refill the buffer
+  portfolio × (1 + return ${mcState().retR}% ± ${mcState().volR}%)
+success = the money (portfolio + buffer) lasts to ${mcState().life}`, ['Spending is the retirement budget grossed up for tax, as everywhere else in the planner.', 'Each run also repeats the same futures without the buffer and without Social Security, to show what each one is worth.', 'The Playbook\'s review used 8% ± 15% working and 5% ± 10% retired.']],
     fullfire: ['Full FIRE', `Full FIRE = spending ÷ (1 − tax) ÷ 4%
   = ${$(S)} ÷ (1 − ${TAX_PCT}%) ÷ 4%
   = ${$(S / taxDiv() / WR)}
@@ -1795,9 +2068,9 @@ progress  = ${$(inv)} ÷ ${$(S / taxDiv() / WR)} = ${pct(inv / (S / taxDiv() / W
 
 date: balance × (1 + 7%/12) + ${$(sv.totalMo)} each month`, ['Monthly savings = last 12 months of retirement (incl. employer) + coast contributions.', 'Tax is applied to every dollar withdrawn, which is conservative.', "Today's dollars; no inflation."]],
     coastfire: ['Coast FIRE (no mortgage)', `Coast FIRE = (spending − mortgage) ÷ (1 − tax) ÷ 4%
-  = (${$(S)} − ${$(M)}) ÷ (1 − ${TAX_PCT}%) ÷ 4%
-  = ${$((S - M) / taxDiv() / WR)}
-progress = taxable ${$(T)} ÷ target`, ['Only taxable accounts count, since they can be spent before 59½.', 'Known gap: escrow (property tax + insurance) continues after payoff but is removed with the mortgage.']],
+  = (${$(S)} − ${$(budgetLines().mortgage)}) ÷ (1 − ${TAX_PCT}%) ÷ 4%
+  = ${$((S - budgetLines().mortgage) / taxDiv() / WR)}
+progress = taxable ${$(T)} ÷ target`, ['Only taxable accounts count, since they can be spent before 59½.', 'Since 4.7.0 the budget leaves the mortgage out once it is paid off and keeps its escrow (property tax + insurance).']],
     savings: ['Savings rate', `(retirement + coast) ÷ (take-home + retirement)
   = (${$(sv.ret)} + ${$(sv.coast)}) ÷ (${$(takeHomeT12())} + ${$(sv.ret)})
   = ${savingsRate() == null ? '—' : pct(savingsRate())}`, ['Last 12 complete months: ' + t12Label() + '.', 'Retirement money leaves before payday, so it is added back to the income side.']],
