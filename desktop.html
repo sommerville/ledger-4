@@ -69,6 +69,7 @@ nav{flex:1;padding:10px 0;overflow-y:auto}
 nav button{display:flex;gap:10px;align-items:center;width:100%;padding:10px 18px;border:0;border-left:3px solid transparent;background:none;color:var(--muted);font-size:13.5px;text-align:left}
 nav button:hover{background:var(--hover);color:var(--text)}
 nav button.active{color:var(--accent);border-left-color:var(--accent);background:var(--hover)}
+nav .nav-h{padding:16px 18px 6px;font-size:10.5px;letter-spacing:.16em;font-weight:700;color:var(--muted);opacity:.75;text-transform:uppercase}   /* 4.11.1: sidebar section heading */
 .side-foot{padding:14px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
 .side-foot button{padding:8px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px}
 .side-foot button:hover{border-color:var(--accent);color:var(--accent)}
@@ -199,11 +200,13 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <aside>
-    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.11.0</span></div>
+    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.12.0</span></div>
     <nav id="nav"></nav>
     <div class="side-foot">
       <button onclick="toggleTheme()">🎨 Switch theme</button>
       <button onclick="reopen()">📂 Open another file</button>
+      <button onclick="exportPlan()">💾 Export plan</button>
+      <button onclick="importPlan()">📥 Import plan</button>
       <button onclick="resetSettings()">↺ Reset planner settings</button>
     </div>
   </aside>
@@ -432,6 +435,60 @@ function resetSettings() {
   try { localStorage.removeItem(SETTINGS_KEY); } catch (e) {}
   RP = null; PS = null; PULSE_RANGE = 12; GROWTH_RANGE = 24; GROWTH_RET = false; FLOW_RANGE = 24; window._fireRet = undefined; window._fireStop = undefined; if (D) BUDGET = budgetFrom({}, D); SS = ssFrom({}); BR = brFrom({}); MC = null; MC_LAST = null; if (D) TAX_PCT = D.taxRatePct;
   if (D) show(VIEW);
+}
+/* 4.12.0: EXPORT / IMPORT PLAN — every planner setting (the retirement numbers typed in: budget, Social Security,
+   bridge plan, goal, ages, rates, Monte Carlo assumptions, paycheck elections, theme) saved as one data file, plus the
+   plan's key results from the loaded backup, so the plan survives a cleared browser and Chad can track it
+   (Assistant/retirement, his "Retirement plan check"). Format 'ledger-plan-1'. Import puts the settings back. */
+function planResults() {
+  if (!D) return null;
+  if (!RP) rpInit();
+  const o = rpCompute(), L = budgetLines(), P = ssPlan(), B = o.bridge, fin = v => (isFinite(v) ? v : null);
+  const p1 = fin(o.p1Months), payoff = o.payoffMonths != null && isFinite(o.payoffMonths) ? (p1 || 0) + o.payoffMonths : null;
+  return {
+    backupAsOf: ASOF.toISOString().slice(0, 10), age: o.age, portfolio: o.current, taxable: o.taxableNow,
+    fullFire: fullFireT(), coastFire: coastFireT(),
+    phase1: { goal: RP.goal, pct: o.current / (RP.goal || 1), months: p1, date: p1 == null ? null : erDate(p1), savingPerMonth: o.totMo, matchPerMonth: o.matchMo },
+    mortgage: { balance: RP.mBal, principalPerMonth: RP.mPrin, payment: RP.mPay, paydownPerMonth: o.paydown, payoffMonths: payoff, payoffDate: payoff == null ? null : erDate(payoff) },
+    retire: { age: RP.retireAge, months: o.p2aEndMonths, date: erDate(o.p2aEndMonths), portfolio: o.p2aEnd, taxable: o.taxableAtP2, bufferPot: o.surplusEnd },
+    budget: L,
+    bridge: { covered: B.covered, short: B.short, firstShortAge: B.firstShortAge, converted: B.converted, conversionTax: B.tax, firstConversionUsable: B.firstAccess,
+              healthTo65: B.health, creditsTo65: B.credit, cliffYears: B.cliffYrs, medicaidYears: B.medicaidYrs, taxableAt595: B.taxableAt595, pretaxAt595: B.pretaxAt595, rothAt595: B.rothAt595 },
+    at595: { total: o.totalAt595, spendablePerYear: o.net4 },
+    socialSecurity: P.known ? { mine: P.mine, mineFromAge: P.mineStart, hers: SS.sp.born ? P.her : null, hersFromAge: SS.sp.born ? P.herStart : null, hersIsSpousal: P.useSpousal } : null,
+    monteCarlo: MC_LAST ? { rate: MC_LAST.rate, withoutBuffer: MC_LAST.noBuffer, withoutSocialSecurity: MC_LAST.noSS, median: MC_LAST.median, p10: MC_LAST.p10, p90: MC_LAST.p90, assumptions: MC_LAST.a, runAt: MC_LAST.runAt } : null
+  };
+}
+async function exportPlan() {
+  const now = new Date(), day = now.toISOString().slice(0, 10);
+  const data = { format: 'ledger-plan-1', planner: (document.querySelector('.brand span') || {}).textContent || '', exportedAt: now.toISOString(),
+                 settings: loadSettings(), results: planResults() };
+  const text = JSON.stringify(data, null, 2), name = `ledger-plan-${day}.json`;
+  try {
+    if (window.showSaveFilePicker) {
+      const h = await showSaveFilePicker({ id: 'ledger-plan', suggestedName: name, types: [{ description: 'Ledger plan', accept: { 'application/json': ['.json'] } }] });
+      const w = await h.createWritable(); await w.write(text); await w.close();
+      alert('Plan saved as ' + h.name + '.\nKeep it in Claude Projects → Assistant → retirement so Chad can track it.');
+      return;
+    }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  alert('Plan downloaded as ' + name + '.\nMove it to Claude Projects → Assistant → retirement so Chad can track it.');
+}
+function importPlan() {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    let d; try { d = JSON.parse(await f.text()); } catch (e) { alert("That file isn't a Ledger plan (it isn't readable JSON)."); return; }
+    if (!d || d.format !== 'ledger-plan-1' || !d.settings || typeof d.settings !== 'object') { alert("That file isn't a Ledger plan export."); return; }
+    if (!confirm(`Replace this browser's planner settings with the plan exported ${String(d.exportedAt || '').slice(0, 10) || '(no date)'}?`)) return;
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(d.settings)); } catch (e) { alert('Could not save the settings in this browser.'); return; }
+    const v = VIEW; MC = null; MC_LAST = null;
+    if (D) { load(D); show(v || 'retplan'); }
+    alert('Plan imported.');
+  };
+  inp.click();
 }
 const RP_KEYS = ['goal', 'r1', 'retireAge', 'r2', 'freed', 'r3', 'tax3', 'exp3', 'wr4', 'tax4', 'r4'];
 
@@ -1715,8 +1772,12 @@ const VIEWS = [
   ['income', '💵', 'Income'], ['expenses', '🧾', 'Expenses'], ['retirement', '🏦', 'Retirement'], ['paycheck', '💰', 'Paycheck Planner'],
   ['fire', '🔥', 'FIRE & Projections'], ['retplan', '🎯', 'Retirement Plan'], ['coast', '🌴', 'Coast Contributions'], ['notes', '📓', 'Notes & Logbook']
 ];
+// 4.11.1: the planning tools get their own section at the bottom of the sidebar (Darrin's ask)
+const NAV_TOOLS = ['retplan', 'paycheck', 'notes'];
 function buildNav() {
-  document.getElementById('nav').innerHTML = VIEWS.map(([k, i, t]) => `<button data-v="${k}" onclick="show('${k}')"><span>${i}</span>${t}</button>`).join('');
+  const btn = ([k, i, t]) => `<button data-v="${k}" onclick="show('${k}')"><span>${i}</span>${t}</button>`;
+  document.getElementById('nav').innerHTML = VIEWS.filter(v => !NAV_TOOLS.includes(v[0])).map(btn).join('')
+    + '<div class="nav-h">Tools</div>' + NAV_TOOLS.map(k => btn(VIEWS.find(v => v[0] === k))).join('');
 }
 function show(v) {
   VIEW = v; destroyCharts();
