@@ -81,6 +81,7 @@ main{flex:1;min-width:0;padding:24px 28px 48px}
 
 /* ═══ Grid / cards ═══ */
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+#rp-kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}   /* 4.13.0: seven tiles on one row */
 .kpi{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;position:relative}
 .kpi .l{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
 .kpi .v{font-size:24px;font-weight:800;margin-top:6px}
@@ -200,13 +201,13 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <aside>
-    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.12.0</span></div>
+    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.13.1</span></div>
     <nav id="nav"></nav>
     <div class="side-foot">
       <button onclick="toggleTheme()">🎨 Switch theme</button>
       <button onclick="reopen()">📂 Open another file</button>
-      <button onclick="exportPlan()">💾 Export plan</button>
-      <button onclick="importPlan()">📥 Import plan</button>
+      <button onclick="exportPlan()">💾 Export playbook</button>
+      <button onclick="importPlan()">📥 Import playbook</button>
       <button onclick="resetSettings()">↺ Reset planner settings</button>
     </div>
   </aside>
@@ -436,7 +437,7 @@ function resetSettings() {
   RP = null; PS = null; PULSE_RANGE = 12; GROWTH_RANGE = 24; GROWTH_RET = false; FLOW_RANGE = 24; window._fireRet = undefined; window._fireStop = undefined; if (D) BUDGET = budgetFrom({}, D); SS = ssFrom({}); BR = brFrom({}); MC = null; MC_LAST = null; if (D) TAX_PCT = D.taxRatePct;
   if (D) show(VIEW);
 }
-/* 4.12.0: EXPORT / IMPORT PLAN — every planner setting (the retirement numbers typed in: budget, Social Security,
+/* 4.12.0: EXPORT / IMPORT PLAN (4.12.1: called the playbook; files playbook-YYYY-MM-DD.json) — every planner setting (the retirement numbers typed in: budget, Social Security,
    bridge plan, goal, ages, rates, Monte Carlo assumptions, paycheck elections, theme) saved as one data file, plus the
    plan's key results from the loaded backup, so the plan survives a cleared browser and Chad can track it
    (Assistant/retirement, his "Retirement plan check"). Format 'ledger-plan-1'. Import puts the settings back. */
@@ -446,7 +447,7 @@ function planResults() {
   const o = rpCompute(), L = budgetLines(), P = ssPlan(), B = o.bridge, fin = v => (isFinite(v) ? v : null);
   const p1 = fin(o.p1Months), payoff = o.payoffMonths != null && isFinite(o.payoffMonths) ? (p1 || 0) + o.payoffMonths : null;
   return {
-    backupAsOf: ASOF.toISOString().slice(0, 10), age: o.age, portfolio: o.current, taxable: o.taxableNow,
+    backupAsOf: ASOF.toISOString().slice(0, 10), tablesYear: LC.TABLES_YEAR, age: o.age, portfolio: o.current, taxable: o.taxableNow,
     fullFire: fullFireT(), coastFire: coastFireT(),
     phase1: { goal: RP.goal, pct: o.current / (RP.goal || 1), months: p1, date: p1 == null ? null : erDate(p1), savingPerMonth: o.totMo, matchPerMonth: o.matchMo },
     mortgage: { balance: RP.mBal, principalPerMonth: RP.mPrin, payment: RP.mPay, paydownPerMonth: o.paydown, payoffMonths: payoff, payoffDate: payoff == null ? null : erDate(payoff) },
@@ -463,30 +464,30 @@ async function exportPlan() {
   const now = new Date(), day = now.toISOString().slice(0, 10);
   const data = { format: 'ledger-plan-1', planner: (document.querySelector('.brand span') || {}).textContent || '', exportedAt: now.toISOString(),
                  settings: loadSettings(), results: planResults() };
-  const text = JSON.stringify(data, null, 2), name = `ledger-plan-${day}.json`;
+  const text = JSON.stringify(data, null, 2), name = `playbook-${day}.json`;
   try {
     if (window.showSaveFilePicker) {
-      const h = await showSaveFilePicker({ id: 'ledger-plan', suggestedName: name, types: [{ description: 'Ledger plan', accept: { 'application/json': ['.json'] } }] });
+      const h = await showSaveFilePicker({ id: 'ledger-plan', suggestedName: name, types: [{ description: 'Playbook', accept: { 'application/json': ['.json'] } }] });
       const w = await h.createWritable(); await w.write(text); await w.close();
-      alert('Plan saved as ' + h.name + '.\nKeep it in Claude Projects → Assistant → retirement so Chad can track it.');
+      alert('Playbook saved as ' + h.name + '.\nKeep it in Claude Projects → Assistant → retirement so Chad can track it.');
       return;
     }
   } catch (e) { if (e && e.name === 'AbortError') return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  alert('Plan downloaded as ' + name + '.\nMove it to Claude Projects → Assistant → retirement so Chad can track it.');
+  alert('Playbook downloaded as ' + name + '.\nMove it to Claude Projects → Assistant → retirement so Chad can track it.');
 }
 function importPlan() {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
   inp.onchange = async () => {
     const f = inp.files && inp.files[0]; if (!f) return;
-    let d; try { d = JSON.parse(await f.text()); } catch (e) { alert("That file isn't a Ledger plan (it isn't readable JSON)."); return; }
-    if (!d || d.format !== 'ledger-plan-1' || !d.settings || typeof d.settings !== 'object') { alert("That file isn't a Ledger plan export."); return; }
-    if (!confirm(`Replace this browser's planner settings with the plan exported ${String(d.exportedAt || '').slice(0, 10) || '(no date)'}?`)) return;
+    let d; try { d = JSON.parse(await f.text()); } catch (e) { alert("That file isn't a playbook (it isn't readable JSON)."); return; }
+    if (!d || d.format !== 'ledger-plan-1' || !d.settings || typeof d.settings !== 'object') { alert("That file isn't a playbook export."); return; }
+    if (!confirm(`Replace this browser's planner settings with the playbook exported ${String(d.exportedAt || '').slice(0, 10) || '(no date)'}?`)) return;
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(d.settings)); } catch (e) { alert('Could not save the settings in this browser.'); return; }
     const v = VIEW; MC = null; MC_LAST = null;
     if (D) { load(D); show(v || 'retplan'); }
-    alert('Plan imported.');
+    alert('Playbook imported.');
   };
   inp.click();
 }
@@ -1571,7 +1572,10 @@ function rpUpdate() {
     kpi('Early retirement', 'Age ' + s.retireAge, `${erDate(o.p2aEndMonths)} · ${$k(o.p2aEnd)}`, 'rp2a') +
     kpi('Mortgage paid off', hasM && isFinite(o.payoffMonths) ? erDate((isFinite(o.p1Months) ? o.p1Months : 0) + o.payoffMonths) : '—', hasM ? $(o.paydown) + '/mo paydown' : '', 'rp2b') +
     kpi('Bridge to 59½', o.bridge.covered ? 'Covered' : `<span class="neg">Short ${$k(o.bridge.short)}</span>`, o.bridge.covered ? `taxable + Roth basis + ladder · ${$k(o.bridge.converted)} converted` : `runs short at ${o.bridge.firstShortAge}`, 'rp3') +
-    kpi('Income at 59½', $(o.net4 / 12) + '/mo', `${$k(o.totalAt595)} at ${s.wr4}% · after ${s.tax4}% tax`, 'rp4');
+    kpi('Income at 59½', $(o.net4 / 12) + '/mo', `${$k(o.totalAt595)} at ${s.wr4}% · after ${s.tax4}% tax`, 'rp4') +
+    // 4.13.0: moved here from the FIRE & Projections page (removed)
+    kpi('Safe withdrawal today', $(o.current * WR) + '/yr', '4% of the portfolio now') +
+    kpi('Break-even pay', '$' + LC.breakEvenHourly(trackedExp(), livingAmt(), healthAmt()).toFixed(2) + '/hr', 'covers costs with no saving');
   roadRender(o);
   rpChart(o);
 }
@@ -1770,7 +1774,7 @@ function mcRender() {
 const VIEWS = [
   ['overview', '⬡', 'Overview'], ['investments', '📈', 'Investments'], ['networth', '⚖️', 'Net Worth & Debt'],
   ['income', '💵', 'Income'], ['expenses', '🧾', 'Expenses'], ['retirement', '🏦', 'Retirement'], ['paycheck', '💰', 'Paycheck Planner'],
-  ['fire', '🔥', 'FIRE & Projections'], ['retplan', '🎯', 'Retirement Plan'], ['coast', '🌴', 'Coast Contributions'], ['notes', '📓', 'Notes & Logbook']
+  ['retplan', '🎯', 'Retirement Plan'], ['coast', '🌴', 'Coast Contributions'], ['notes', '📓', 'Notes & Logbook']
 ];
 // 4.11.1: the planning tools get their own section at the bottom of the sidebar (Darrin's ask)
 const NAV_TOOLS = ['retplan', 'paycheck', 'notes'];
@@ -1780,6 +1784,7 @@ function buildNav() {
     + '<div class="nav-h">Tools</div>' + NAV_TOOLS.map(k => btn(VIEWS.find(v => v[0] === k))).join('');
 }
 function show(v) {
+  if (!VIEWS.some(x => x[0] === v)) v = 'overview';   // 4.13.0: a removed page (FIRE & Projections) falls back to the Overview
   VIEW = v; destroyCharts();
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
   document.getElementById('viewTitle').textContent = VIEWS.find(x => x[0] === v)[2];
@@ -1999,38 +2004,8 @@ retirement() {
     options: baseOpts({ scales: { x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } } }) });
 },
 
-fire() {
-  const inv = investTotal(), T = investTotal(null, a => a.type === 'taxable'), S = annualSpending(), M = mortgageExp(), sv = t12Savings();
-  const full = fullFireT(), coast = coastFireT();
-  const age = ageAt(ASOF);
-  const ret = window._fireRet ?? 7, stop = window._fireStop ?? 48;
-  // Year-by-year projection to 65: contributions until the stop age, then growth only
-  const labels = [], bal = [], tgt = [];
-  let b = inv; const r = ret / 100 / 12;
-  for (let a = age; a <= 65; a++) {
-    labels.push(String(a)); bal.push(Math.round(b)); tgt.push(Math.round(full));
-    for (let m = 0; m < 12; m++) b = b * (1 + r) + (a < stop ? sv.totalMo : 0);
-  }
-  TABLES.proj = () => `<table><thead><tr><th>Age</th><th class="r">Projected portfolio</th><th class="r">vs Full FIRE</th></tr></thead><tbody>${labels.map((l, i) => `<tr><td>${l}</td><td class="r num">${$(bal[i])}</td><td class="r num ${bal[i] >= full ? 'pos' : ''}">${pct(bal[i] / full, 0)}</td></tr>`).join('')}</tbody></table>`;
-  const cross = labels[bal.findIndex(v => v >= full)];
-  const be = LC.breakEvenHourly(trackedExp(), livingAmt(), healthAmt());   // 3.7.1
-  const mcOld = D.monteCarloResult;   // only in backups from phones before 3.1
-  document.getElementById('views').innerHTML = `
-    <div class="kpis">${kpi('Full FIRE target', $(full), pct(inv / full, 1) + ' there · ' + monthsLabel(monthsToGoal(inv, full, sv.totalMo)), 'fullfire')}
-      ${kpi('Coast FIRE target', $(coast), pct(T / coast, 1) + ' (taxable) · ' + monthsLabel(monthsToGoal(T, coast, sv.coastMo)), 'coastfire')}
-      ${kpi('Annual spending', $(S), spendSub(), 'spending')}${kpi('Safe withdrawal today', $(inv * WR) + '/yr', '4% of portfolio')}
-      ${kpi('Break-even pay', '$' + be.toFixed(2) + '/hr', 'no contributions')}${MC_LAST ? kpi('Monte Carlo', MC_LAST.rate.toFixed(1) + '%', 'run on the Retirement Plan page', 'mc')
-        : kpi('Monte Carlo', mcOld ? mcOld.successRate + '%' : '—', (mcOld ? 'old phone run ' + new Date(mcOld.runAt).toLocaleDateString('en-US') + ' · ' : '') + 'run it on the Retirement Plan page', 'mc')}</div>
-    ${card('proj', 'Projection to age 65', '<div class="chart tall"><canvas id="c-proj"></canvas></div>',
-      { chips: `<span class="asof" style="margin-right:4px">what-if:</span>
-        <label class="asof">return <input type="number" value="${ret}" step="0.5" min="0" max="15" style="width:52px" onchange="window._fireRet=+this.value;saveSettings({fireRet:+this.value});show('fire')">%</label>
-        <label class="asof">stop saving at <input type="number" value="${stop}" min="${age}" max="65" style="width:52px" onchange="window._fireStop=+this.value;saveSettings({fireStop:+this.value});show('fire')"></label>` })}
-    <div class="note">Starts at ${$(inv)} (age ${age}), adds ${$(sv.totalMo)}/mo until age ${stop}, grows at ${ret}%/yr. ${cross ? 'Crosses Full FIRE at age ' + cross + '.' : "Doesn't reach Full FIRE by 65 with these inputs."} Nominal dollars. Social Security not included.</div>`;
-  mkChart('c-proj', { type: 'line', data: { labels, datasets: [lineDs('Projected portfolio', bal, SERIES[0]),
-      lineDs('Full FIRE target', tgt, cssv('--muted'), { borderDash: [6, 5], borderWidth: 1.5, pointHoverRadius: 0 })] },
-    options: baseOpts({ scales: { ...baseOpts().scales, x: { ...baseOpts().scales.x, title: { display: true, text: 'Age', color: cssv('--muted') } } } }) });
-  document.querySelectorAll('.chips input').forEach(i => { i.style.background = 'var(--panel2)'; i.style.color = 'var(--text)'; i.style.border = '1px solid var(--border)'; i.style.borderRadius = '6px'; i.style.padding = '2px 6px'; });
-},
+// 4.13.0: the FIRE & Projections page was removed (Darrin): its targets, spending and Monte Carlo were already on the
+// Overview and the Retirement Plan page; safe withdrawal and break-even pay moved to the Retirement Plan's top row.
 
 coast() {
   const months = monthAxis(D.coastContribs.map(e => e.date.slice(0, 7)).sort()[0]);

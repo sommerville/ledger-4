@@ -233,6 +233,8 @@ var LC = (function () {
     // Federal tax on ordinary income (married filing jointly, 2026): standard deduction $32,200,
     // 10% to $24,800 of taxable income, 12% to $100,800, 22% to $211,400, 24% after. Gains and dividends
     // are assumed to sit in the 0% capital-gains band (true at these incomes).
+    // The year the tax and ACA tables here are for; the yearly update bumps it (offline Chad asks for it each January).
+    const TABLES_YEAR = 2026;
     const FED_2026 = { std: 32200, bands: [[24800, 0.10], [100800, 0.12], [211400, 0.22], [Infinity, 0.24]] };
     function fedTax(ordinary, t) {
         t = t || FED_2026;
@@ -385,5 +387,5 @@ var LC = (function () {
              t12Range, inT12, sumT12, MORTGAGE_RE, isMortgageBill, trackedSpending, mortgageSpending, t12Savings, takeHome, savingsRate,
              PLAN_RETURN, WR, taxDivisor, fullFire, coastFire, monthsToGoal, projectBalance, breakEvenHourly, mortgageInfo,
              escrowEstimate, retirementBudget, ssAtAge, spousalAtAge,
-             acaCredit, fedTax, bridgePlan, FED_2026, rng, monteCarlo };
+             acaCredit, fedTax, bridgePlan, FED_2026, TABLES_YEAR, rng, monteCarlo };
 })();
