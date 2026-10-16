@@ -458,7 +458,7 @@
                 <input type="checkbox" ${d.bonus ? 'checked' : ''} ${d.bonusLocked ? 'disabled' : ''} onchange="suSet('bonus', this.checked, true)"><span class="su-switch"></span></label>
             ${d.bonus ? `<div class="su-field"><span class="su-label">Retirement from bonus checks</span>
                 ${suTypeChips(SU_401K_TYPES, d.bonusTypes, "suToggleIn.bind(null,'bonusTypes')")}</div>` : ''}` : '';
-        return `${suTextField('suName', 'Company name', 'name', { placeholder: 'e.g. Hilcorp' })}${sched}${plans}`;
+        return `${suTextField('suName', 'Company name', 'name', { placeholder: 'e.g. Acme Corp' })}${sched}${plans}`;
     }
     function suDraftSchedule() {
         const d = suDraft;

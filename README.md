@@ -2,7 +2,7 @@
 
 A personal finance app built as two web apps on GitHub Pages (no build step): a **phone logger** and a **desktop planner**.
 
-Ledger 3.0 was the pivot from Ledger 2: backups go to the cloud, and all the planning (Retirement Plan, Paycheck Planner, FIRE projections) lives on the desktop. **Current version: 4.7.10 (phone; desktop 4.13.1).** 4.7.0: Month in Review and Year in Review (with YTD) are their own home widgets, fit to one screen, swipe up to close; Logbook swipes between entries. 4.0 rolls up 3.6–3.8.1: bundled libraries and import safety (3.6), golden-number tests, one shared math file used by both apps (`js/ledger-core.js`, 3.7–3.7.2), the goals rework with editable goal steps and critical mass (3.8), and a home icon layout that finally stays put (3.8.1). See [CHANGELOG](library/CHANGELOG.md).
+Ledger 3.0 was the pivot from Ledger 2: backups go to the cloud, and all the planning (Retirement Plan, Paycheck Planner, FIRE projections) lives on the desktop. **Current version: 4.7.12 (phone; desktop 4.13.3).** 4.7.0: Month in Review and Year in Review (with YTD) are their own home widgets, fit to one screen, swipe up to close; Logbook swipes between entries. 4.0 rolls up 3.6–3.8.1: bundled libraries and import safety (3.6), golden-number tests, one shared math file used by both apps (`js/ledger-core.js`, 3.7–3.7.2), the goals rework with editable goal steps and critical mass (3.8), and a home icon layout that finally stays put (3.8.1). See [CHANGELOG](library/CHANGELOG.md).
 
 | App | Open it at | What it does |
 |---|---|---|
@@ -15,7 +15,7 @@ The two apps share two things: the **backup file** (`ledger-YYYY-MM-DD.json`) an
 1. Phone → Settings → Data Management. Tap **📤 Save to OneDrive / Share…** → OneDrive (backups are plain files since 4.0.10, no PIN).
 2. Computer → open `desktop.html` → choose the newest backup in the synced OneDrive folder (or **Load newest backup** once the folder is chosen). Older locked backups ask for the app PIN.
 
-Backups are plain files since 4.0.10 (Darrin's call: there are no account numbers or other sensitive data in them). Backups saved locked before that (`-locked.json`, keyed with the 4-digit app PIN) still open on both apps.
+Backups are plain files since 4.0.10 (the owner's call: there are no account numbers or other sensitive data in them). Backups saved locked before that (`-locked.json`, keyed with the 4-digit app PIN) still open on both apps.
 
 ---
 

@@ -80,7 +80,8 @@
         if (c65El) {
             const currentTotal = getCurrentTotal();
             const currentAge   = getCurrentAge();
-            const yearsLeft    = 65 - currentAge;
+            if (currentAge == null) { c65El.innerHTML = '<div style="opacity:.75;font-size:13px">Add your birthday in Settings → Display Options to see this.</div>'; }
+            const yearsLeft    = currentAge == null ? 0 : 65 - currentAge;
             if (currentTotal > 0 && yearsLeft > 0) {
                 const scenarios = [
 { label: 'Conservative', rate: 0.06 },

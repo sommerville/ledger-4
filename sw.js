@@ -2,7 +2,7 @@
 // Ledger 4.0 keeps the 'Ledger3 ' prefix on purpose: activate() only clears caches with this prefix, so the
 // old 3.x caches on the phone are cleaned up. Changing it would leave them behind.
 const CACHE_PREFIX = 'Ledger3 ';
-const CACHE_NAME = CACHE_PREFIX + 'v4.7.10';
+const CACHE_NAME = CACHE_PREFIX + 'v4.7.12';
 const ASSETS = [
   './',
   './index.html',
@@ -44,7 +44,7 @@ const ASSETS = [
   './icons/home/debt.png',
   './icons/home/expenses.png',
   './icons/home/fire.png',
-  './icons/home/goals.png',   // 3.8, Darrin's art (4.0)
+  './icons/home/goals.png',   // 3.8, the owner's art (4.0)
   './icons/home/real-estate.png',
   './icons/home/income.png',
   './icons/home/investments.png',

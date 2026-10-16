@@ -34,7 +34,7 @@
             'pf_retirementContribs', 'pf_retirementLimits', 'pf_retirementSources',
             'pf_coastContribs', 'pf_coastAccounts', 'pf_loanPeople', 'pf_loanEvents', 'pf_goalLadders',
             'pf_logbook', 'pf_home_values', 'pf_properties', 'pf_monteCarlo', 'pf_monthNotes',
-            'pf_taxRate', 'pf_taxEnabled', 'pf_dt_user_age',
+            'pf_taxRate', 'pf_taxEnabled', 'pf_dt_user_age', 'pf_birthday',
             'pf_last_income_type', 'pf_last_income_payer',
             'pf_ret_lastHolder', 'pf_ret_lastInst', 'pf_ret_lastSponsor', 'pf_ret_lastType',
             'pf_pin_hint', 'pf_basicCalcEnabled'
@@ -282,9 +282,20 @@
     }
 
     // ─── Projections ─────────────────────────────────────────
-    const BIRTHDAY = new Date(1985, 3, 29); // April 29, 1985
+    // 4.7.12: the birthday is a setting (Settings → Display Options → Your birthday), kept on this phone and in its
+    // backups, never in the code (the repo is public). Null until it's set.
+    function getBirthday() {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(localStorage.getItem('pf_birthday') || '');
+        return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+    }
+    function setBirthday(v) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v || '')) localStorage.setItem('pf_birthday', v); else localStorage.removeItem('pf_birthday');
+        if (typeof refreshAll === 'function') refreshAll();
+    }
 
     function getCurrentAge() {
+        const BIRTHDAY = getBirthday();
+        if (!BIRTHDAY) return null;
         const today = new Date();
         let age = today.getFullYear() - BIRTHDAY.getFullYear();
         const hasBirthdayPassed = today.getMonth() > BIRTHDAY.getMonth() ||

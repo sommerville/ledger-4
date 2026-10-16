@@ -201,7 +201,7 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <aside>
-    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.13.1</span></div>
+    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.13.3</span></div>
     <nav id="nav"></nav>
     <div class="side-foot">
       <button onclick="toggleTheme()">🎨 Switch theme</button>
@@ -234,7 +234,8 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
    ═══════════════════════════════════════════════════════════════════════════ */
 const VIEWER_SCHEMA = 1;                    // highest export schemaVersion this viewer understands
 const PLAN_RETURN = LC.PLAN_RETURN;         // 7%, js/ledger-core.js (3.7.1)
-const BIRTHDAY = new Date(1985, 3, 29);     // same as mobile
+let BIRTHDAY = new Date(2000, 0, 1);       // 4.13.3: set from the backup's birthday in load() (the phone's setting); never hard-coded
+let BIRTHDAY_SET = false;
 const DEF_LIVING = 16800, DEF_HEALTH = 13200;
 // Categorical palette — validated (dataviz validator) on both theme surfaces:
 // adjacent CVD ΔE ≥ 8.4, normal-vision ΔE ≥ 19.3, all ≥ 3:1 contrast. Fixed order, never cycled.
@@ -328,6 +329,8 @@ function load(b) {
   if (typeof b.untrackedLiving !== 'number') b.untrackedLiving = DEF_LIVING;
   if (typeof b.healthInsurance !== 'number') b.healthInsurance = DEF_HEALTH;
   D = b; PS = null; RP = null;
+  { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(b.birthday || ''); const ex0 = new Date(b.exportedAt || Date.now());
+    BIRTHDAY_SET = !!m; BIRTHDAY = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date((isNaN(ex0) ? new Date() : ex0).getFullYear() - 40, 0, 1); }   // no birthday yet: ages assume 40
   const ex = new Date(b.exportedAt || Date.now());
   ASOF = isNaN(ex) ? new Date() : ex;
   const st = loadSettings();
@@ -349,6 +352,7 @@ function load(b) {
   const sv = b.schemaVersion;
   if (sv === undefined) banners.push('This backup came from an older phone app (before v15). Everything that exists in it is shown.');
   else if (sv > VIEWER_SCHEMA) banners.push(`This backup is schema v${sv}, newer than this viewer (v${VIEWER_SCHEMA}). Most things will show, but newer fields are ignored. Update desktop.html.`);
+  if (!BIRTHDAY_SET) banners.push('No birthday in this backup, so ages and retirement dates assume you are 40. On the phone: Settings → Display Options → Your birthday, then save a new backup.');
   document.getElementById('banners').innerHTML = banners.map(t => `<div class="banner">${esc(t)}</div>`).join('');
   document.getElementById('asof').textContent = 'Data as of ' + ASOF.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' · ' + b.entries.length + ' balance entries';
 
@@ -727,7 +731,7 @@ function meter(label, cur, lim, sub = '', overGood = false) {
 }
 
 /* ═══ PAYCHECK PLANNER — engine ═════════════════════════════════════════════
-   Rebuilds a Hilcorp check from gross pay (payroll order confirmed on the
+   Rebuilds an employer paycheck from gross pay (payroll order confirmed on the
    9/13/2026 stub) and projects the rest of the year's 401(k) against limits.
    Pure math; nothing here saves anything.
    Verification (must pass): little check $5,987.44 at 12% / 15% → deposit $2,575.49.
@@ -739,7 +743,7 @@ const PAY_DEFAULTS = {
   // Elections as of Sep 2026 (regular 7/1 for the rest of 2026, bonus 7/15, 40% of deposit to savings)
   elect: { pre: 7, after: 1, bPre: 7, bAfter: 15, coast: 40 },
   living: 1900,          // $ needed from each check
-  matchCap: 7,           // Hilcorp matches pretax up to 7% of eligible pay
+  matchCap: 7,           // the employer matches pretax up to 7% of eligible pay
   supplemental: 0.22,    // flat federal rate on bonus checks (assumed; confirm with a bonus stub)
   bigGross: 8000,        // regular checks with gross above this are "big" (rotation weeks)
   addlMedicareAt: 200000,
@@ -1103,7 +1107,7 @@ function ppUpdate(solved) {
     : `<div class="pp-alert">${$(L.total - totEnd)} of room left at year end. Raise after-tax % to use it, or press Find my max.</div>`;
   document.getElementById('pp-status').innerHTML =
     bar('Total (you + match + after-tax)', ytd.total, totEnd, L.total, now ? `${$(ytd.total)} so far + ${$(totEnd - ytd.total)} from ${r.rows.length} checks left` : `${r.rows.length} checks`) +
-    bar('Employee (pre-tax + Roth)', ytd.emp, empEnd, L.emp, r.empHit ? `Capped ${shortDate(r.empHit)}. Fine: Hilcorp's true-up keeps the match coming.` : `${$(L.emp - empEnd)} unused`) +
+    bar('Employee (pre-tax + Roth)', ytd.emp, empEnd, L.emp, r.empHit ? `Capped ${shortDate(r.empHit)}. Fine: the employer's true-up keeps the match coming.` : `${$(L.emp - empEnd)} unused`) +
     statusLine +
     `<div class="pp-legend"><span><i class="fill"></i>so far</span><span><i class="fill pp-proj"></i>projected</span></div>` +
     (now ? `<div class="note">Savings: ${$(coastYTD)} logged so far + ${$(r.sum.coast)} from checks left = <b>${$(coastYTD + r.sum.coast)}</b> for ${p.year}.</div>` : '');
@@ -1203,7 +1207,7 @@ function buildPulse() {
 /* ═══ MARKET GROWTH vs. WHAT YOU PUT IN (Overview, 4.4.0) ══════════════════
    Each complete month: market = change in invested balance − contributions
    (retirement incl. match/HSA + Coast). Both summed over the trailing 12
-   months, then smoothed twice with a trailing 3-month average (Darrin's pick:
+   months, then smoothed twice with a trailing 3-month average (the owner's pick:
    the raw 12-month lines were too noisy). The table shows raw and smoothed.
    When the market line passes yours, growth beats saving.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -1335,7 +1339,8 @@ function rpInit() {
   RP_KEYS.forEach(k => { if (k in s) RP[k] = s[k]; });
 }
 function rpCompute() {
-  const s = RP, sv = t12Savings(), age = ageAt(ASOF);
+  // 2026-10-14 (audit): exact age (birthday-based), so retirement at 48 lands on the 48th birthday, not up to a year late
+  const s = RP, sv = t12Savings(), age = (ASOF - BIRTHDAY) / (365.2425 * 864e5);
   const current = investTotal(), taxableNow = investTotal(null, a => a.type === 'taxable');
   const retMo = sv.ret / 12, coastMo = sv.coastMo, matchMo = sv.match / 12, totMo = retMo + coastMo;
   const o = { age, current, taxableNow, retMo, coastMo, matchMo, totMo };
@@ -1579,7 +1584,7 @@ function rpUpdate() {
   roadRender(o);
   rpChart(o);
 }
-/* 4.11.0: THE ROAD TO RETIREMENT — the plan's stops on a winding road (Darrin's idea): the stretch already
+/* 4.11.0: THE ROAD TO RETIREMENT — the plan's stops on a winding road (the owner's idea): the stretch already
    travelled is solid gold, the rest dotted. Stops, in date order: Phase 1 goal, mortgage paid off, retire,
    59½, Social Security; small markers for the first usable Roth conversion and Medicare at 65. Phase 1 progress
    is the portfolio ÷ the goal; later legs by time. Drawn from the same numbers as the rest of the page. */
@@ -1776,7 +1781,7 @@ const VIEWS = [
   ['income', '💵', 'Income'], ['expenses', '🧾', 'Expenses'], ['retirement', '🏦', 'Retirement'], ['paycheck', '💰', 'Paycheck Planner'],
   ['retplan', '🎯', 'Retirement Plan'], ['coast', '🌴', 'Coast Contributions'], ['notes', '📓', 'Notes & Logbook']
 ];
-// 4.11.1: the planning tools get their own section at the bottom of the sidebar (Darrin's ask)
+// 4.11.1: the planning tools get their own section at the bottom of the sidebar (the owner's ask)
 const NAV_TOOLS = ['retplan', 'paycheck', 'notes'];
 function buildNav() {
   const btn = ([k, i, t]) => `<button data-v="${k}" onclick="show('${k}')"><span>${i}</span>${t}</button>`;
@@ -2004,7 +2009,7 @@ retirement() {
     options: baseOpts({ scales: { x: { ...baseOpts().scales.x, stacked: true }, y: { ...baseOpts().scales.y, stacked: true } } }) });
 },
 
-// 4.13.0: the FIRE & Projections page was removed (Darrin): its targets, spending and Monte Carlo were already on the
+// 4.13.0: the FIRE & Projections page was removed (owner): its targets, spending and Monte Carlo were already on the
 // Overview and the Retirement Plan page; safe withdrawal and break-even pay moved to the Retirement Plan's top row.
 
 coast() {

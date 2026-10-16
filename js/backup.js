@@ -4,8 +4,8 @@
     // ── Backup file ─────────────────────────────────────────
     // v3.0: optional password lock (AES-GCM, key from PBKDF2-SHA256 via WebCrypto),
     // and a share-sheet button so the file can go straight to OneDrive (or any cloud app).
-    // 3.6: a passphrase lock was tried and dropped (Darrin's call): backups stay locked with the app PIN.
-    // 4.0.10: backups are never locked (Darrin's call: nothing in them is sensitive). Locked files saved before
+    // 3.6: a passphrase lock was tried and dropped (the owner's call): backups stay locked with the app PIN.
+    // 4.0.10: backups are never locked (the owner's call: nothing in them is sensitive). Locked files saved before
     // 4.0.10 still load (import + desktop), so encryptBackup / decryptBackup stay.
     function buildBackup() {
         return {
@@ -44,6 +44,7 @@
             theme:          localStorage.getItem('pf_theme')            || 'alaskan',
             basicCalcEnabled: localStorage.getItem('pf_basicCalcEnabled') || '0',
             userAge:        localStorage.getItem('pf_dt_user_age')      || '',
+            birthday:       localStorage.getItem('pf_birthday')         || '',   // 4.7.12: the desktop planner reads it
             pinHint:        localStorage.getItem('pf_pin_hint')         || '',
             erGoal:         localStorage.getItem('pf_er_goal')           || ''
             // v3.1: monteCarloResult, untrackedLiving, healthInsurance no longer exported
@@ -453,6 +454,7 @@
                 if (b.theme)      localStorage.setItem('pf_theme',       b.theme);
                 if (b.basicCalcEnabled !== undefined) localStorage.setItem('pf_basicCalcEnabled', b.basicCalcEnabled);
                 if (b.userAge)    localStorage.setItem('pf_dt_user_age', b.userAge);
+                if (b.birthday)   localStorage.setItem('pf_birthday', b.birthday);
                 if (b.erGoal)     localStorage.setItem('pf_er_goal',     b.erGoal);
                 linkBonusPayers();   // v3.2: link bonuses to their company and old entries to their payer
                 saveEntries();

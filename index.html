@@ -874,7 +874,7 @@
         <div class="modal-header">
             <h2>Settings</h2>
         </div>
-        <!-- 4.0.7: order Darrin chose: Data Management, Display Options, Themes, About (Security removed in 4.0.9) -->
+        <!-- 4.0.7: order the owner chose: Data Management, Display Options, Themes, About (Security removed in 4.0.9) -->
         <div class="settings-section">
             <h3>Data Management</h3>
             <p>Backup, restore, or delete your portfolio data.</p>
@@ -893,7 +893,7 @@
         <div class="settings-section">
             <h3>About</h3>
             <div id="settingsAboutCard" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
-                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.7.10 &nbsp;·&nbsp; Mobile</div>
+                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.7.12 &nbsp;·&nbsp; Mobile</div>
                 <div class="about-divider" style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px;"></div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <span style="font-size:18px;">🤖</span>
@@ -989,6 +989,12 @@
                 <input type="checkbox" id="demoModeCheckbox" onchange="toggleDemoMode()" style="width:20px; height:20px; cursor:pointer; margin-right:10px;">
                 <span style="font-size:14px;">Enable Demo Mode</span>
             </label>
+        </div>
+        <div class="settings-section">
+            <h3>Your birthday</h3>
+            <p>Used for age-based projections. Stays on this phone and in your backups.</p>
+            <input type="date" id="birthdayInput" onchange="setBirthday(this.value)" onfocus="this.value=localStorage.getItem('pf_birthday')||''" style="margin-top:10px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);color:inherit;font:inherit">
+            <script>try{document.getElementById('birthdayInput').value=localStorage.getItem('pf_birthday')||'';}catch(e){}</script>
         </div>
         <div class="settings-section">
             <h3>Full Screen</h3>

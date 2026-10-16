@@ -249,7 +249,9 @@ var LC = (function () {
     // least 5 years old. Returns rows and a summary.
     function bridgePlan(p) {
         const r = (p.growth || 0) / 100, rows = [], ladder = [];
-        let taxable = p.taxable || 0, pretax = p.pretax || 0, basis = p.rothBasis || 0, short = 0, firstShortAge = null;
+        let taxable = p.taxable || 0, pretax = p.pretax || 0, basis = p.rothBasis || 0, rothGrowth = 0, short = 0, firstShortAge = null;
+        // 2026-10-14 (audit): only what went in can come out before 59½: Roth basis (contributions + after-tax money) and each
+        // conversion once it is 5 years old. Their growth stays in the Roth until 59½ (rothGrowth), never spent here.
         const S = { converted: 0, tax: 0, health: 0, credit: 0, medicaidYrs: 0, cliffYrs: 0, firstAccess: null };
         for (let age = Math.floor(p.age); age < 65; age++) {
             const bridge = age < p.endAge;
@@ -284,9 +286,9 @@ var LC = (function () {
                 row = { age, conv, tax, magi, fplPct: h.a ? h.a.pct : null, credit: h.a ? h.a.credit : 0, health: h.cost, medicaid: !!(h.a && h.a.medicaid),
                         overCliff: !!(h.a && h.a.overCliff), need, fromTaxable: w1, fromBasis: w2, fromLadder: w3, short: Math.max(0, left) };
                 taxable = Math.max(0, (taxable - w1) * (1 + r));
-                basis = Math.max(0, basis - w2) * (1 + r);
+                rothGrowth = rothGrowth * (1 + r) + (Math.max(0, basis - w2) + ladder.reduce((t, c) => t + c.left, 0)) * r;
+                basis = Math.max(0, basis - w2);
                 pretax = Math.max(0, (pretax - conv) * (1 + r));
-                ladder.forEach(c => { c.left *= (1 + r); });
             } else {
                 const magi = p.after595Magi || 0, h = health(magi);
                 row = { age, conv: 0, tax: 0, magi, fplPct: h.a ? h.a.pct : null, credit: h.a ? h.a.credit : 0, health: h.cost, medicaid: !!(h.a && h.a.medicaid),
@@ -297,7 +299,7 @@ var LC = (function () {
         }
         if (ladder.length) S.firstAccess = ladder[0].age + 5;
         const ladderLeft = ladder.reduce((s, c) => s + c.left, 0);
-        return { rows, short, firstShortAge, covered: short < 1, taxableAt595: taxable, pretaxAt595: pretax, rothAt595: basis + ladderLeft, ...S };
+        return { rows, short, firstShortAge, covered: short < 1, taxableAt595: taxable, pretaxAt595: pretax, rothAt595: basis + ladderLeft + rothGrowth, ...S };
     }
 
     // ─── Monte Carlo (desktop 4.10.0) ─────────────────────────
