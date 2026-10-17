@@ -545,6 +545,171 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         }
     }
 
+    // ─── Spending page (4.8.0; the 4.7.13 Spending Map moved here from Budget) ───
+    // The home "Spending" widget. This year to date, from logged data only:
+    //   Household = take-home (every income entry) − coast contributions   (bills + everyday spending)
+    //   Partner   = the take-home of one chosen payer (e.g. a spouse's paychecks, all counted as spent)
+    //   Me        = take-home − coast − logged bills − Partner                (what's left)
+    // Payroll savings (retirementContribs) never reach take-home, so they're shown apart and not subtracted.
+    // Settings live in pf_spendMap { view, payer, me, partner } (UI only, not exported). No LC math changes.
+    let spendChart = null;
+    function spGet() {
+        let s = {};
+        try { s = JSON.parse(localStorage.getItem('pf_spendMap') || '{}') || {}; } catch (e) {}
+        return { view: s.view || 'household', payer: s.payer || '', me: s.me || 'Me', partner: s.partner || 'Partner' };
+    }
+    function spSet(patch) {
+        const s = Object.assign(spGet(), patch);
+        try { localStorage.setItem('pf_spendMap', JSON.stringify(s)); } catch (e) {}
+        updateSpendingPage();
+    }
+    function setSpendView(v) { spSet({ view: v }); }
+    function setSpendingMapPayer(id) { spSet({ payer: id }); }
+    function setSpendName(which, val) {
+        const v = String(val || '').trim().slice(0, 20);
+        spSet(which === 'me' ? { me: v || 'Me' } : { partner: v || 'Partner' });
+    }
+    // Everything the page shows, for this year: totals, take-home by payer, and month-by-month amounts
+    function spendingData() {
+        const now = new Date(), yr = String(now.getFullYear());
+        const inYr = e => e && e.date && e.date.slice(0, 4) === yr;
+        const daysInMo = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const months = now.getMonth() + now.getDate() / daysInMo;   // months so far, for the per-month figure
+        const st = spGet();
+        const payerName = id => { const p = (payers || []).find(x => String(x.id) === String(id)); return p ? p.name : null; };
+        const keyOf = e => e.payerId ? String(e.payerId) : 'name:' + (e.payerName || 'Other');
+        const byPayer = {};
+        (incomeEntries || []).filter(inYr).forEach(e => {
+            const k = keyOf(e);
+            if (!byPayer[k]) byPayer[k] = { name: (e.payerId && payerName(e.payerId)) || e.payerName || 'Other', amt: 0 };
+            byPayer[k].amt += e.amount || 0;
+        });
+        const payer = st.payer && byPayer[st.payer] ? st.payer : '';
+        // Month by month (Jan → this month)
+        const mks = [];
+        for (let m = 1; m <= now.getMonth() + 1; m++) mks.push(yr + '-' + String(m).padStart(2, '0'));
+        const inMo = mk => e => e && e.date && e.date.slice(0, 7) === mk;
+        const mSum = (list, mk, f) => (list || []).filter(inMo(mk)).reduce((s, e) => s + (f(e) || 0), 0);
+        const partnerInc = payer ? (incomeEntries || []).filter(e => keyOf(e) === payer) : [];
+        const rows = mks.map(mk => {
+            const th = mSum(incomeEntries, mk, e => e.amount);
+            const co = mSum(coastContribs, mk, e => e.amount);
+            const bi = mSum(expenses, mk, e => e.amount);
+            const pa = mSum(partnerInc, mk, e => e.amount);
+            return { mk, household: th - co, partner: pa, me: th - co - bi - pa };
+        });
+        const tot = k => rows.reduce((s, r) => s + r[k], 0);
+        return {
+            yr, months, st, byPayer, payer, rows,
+            takeHome: Object.values(byPayer).reduce((s, v) => s + v.amt, 0),
+            coast:    (coastContribs || []).filter(inYr).reduce((s, e) => s + (e.amount || 0), 0),
+            bills:    (expenses || []).filter(inYr).reduce((s, e) => s + (e.amount || 0), 0),
+            payroll:  (retirementContribs || []).filter(inYr).reduce((s, e) => s + ((e.totalAmount || e.amount) || 0), 0),
+            household: tot('household'), partner: tot('partner'), me: tot('me')
+        };
+    }
+    function updateSpendingPage() {
+        const D = spendingData(), st = D.st;
+        const view = (st.view !== 'household' && !D.payer) ? 'household' : st.view;   // no partner picked yet → Household
+        const names = { household: 'Household', me: st.me, partner: st.partner };
+        document.querySelectorAll('[data-spview]').forEach(b => {
+            const v = b.getAttribute('data-spview');
+            b.textContent = names[v];
+            b.classList.toggle('active', v === view);
+        });
+        const total = D[view];
+        const tEl = document.getElementById('spPageTotal'), lEl = document.getElementById('spPageLabel'), sEl = document.getElementById('spPageSub');
+        if (tEl) tEl.textContent = fmt(total);
+        if (lEl) lEl.textContent = (view === 'household' ? 'Household' : names[view] + '’s') + ' spending · ' + D.yr + ' to date';
+        if (sEl) sEl.textContent = D.months > 0 ? '≈ ' + fmt(total / D.months) + ' a month' : '';
+        buildSpendChart(D, view, names[view]);
+        renderSpendingMap(D);
+    }
+    // Running total through the year (like the Net Worth line), so a lumpy month doesn't swamp the picture
+    function buildSpendChart(D, view, name) {
+        const canvas = document.getElementById('spendChart');
+        if (!canvas) return;
+        if (spendChart) { spendChart.destroy(); spendChart = null; }
+        if (!D.rows.length) return;
+        const scale = demoMode ? 0.01 : 1;
+        let run = 0;
+        const data = D.rows.map(r => Math.round((run += r[view]) * scale));
+        const labels = D.rows.map(r => new Date(r.mk + '-02').toLocaleDateString('en-US', { month: 'short' }));
+        const col = tc('#D4AF37'), bg = tc('rgba(212,175,55,0.15)'), tick = tc('#C0C0C0'), grid = tc('#5A6F83');
+        const fmtTick = v => { const a = Math.abs(v); return a >= 1e6 ? '$' + Math.round(v / 1e6) + 'M' : a >= 1e3 ? '$' + Math.round(v / 1e3) + 'k' : '$' + Math.round(v); };
+        spendChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: { labels, datasets: [{ label: name, data, borderColor: col, backgroundColor: bg, tension: 0.3, fill: true, pointRadius: 3, pointHoverRadius: 5 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.parsed.y / scale) + ' so far' } } },
+                scales: { x: { ticks: { color: tick }, grid: { color: grid } },
+                          y: { beginAtZero: true, ticks: { callback: fmtTick, color: tick }, grid: { color: grid } } }
+            }
+        });
+    }
+    function renderSpendingMap(D) {
+        const el = document.getElementById('spendingMap');
+        if (!el) return;
+        D = D || spendingData();
+        const st = D.st;
+        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
+        const cardBg   = isSunset ? tc('rgba(35,8,4,0.90)')  : '#1A2A42';
+        const subBg    = isSunset ? tc('rgba(50,12,6,0.85)') : 'rgba(10,26,47,0.7)';
+        const headColor= isSunset ? tc('#F5C030')             : '#D4AF37';
+        const txtMain  = isSunset ? tc('#F0D0A0')             : '#E0E0E0';
+        const txtSub   = isSunset ? tc('#C09070')             : '#8A8F98';
+        const negCol   = isSunset ? tc('#E05050')             : '#E57373';
+        const savCol   = isSunset ? tc('#6AB0E0')             : '#5BA8D8';
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        const lines = Object.entries(D.byPayer).filter(([, v]) => v.amt).sort((a, b) => b[1].amt - a[1].amt);
+        const left = D.takeHome - D.coast - D.bills;
+        const row = (label, val, opts = {}) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:${opts.big ? '12px' : '7px'} 12px;${opts.big ? ` margin-top:6px; background:${subBg}; border-radius:8px;` : ''}">
+                <span style="font-size:${opts.big ? 15 : 14}px; color:${opts.big ? txtMain : txtSub};${opts.big ? ' font-weight:600;' : ''}">${label}</span>
+                <span style="font-size:${opts.big ? 19 : 15}px; font-weight:${opts.big ? 700 : 600}; color:${opts.col || txtMain};">${val}</span>
+            </div>`;
+        const minus = n => '− ' + fmt(n);
+        const perMo = n => D.months > 0 ? `<div style="text-align:right; font-size:12px; color:${txtSub}; padding:0 12px 4px;">≈ ${fmt(n / D.months)}/mo</div>` : '';
+        const box = (title, body) => `
+            <div style="background:${cardBg}; border-radius:12px; padding:14px 6px; margin-bottom:14px;">
+                <h3 style="font-size:16px; margin:0 12px 10px; color:${headColor};">${title}</h3>${body}
+            </div>`;
+        const field = (label, ctl) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 12px;">
+                <span style="font-size:13px; color:${txtSub};">${label}</span>${ctl}
+            </div>`;
+        const inp = 'padding:6px 8px; border-radius:6px; font-size:14px; width:140px;';
+
+        if (!D.takeHome && !D.bills && !D.coast) {
+            el.innerHTML = box('🗺️ Spending Map · ' + D.yr, `<p style="font-size:13px; padding:0 12px;" class="col-muted">Nothing logged for ${D.yr} yet.</p>`);
+            return;
+        }
+        const options = ['<option value="">Nobody</option>'].concat(lines.map(([k, v]) =>
+            `<option value="${esc(k)}"${k === D.payer ? ' selected' : ''}>${esc(v.name)}</option>`)).join('');
+
+        el.innerHTML =
+            box('💵 Brought home · ' + D.yr + ' to date',
+                lines.map(([, v]) => row(esc(v.name), fmt(v.amt))).join('') +
+                row('Total brought home', fmt(D.takeHome), { big: true })) +
+            box('🗺️ Where it went',
+                row('Brought home', fmt(D.takeHome)) +
+                row('Coast savings', minus(D.coast), { col: savCol }) +
+                row('Household spending', fmt(D.household), { big: true }) + perMo(D.household) +
+                row('Bills logged', minus(D.bills), { col: negCol }) +
+                row('Left over (everyday spending)', fmt(left), { big: true }) + perMo(left) +
+                (D.payer ? row(esc(st.partner) + '’s take-home', minus(D.partner), { col: negCol }) +
+                           row(esc(st.me) + '’s spending', fmt(D.me), { big: true }) + perMo(D.me) : '')) +
+            box('🏦 Saved before payday (not counted above)',
+                row('401(k), HSA, match and other payroll savings', fmt(D.payroll), { col: savCol }) +
+                `<p style="font-size:12px; padding:6px 12px 0; margin:0;" class="col-muted">These come out of paychecks before take-home. "Left over" also counts money still sitting in checking.</p>`) +
+            box('⚙️ Who’s who',
+                field('Your name', `<input type="text" value="${esc(st.me)}" maxlength="20" onchange="setSpendName('me', this.value)" style="${inp}">`) +
+                field('Partner’s name', `<input type="text" value="${esc(st.partner)}" maxlength="20" onchange="setSpendName('partner', this.value)" style="${inp}">`) +
+                field('Partner’s paychecks', `<select onchange="setSpendingMapPayer(this.value)" style="${inp}">${options}</select>`));
+    }
+
     // ─── Yearly Goals ────────────────────────────────────────
     // Investments → 🎯 Goals: the Portfolio goal track (3.8, goals.js: steps incl. $1M and the critical-mass
     // points; replaces the $1M card), the date-based yearly goals, and Taxable could pay off mortgage.

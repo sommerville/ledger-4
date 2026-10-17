@@ -959,7 +959,7 @@ tsBar.textContent = '🕐 ' + d.toLocaleDateString('en-US', {weekday:'short', ye
         const [page, overlay] = location.split(':');
 
         // Hide all pages (remove any lingering entrance animation class too)
-        const allPageIds = ['setupPage', 'dataPage', 'loansPage', 'homePage', 'incomePage', 'incomeStatsPage', 'accountsPage', 'retirementPage', 'expensesPage', 'networthPage', 'debtPage', 'realEstatePage', 'firePage', 'calculatorPage', 'budgetPage', 'goalsPage'];
+        const allPageIds = ['setupPage', 'dataPage', 'loansPage', 'homePage', 'incomePage', 'incomeStatsPage', 'accountsPage', 'retirementPage', 'expensesPage', 'networthPage', 'debtPage', 'realEstatePage', 'firePage', 'calculatorPage', 'budgetPage', 'spendingPage', 'goalsPage'];
         allPageIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -1002,6 +1002,7 @@ el.addEventListener('animationend', () => el.classList.remove('page-entering'), 
                 runCompoundCalc();
             }),
             'budget':     () => showPage('budgetPage', () => { seedBudgetCalc(); runBudgetCalc(); }),
+            'spending':   () => showPage('spendingPage', () => updateSpendingPage()),   // 4.8.0: the home Spending widget
             'data':       () => showPage('dataPage', () => { ddBuildMonthDropdown(); }),   // v3.3: full page (was dataDumpModal)
             'loans':      () => showPage('loansPage', () => updateLoansPage()),   // 3.5.4: a regular page
             'allgoals':   () => showPage('goalsPage', () => updateGoalsOverview()),   // 3.8: every goal's next step
