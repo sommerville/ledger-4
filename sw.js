@@ -2,7 +2,7 @@
 // Ledger 4.0 keeps the 'Ledger3 ' prefix on purpose: activate() only clears caches with this prefix, so the
 // old 3.x caches on the phone are cleaned up. Changing it would leave them behind.
 const CACHE_PREFIX = 'Ledger3 ';
-const CACHE_NAME = CACHE_PREFIX + 'v4.8.1';
+const CACHE_NAME = CACHE_PREFIX + 'v4.8.2';
 const ASSETS = [
   './',
   './index.html',
@@ -58,7 +58,9 @@ const ASSETS = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    // 4.8.2: fetch every file fresh from the server ('reload' skips the browser's HTTP cache), so an update
+    // never mixes a new index.html with an older script the browser still had (4.8.1 on the phone did)
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' }))))
   );
   self.skipWaiting();
 });
