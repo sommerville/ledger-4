@@ -584,7 +584,11 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
             if (!byPayer[k]) byPayer[k] = { name: (e.payerId && payerName(e.payerId)) || e.payerName || 'Other', amt: 0 };
             byPayer[k].amt += e.amount || 0;
         });
-        const payer = st.payer && byPayer[st.payer] ? st.payer : '';
+        const payer = st.payer && (incomeEntries || []).some(e => keyOf(e) === st.payer) ? st.payer : '';
+        // Every month with anything logged, newest first, never past this month (the month cards, 4.8.1)
+        const curMk = moKey(now);
+        const allMonths = [...new Set([incomeEntries, coastContribs, expenses].flatMap(l => (l || []).map(e => e && e.date && e.date.slice(0, 7))).filter(Boolean))]
+            .filter(m => m <= curMk).sort().reverse();
         // Month by month (Jan → this month)
         const mks = [];
         for (let m = 1; m <= now.getMonth() + 1; m++) mks.push(yr + '-' + String(m).padStart(2, '0'));
@@ -600,7 +604,7 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         });
         const tot = k => rows.reduce((s, r) => s + r[k], 0);
         return {
-            yr, months, st, byPayer, payer, rows,
+            yr, months, st, byPayer, payer, rows, allMonths,
             takeHome: Object.values(byPayer).reduce((s, v) => s + v.amt, 0),
             coast:    (coastContribs || []).filter(inYr).reduce((s, e) => s + (e.amount || 0), 0),
             bills:    (expenses || []).filter(inYr).reduce((s, e) => s + (e.amount || 0), 0),
@@ -648,29 +652,50 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
             }
         });
     }
+    // One period's numbers (a month 'YYYY-MM' or a year 'YYYY'), for the month cards and the year-end cards (4.8.1)
+    function spPeriod(key, st) {
+        const inP = e => e && e.date && e.date.slice(0, key.length) === key;
+        const sum = (list, f) => (list || []).filter(inP).reduce((s, e) => s + (f(e) || 0), 0);
+        const keyOf = e => e.payerId ? String(e.payerId) : 'name:' + (e.payerName || 'Other');
+        const payerName = id => { const p = (payers || []).find(x => String(x.id) === String(id)); return p ? p.name : null; };
+        const byPayer = {};
+        (incomeEntries || []).filter(inP).forEach(e => {
+            const k = keyOf(e);
+            if (!byPayer[k]) byPayer[k] = { name: (e.payerId && payerName(e.payerId)) || e.payerName || 'Other', amt: 0 };
+            byPayer[k].amt += e.amount || 0;
+        });
+        const takeHome = sum(incomeEntries, e => e.amount), coast = sum(coastContribs, e => e.amount), bills = sum(expenses, e => e.amount);
+        const partner = st.payer ? sum((incomeEntries || []).filter(e => keyOf(e) === st.payer), e => e.amount) : 0;
+        return { byPayer, takeHome, coast, bills, partner, payroll: sum(retirementContribs, e => e.totalAmount || e.amount),
+                 household: takeHome - coast, left: takeHome - coast - bills, me: takeHome - coast - bills - partner };
+    }
+    // Under the chart: this year's "Where it went", then one card per month (newest first, like Investments'
+    // Monthly Snapshots) with a "Year end" card after each December, then take-home by payer, payroll savings,
+    // and Who's who. Each card's right side is the chosen view's amount (Household / Me / Partner).
     function renderSpendingMap(D) {
         const el = document.getElementById('spendingMap');
         if (!el) return;
         D = D || spendingData();
         const st = D.st;
+        const view = (st.view !== 'household' && !D.payer) ? 'household' : st.view;
         const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
         const cardBg   = isSunset ? tc('rgba(35,8,4,0.90)')  : '#1A2A42';
         const subBg    = isSunset ? tc('rgba(50,12,6,0.85)') : 'rgba(10,26,47,0.7)';
+        const border   = isSunset ? tc('#5A2018')             : '#2A3A52';
         const headColor= isSunset ? tc('#F5C030')             : '#D4AF37';
         const txtMain  = isSunset ? tc('#F0D0A0')             : '#E0E0E0';
         const txtSub   = isSunset ? tc('#C09070')             : '#8A8F98';
         const negCol   = isSunset ? tc('#E05050')             : '#E57373';
         const savCol   = isSunset ? tc('#6AB0E0')             : '#5BA8D8';
         const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const money = n => (n < 0 ? '−' : '') + fmt(Math.abs(n));
+        const minus = n => '− ' + fmt(n);
 
-        const lines = Object.entries(D.byPayer).filter(([, v]) => v.amt).sort((a, b) => b[1].amt - a[1].amt);
-        const left = D.takeHome - D.coast - D.bills;
         const row = (label, val, opts = {}) => `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:${opts.big ? '12px' : '7px'} 12px;${opts.big ? ` margin-top:6px; background:${subBg}; border-radius:8px;` : ''}">
                 <span style="font-size:${opts.big ? 15 : 14}px; color:${opts.big ? txtMain : txtSub};${opts.big ? ' font-weight:600;' : ''}">${label}</span>
                 <span style="font-size:${opts.big ? 19 : 15}px; font-weight:${opts.big ? 700 : 600}; color:${opts.col || txtMain};">${val}</span>
             </div>`;
-        const minus = n => '− ' + fmt(n);
         const perMo = n => D.months > 0 ? `<div style="text-align:right; font-size:12px; color:${txtSub}; padding:0 12px 4px;">≈ ${fmt(n / D.months)}/mo</div>` : '';
         const box = (title, body) => `
             <div style="background:${cardBg}; border-radius:12px; padding:14px 6px; margin-bottom:14px;">
@@ -682,32 +707,71 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
             </div>`;
         const inp = 'padding:6px 8px; border-radius:6px; font-size:14px; width:140px;';
 
-        if (!D.takeHome && !D.bills && !D.coast) {
-            el.innerHTML = box('🗺️ Spending Map · ' + D.yr, `<p style="font-size:13px; padding:0 12px;" class="col-muted">Nothing logged for ${D.yr} yet.</p>`);
+        // Small rows inside a month card
+        const line = (label, val, col, strong) => `<div style="display:flex;justify-content:space-between;font-size:${strong ? 13 : 12}px;padding:${strong ? '5px 0 3px' : '2px 0'};${strong ? `border-top:1px solid ${border};margin-top:3px;font-weight:700;color:${txtMain};` : `color:${txtSub};`}"><span>${label}</span><span style="color:${col || (strong ? txtMain : txtSub)};">${val}</span></div>`;
+        const cardBody = P => {
+            const payersHtml = Object.values(P.byPayer).filter(v => v.amt).sort((a, b) => b.amt - a.amt)
+                .map(v => line('&nbsp;&nbsp;' + esc(v.name), fmt(v.amt))).join('');
+            return line('Brought home', fmt(P.takeHome)) + payersHtml +
+                line('Coast savings', minus(P.coast), savCol) +
+                line('Household spending', money(P.household), null, true) +
+                line('Bills logged', minus(P.bills), negCol) +
+                line('Left over (everyday)', money(P.left), null, true) +
+                (D.payer ? line(esc(st.partner) + '’s take-home', minus(P.partner), negCol) +
+                           line(esc(st.me) + '’s spending', money(P.me), null, true) : '') +
+                (P.payroll ? line('Saved before payday (not counted)', fmt(P.payroll), savCol) : '');
+        };
+        const rightAmt = P => `<span style="font-size:14px;font-weight:700;color:${P[view] < 0 ? negCol : txtMain};">${money(P[view])}</span>`;
+
+        if (!D.takeHome && !D.bills && !D.coast && !D.allMonths.length) {
+            el.innerHTML = box('🗺️ Spending Map · ' + D.yr, `<p style="font-size:13px; padding:0 12px;" class="col-muted">Nothing logged yet.</p>`);
             return;
         }
-        const options = ['<option value="">Nobody</option>'].concat(lines.map(([k, v]) =>
-            `<option value="${esc(k)}"${k === D.payer ? ' selected' : ''}>${esc(v.name)}</option>`)).join('');
 
-        el.innerHTML =
+        // 1. This year to date
+        const left = D.takeHome - D.coast - D.bills;
+        let html = box('🗺️ Where it went · ' + D.yr + ' to date',
+            row('Brought home', fmt(D.takeHome)) +
+            row('Coast savings', minus(D.coast), { col: savCol }) +
+            row('Household spending', money(D.household), { big: true }) + perMo(D.household) +
+            row('Bills logged', minus(D.bills), { col: negCol }) +
+            row('Left over (everyday spending)', money(left), { big: true }) + perMo(left) +
+            (D.payer ? row(esc(st.partner) + '’s take-home', minus(D.partner), { col: negCol }) +
+                       row(esc(st.me) + '’s spending', money(D.me), { big: true }) + perMo(D.me) : ''));
+
+        // 2. Month cards, newest first; a year-end card sits after each December (above it in this newest-first list)
+        const fmtMK = mk => new Date(mk + '-02').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const curMk = moKey(new Date());
+        let cards = '';
+        D.allMonths.forEach(mk => {
+            if (mk.slice(5) === '12') {
+                const y = mk.slice(0, 4), Y = spPeriod(y, st);
+                cards += snapCard('sp', 'y' + y, subBg, headColor, headColor, '📅 ' + y + ' · Year end', rightAmt(Y), cardBody(Y), 6);
+            }
+            const P = spPeriod(mk, st);
+            cards += snapCard('sp', mk, cardBg, border, txtMain, fmtMK(mk) + (mk === curMk ? ' · so far' : ''), rightAmt(P), cardBody(P), 6);
+        });
+        html += `<div class="u-mb16">${snapHead(txtSub)}${cards}</div>`;
+
+        // 3. Take-home by payer this year, payroll savings, and Who's who
+        const lines = Object.entries(D.byPayer).filter(([, v]) => v.amt).sort((a, b) => b[1].amt - a[1].amt);
+        const all = {};
+        (incomeEntries || []).forEach(e => { const k = e.payerId ? String(e.payerId) : 'name:' + (e.payerName || 'Other');
+            if (!all[k]) { const p = (payers || []).find(x => String(x.id) === String(e.payerId)); all[k] = (p && p.name) || e.payerName || 'Other'; } });
+        const options = ['<option value="">Nobody</option>'].concat(Object.entries(all).map(([k, n]) =>
+            `<option value="${esc(k)}"${k === D.payer ? ' selected' : ''}>${esc(n)}</option>`)).join('');
+        html +=
             box('💵 Brought home · ' + D.yr + ' to date',
                 lines.map(([, v]) => row(esc(v.name), fmt(v.amt))).join('') +
                 row('Total brought home', fmt(D.takeHome), { big: true })) +
-            box('🗺️ Where it went',
-                row('Brought home', fmt(D.takeHome)) +
-                row('Coast savings', minus(D.coast), { col: savCol }) +
-                row('Household spending', fmt(D.household), { big: true }) + perMo(D.household) +
-                row('Bills logged', minus(D.bills), { col: negCol }) +
-                row('Left over (everyday spending)', fmt(left), { big: true }) + perMo(left) +
-                (D.payer ? row(esc(st.partner) + '’s take-home', minus(D.partner), { col: negCol }) +
-                           row(esc(st.me) + '’s spending', fmt(D.me), { big: true }) + perMo(D.me) : '')) +
             box('🏦 Saved before payday (not counted above)',
                 row('401(k), HSA, match and other payroll savings', fmt(D.payroll), { col: savCol }) +
-                `<p style="font-size:12px; padding:6px 12px 0; margin:0;" class="col-muted">These come out of paychecks before take-home. "Left over" also counts money still sitting in checking.</p>`) +
+                `<p style="font-size:12px; padding:6px 12px 0; margin:0;" class="col-muted">These come out of paychecks before take-home. "Left over" also counts money still sitting in checking. A month can go below zero when savings that month came from money already in checking.</p>`) +
             box('⚙️ Who’s who',
                 field('Your name', `<input type="text" value="${esc(st.me)}" maxlength="20" onchange="setSpendName('me', this.value)" style="${inp}">`) +
                 field('Partner’s name', `<input type="text" value="${esc(st.partner)}" maxlength="20" onchange="setSpendName('partner', this.value)" style="${inp}">`) +
                 field('Partner’s paychecks', `<select onchange="setSpendingMapPayer(this.value)" style="${inp}">${options}</select>`));
+        el.innerHTML = html;
     }
 
     // ─── Yearly Goals ────────────────────────────────────────
