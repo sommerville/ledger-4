@@ -134,6 +134,14 @@
             return;
         }
 
+        // 4.8.1: Spending page — sideways steps the year (left = newer, right = older), like the Data page's months
+        if (navStack[navStack.length - 1] === 'spending') {
+            const ae = document.activeElement;
+            if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+            if (absX > absY * 1.5 && absX >= minSwipe) spStepYear(swipeDistanceX < 0 ? 1 : -1);
+            return;
+        }
+
         // Only horizontal swipes below — no vertical swipes on main pages
         if (absX <= absY * 1.2) return;
         if (absX < minSwipe) return;

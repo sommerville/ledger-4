@@ -553,6 +553,23 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
     // Payroll savings (retirementContribs) never reach take-home, so they're shown apart and not subtracted.
     // Settings live in pf_spendMap { view, payer, me, partner } (UI only, not exported). No LC math changes.
     let spendChart = null;
+    let spYr = null;   // 4.8.1: the year shown ('YYYY'); starts on this year. Sideways swipes / ‹ › step it.
+    // Years with anything logged, oldest first, never past this year
+    function spYears() {
+        const cur = String(new Date().getFullYear());
+        return [...new Set([incomeEntries, coastContribs, expenses].flatMap(l => (l || []).map(e => e && e.date && e.date.slice(0, 4))).filter(Boolean))]
+            .filter(y => y <= cur).sort();
+    }
+    // dir +1 = newer year, -1 = older (a left swipe is newer, like the Data page's months)
+    function spStepYear(dir) {
+        const ys = spYears(), i = ys.indexOf(spYr), j = i + dir;
+        if (i < 0 || j < 0 || j >= ys.length) return;
+        spYr = ys[j];
+        updateSpendingPage();
+        const pg = document.getElementById('spendingPage');
+        if (pg) pg.scrollTop = 0;
+        window.scrollTo(0, 0);
+    }
     function spGet() {
         let s = {};
         try { s = JSON.parse(localStorage.getItem('pf_spendMap') || '{}') || {}; } catch (e) {}
@@ -569,12 +586,14 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         const v = String(val || '').trim().slice(0, 20);
         spSet(which === 'me' ? { me: v || 'Me' } : { partner: v || 'Partner' });
     }
-    // Everything the page shows, for this year: totals, take-home by payer, and month-by-month amounts
-    function spendingData() {
-        const now = new Date(), yr = String(now.getFullYear());
+    // Everything the page shows for one year: totals, take-home by payer, and month-by-month amounts
+    function spendingData(yr) {
+        const now = new Date(), curYr = String(now.getFullYear());
+        yr = yr || curYr;
+        const isCur = yr === curYr;
         const inYr = e => e && e.date && e.date.slice(0, 4) === yr;
         const daysInMo = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const months = now.getMonth() + now.getDate() / daysInMo;   // months so far, for the per-month figure
+        const months = isCur ? now.getMonth() + now.getDate() / daysInMo : 12;   // months covered, for the per-month figure
         const st = spGet();
         const payerName = id => { const p = (payers || []).find(x => String(x.id) === String(id)); return p ? p.name : null; };
         const keyOf = e => e.payerId ? String(e.payerId) : 'name:' + (e.payerName || 'Other');
@@ -585,13 +604,13 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
             byPayer[k].amt += e.amount || 0;
         });
         const payer = st.payer && (incomeEntries || []).some(e => keyOf(e) === st.payer) ? st.payer : '';
-        // Every month with anything logged, newest first, never past this month (the month cards, 4.8.1)
+        // This year's months with anything logged, newest first, never past this month (the month cards, 4.8.1)
         const curMk = moKey(now);
         const allMonths = [...new Set([incomeEntries, coastContribs, expenses].flatMap(l => (l || []).map(e => e && e.date && e.date.slice(0, 7))).filter(Boolean))]
-            .filter(m => m <= curMk).sort().reverse();
-        // Month by month (Jan → this month)
+            .filter(m => m <= curMk && m.slice(0, 4) === yr).sort().reverse();
+        // Month by month (Jan → this month, or → Dec for a finished year)
         const mks = [];
-        for (let m = 1; m <= now.getMonth() + 1; m++) mks.push(yr + '-' + String(m).padStart(2, '0'));
+        for (let m = 1; m <= (isCur ? now.getMonth() + 1 : 12); m++) mks.push(yr + '-' + String(m).padStart(2, '0'));
         const inMo = mk => e => e && e.date && e.date.slice(0, 7) === mk;
         const mSum = (list, mk, f) => (list || []).filter(inMo(mk)).reduce((s, e) => s + (f(e) || 0), 0);
         const partnerInc = payer ? (incomeEntries || []).filter(e => keyOf(e) === payer) : [];
@@ -604,7 +623,7 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         });
         const tot = k => rows.reduce((s, r) => s + r[k], 0);
         return {
-            yr, months, st, byPayer, payer, rows, allMonths,
+            yr, isCur, months, st, byPayer, payer, rows, allMonths,
             takeHome: Object.values(byPayer).reduce((s, v) => s + v.amt, 0),
             coast:    (coastContribs || []).filter(inYr).reduce((s, e) => s + (e.amount || 0), 0),
             bills:    (expenses || []).filter(inYr).reduce((s, e) => s + (e.amount || 0), 0),
@@ -613,7 +632,16 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         };
     }
     function updateSpendingPage() {
-        const D = spendingData(), st = D.st;
+        const ys = spYears(), curYr = String(new Date().getFullYear());
+        if (!spYr || !ys.includes(spYr)) spYr = ys.includes(curYr) || !ys.length ? curYr : ys[ys.length - 1];
+        const D = spendingData(spYr), st = D.st;
+        const nav = document.getElementById('spYearNav');
+        if (nav) {
+            const i = ys.indexOf(spYr);
+            nav.innerHTML = `<button onclick="spStepYear(-1)" ${i <= 0 ? 'disabled' : ''} aria-label="Older year">‹</button>
+                <span>${spYr}</span>
+                <button onclick="spStepYear(1)" ${i < 0 || i >= ys.length - 1 ? 'disabled' : ''} aria-label="Newer year">›</button>`;
+        }
         const view = (st.view !== 'household' && !D.payer) ? 'household' : st.view;   // no partner picked yet → Household
         const names = { household: 'Household', me: st.me, partner: st.partner };
         document.querySelectorAll('[data-spview]').forEach(b => {
@@ -624,7 +652,7 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         const total = D[view];
         const tEl = document.getElementById('spPageTotal'), lEl = document.getElementById('spPageLabel'), sEl = document.getElementById('spPageSub');
         if (tEl) tEl.textContent = fmt(total);
-        if (lEl) lEl.textContent = (view === 'household' ? 'Household' : names[view] + '’s') + ' spending · ' + D.yr + ' to date';
+        if (lEl) lEl.textContent = (view === 'household' ? 'Household' : names[view] + '’s') + ' spending · ' + D.yr + (D.isCur ? ' to date' : '');
         if (sEl) sEl.textContent = D.months > 0 ? '≈ ' + fmt(total / D.months) + ' a month' : '';
         buildSpendChart(D, view, names[view]);
         renderSpendingMap(D);
@@ -696,7 +724,6 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
                 <span style="font-size:${opts.big ? 15 : 14}px; color:${opts.big ? txtMain : txtSub};${opts.big ? ' font-weight:600;' : ''}">${label}</span>
                 <span style="font-size:${opts.big ? 19 : 15}px; font-weight:${opts.big ? 700 : 600}; color:${opts.col || txtMain};">${val}</span>
             </div>`;
-        const perMo = n => D.months > 0 ? `<div style="text-align:right; font-size:12px; color:${txtSub}; padding:0 12px 4px;">≈ ${fmt(n / D.months)}/mo</div>` : '';
         const box = (title, body) => `
             <div style="background:${cardBg}; border-radius:12px; padding:14px 6px; margin-bottom:14px;">
                 <h3 style="font-size:16px; margin:0 12px 10px; color:${headColor};">${title}</h3>${body}
@@ -707,19 +734,17 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
             </div>`;
         const inp = 'padding:6px 8px; border-radius:6px; font-size:14px; width:140px;';
 
-        // Small rows inside a month card
-        const line = (label, val, col, strong) => `<div style="display:flex;justify-content:space-between;font-size:${strong ? 13 : 12}px;padding:${strong ? '5px 0 3px' : '2px 0'};${strong ? `border-top:1px solid ${border};margin-top:3px;font-weight:700;color:${txtMain};` : `color:${txtSub};`}"><span>${label}</span><span style="color:${col || (strong ? txtMain : txtSub)};">${val}</span></div>`;
-        const cardBody = P => {
-            const payersHtml = Object.values(P.byPayer).filter(v => v.amt).sort((a, b) => b.amt - a.amt)
-                .map(v => line('&nbsp;&nbsp;' + esc(v.name), fmt(v.amt))).join('');
-            return line('Brought home', fmt(P.takeHome)) + payersHtml +
-                line('Coast savings', minus(P.coast), savCol) +
-                line('Household spending', money(P.household), null, true) +
-                line('Bills logged', minus(P.bills), negCol) +
-                line('Left over (everyday)', money(P.left), null, true) +
-                (D.payer ? line(esc(st.partner) + '’s take-home', minus(P.partner), negCol) +
-                           line(esc(st.me) + '’s spending', money(P.me), null, true) : '') +
-                (P.payroll ? line('Saved before payday (not counted)', fmt(P.payroll), savCol) : '');
+        // Inside every card: the same rows as the year-to-date breakdown, nothing more (Darrin, 4.8.1).
+        // months = how many months the card covers, for the ≈ per-month lines (none on a single month)
+        const cardBody = (P, months) => {
+            const pm = n => months > 1 ? `<div style="text-align:right; font-size:12px; color:${txtSub}; padding:0 12px 4px;">≈ ${fmt(n / months)}/mo</div>` : '';
+            return row('Brought home', fmt(P.takeHome)) +
+                row('Coast savings', minus(P.coast), { col: savCol }) +
+                row('Household spending', money(P.household), { big: true }) + pm(P.household) +
+                row('Bills logged', minus(P.bills), { col: negCol }) +
+                row('Left over (everyday spending)', money(P.left), { big: true }) + pm(P.left) +
+                (D.payer ? row(esc(st.partner) + '’s take-home', minus(P.partner), { col: negCol }) +
+                           row(esc(st.me) + '’s spending', money(P.me), { big: true }) + pm(P.me) : '');
         };
         const rightAmt = P => `<span style="font-size:14px;font-weight:700;color:${P[view] < 0 ? negCol : txtMain};">${money(P[view])}</span>`;
 
@@ -728,42 +753,23 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
             return;
         }
 
-        // 1. This year to date
-        const left = D.takeHome - D.coast - D.bills;
-        let html = box('🗺️ Where it went · ' + D.yr + ' to date',
-            row('Brought home', fmt(D.takeHome)) +
-            row('Coast savings', minus(D.coast), { col: savCol }) +
-            row('Household spending', money(D.household), { big: true }) + perMo(D.household) +
-            row('Bills logged', minus(D.bills), { col: negCol }) +
-            row('Left over (everyday spending)', money(left), { big: true }) + perMo(left) +
-            (D.payer ? row(esc(st.partner) + '’s take-home', minus(D.partner), { col: negCol }) +
-                       row(esc(st.me) + '’s spending', money(D.me), { big: true }) + perMo(D.me) : ''));
-
-        // 2. Month cards, newest first; a year-end card sits after each December (above it in this newest-first list)
+        // One year at a time (‹ › or a sideways swipe): the year's card, then its months newest first
         const fmtMK = mk => new Date(mk + '-02').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         const curMk = moKey(new Date());
-        let cards = '';
-        D.allMonths.forEach(mk => {
-            if (mk.slice(5) === '12') {
-                const y = mk.slice(0, 4), Y = spPeriod(y, st);
-                cards += snapCard('sp', 'y' + y, subBg, headColor, headColor, '📅 ' + y + ' · Year end', rightAmt(Y), cardBody(Y), 6);
-            }
-            const P = spPeriod(mk, st);
-            cards += snapCard('sp', mk, cardBg, border, txtMain, fmtMK(mk) + (mk === curMk ? ' · so far' : ''), rightAmt(P), cardBody(P), 6);
-        });
-        html += `<div class="u-mb16">${snapHead(txtSub)}${cards}</div>`;
+        const card = (id, title, P, months) => snapCard('sp', id, cardBg, border, txtMain, title, rightAmt(P), cardBody(P, months), 6);
+        // The year's card starts open: Year to date for this year, Year end for a finished one
+        let cards = card('yr', D.yr + (D.isCur ? ' · Year to date' : ' · Year end'), spPeriod(D.yr, st), D.months)
+            .replace('id="sp-snap-yr" style="display:none;', 'id="sp-snap-yr" style="display:block;');
+        D.allMonths.forEach(mk => { cards += card(mk, fmtMK(mk) + (mk === curMk ? ' · so far' : ''), spPeriod(mk, st), 1); });
+        let html = `<div class="u-mb16">${cards}</div>`;
 
-        // 3. Take-home by payer this year, payroll savings, and Who's who
-        const lines = Object.entries(D.byPayer).filter(([, v]) => v.amt).sort((a, b) => b[1].amt - a[1].amt);
+        // Then payroll savings and Who's who (take-home by payer is shown elsewhere in the app)
         const all = {};
         (incomeEntries || []).forEach(e => { const k = e.payerId ? String(e.payerId) : 'name:' + (e.payerName || 'Other');
             if (!all[k]) { const p = (payers || []).find(x => String(x.id) === String(e.payerId)); all[k] = (p && p.name) || e.payerName || 'Other'; } });
         const options = ['<option value="">Nobody</option>'].concat(Object.entries(all).map(([k, n]) =>
             `<option value="${esc(k)}"${k === D.payer ? ' selected' : ''}>${esc(n)}</option>`)).join('');
         html +=
-            box('💵 Brought home · ' + D.yr + ' to date',
-                lines.map(([, v]) => row(esc(v.name), fmt(v.amt))).join('') +
-                row('Total brought home', fmt(D.takeHome), { big: true })) +
             box('🏦 Saved before payday (not counted above)',
                 row('401(k), HSA, match and other payroll savings', fmt(D.payroll), { col: savCol }) +
                 `<p style="font-size:12px; padding:6px 12px 0; margin:0;" class="col-muted">These come out of paychecks before take-home. "Left over" also counts money still sitting in checking. A month can go below zero when savings that month came from money already in checking.</p>`) +
