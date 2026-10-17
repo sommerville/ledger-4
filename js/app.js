@@ -134,14 +134,6 @@
             return;
         }
 
-        // 4.8.1: Spending page — sideways steps the year (left = newer, right = older), like the Data page's months
-        if (navStack[navStack.length - 1] === 'spending') {
-            const ae = document.activeElement;
-            if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
-            if (absX > absY * 1.5 && absX >= minSwipe) spStepYear(swipeDistanceX < 0 ? 1 : -1);
-            return;
-        }
-
         // Only horizontal swipes below — no vertical swipes on main pages
         if (absX <= absY * 1.2) return;
         if (absX < minSwipe) return;
@@ -178,6 +170,7 @@
     // Year in Review starts on the current year as Year to Date. Balances use the same math as the Net Worth /
     // Investments monthly snapshots (each account's latest value on or before the month), the savings rate is
     // LC.savingsRate, and every amount goes through fmt(), so Demo Mode scales it. Colors come from retTheme()/tc().
+    let mirSpend = null;     // 4.9.0: the review's Spending numbers, for its ⓘ panel (INFO_PANELS.mirSpending)
     let mirMode = 'month';   // 'month' | 'year'
     let mirMk = null;        // 'YYYY-MM' when mode is month
     let mirYr = null;        // 'YYYY' when mode is year
@@ -265,15 +258,12 @@
         const rate     = LC.savingsRate({ ret, coast }, takeHome);
         const bills    = (expenses || []).filter(inP);
         const spent    = bills.reduce((s, e) => s + (e.amount || 0), 0);
-        // Top 3: single bills for a month; biggest payees (summed) for a year
-        let top;
-        if (isYear) {
-            const by = {};
-            bills.forEach(b => { const n = b.companyName || b.serviceType || 'Bill'; by[n] = (by[n] || 0) + (b.amount || 0); });
-            top = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, a]) => ({ n, a }));
-        } else {
-            top = bills.slice().sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 3).map(b => ({ n: b.companyName || b.serviceType || 'Bill', a: b.amount || 0 }));
-        }
+        // 4.9.0: My spending = take-home − coast − expenses − the partner's take-home (the payer picked in the ⓘ panel,
+        // pf_spendMap.payer). Whatever's left is counted as spent, including money that stayed in checking.
+        const partnerKey = spendPartnerKey();
+        const partnerTH  = partnerKey ? sum(incomeEntries.filter(e => spendPayerKey(e) === partnerKey), e => e.amount) : 0;
+        const mySpend    = takeHome - coast - spent - partnerTH;
+        mirSpend = { takeHome, coast, spent, partnerTH, mySpend, partnerKey, period: isYear ? (key === String(now.getFullYear()) ? key + ' so far' : key) : new Date(key + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' }) };
         // Starting month (4.7.3): the first month on record has no balance before it, so its "change" would just be
         // the money already there. That month shows a starting point instead; the first year measures from the
         // end of that month, and goals already met at the start aren't listed as reached.
@@ -298,7 +288,10 @@
         const name = isYear ? key : new Date(key + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' });
         const sub  = isYear ? (isYTD ? 'Year to date · Jan 1 – ' + now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : (fromFirst ? 'First year on record' : 'Full year')) : (isFirst ? 'First month on record' : '');
         const unit = isYear ? 'year' : 'month';
-        const nMonths = isYear ? (isYTD ? now.getMonth() + 1 : 12) - (firstMk && firstMk.slice(0, 4) === key ? Number(firstMk.slice(5)) - 1 : 0) : 1;   // the first year counts from its first month
+        // The first year counts from its first month. 4.9.0: year to date counts this month as the part that's gone
+        // (Oct 16 = 9.5 months), so the /mo averages don't run low mid-month.
+        const doneSoFar = now.getMonth() + now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const nMonths = isYear ? (isYTD ? doneSoFar : 12) - (firstMk && firstMk.slice(0, 4) === key ? Number(firstMk.slice(5)) - 1 : 0) : 1;
 
         // Sizes scale with screen height so the whole review fits on one screen
         const fs = (min, vh, max) => `clamp(${min}px,${vh}vh,${max}px)`;
@@ -330,7 +323,11 @@
                 ${tile('EARNED', fmt(takeHome), isYear && takeHome ? fmt(takeHome / nMonths) + '/mo avg' : (gross ? fmt(gross) + ' gross' : 'take-home'), T.textClr)}
                 ${tile('SAVED', fmt(added), rate !== null ? Math.round(rate * 100) + '% savings rate' : '', T.valClr)}
             </div>
-            ${card('BILLS PAID', `<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:${fs(16, 2.4, 20)};font-weight:800;color:${T.textClr}">${fmt(spent)}</span><span style="font-size:11px;color:${T.mutedClr}">${bills.length} ${bills.length === 1 ? 'bill' : 'bills'}${isYear && bills.length ? ' · ' + fmt(spent / nMonths) + '/mo' : ''}</span></div>` + top.map(b => row(esc(b.n), fmt(b.a))).join(''))}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none">
+                ${tile('EXPENSES', fmt(spent), isYear && spent ? fmt(spent / nMonths) + '/mo avg' : '', T.textClr)}
+                ${tile(`SPENDING <button type="button" class="info-btn" onclick="event.stopPropagation();openInfo('mirSpending')" aria-label="How this is calculated" style="margin-left:4px;vertical-align:middle">i</button>`,
+                       (mySpend < 0 ? '−' : '') + fmt(Math.abs(mySpend)), isYear && nMonths ? fmt(mySpend / nMonths) + '/mo avg' : '', mySpend < 0 ? neg : T.textClr)}
+            </div>
             ${isFirst ? card('STARTING POINT',
                 row('Portfolio', fmt(p1)) +
                 row('Net worth', fmt(n1)) +
@@ -967,7 +964,7 @@ tsBar.textContent = '🕐 ' + d.toLocaleDateString('en-US', {weekday:'short', ye
         const [page, overlay] = location.split(':');
 
         // Hide all pages (remove any lingering entrance animation class too)
-        const allPageIds = ['setupPage', 'dataPage', 'loansPage', 'homePage', 'incomePage', 'incomeStatsPage', 'accountsPage', 'retirementPage', 'expensesPage', 'networthPage', 'debtPage', 'realEstatePage', 'firePage', 'calculatorPage', 'budgetPage', 'spendingPage', 'goalsPage'];
+        const allPageIds = ['setupPage', 'dataPage', 'loansPage', 'homePage', 'incomePage', 'incomeStatsPage', 'accountsPage', 'retirementPage', 'expensesPage', 'networthPage', 'debtPage', 'realEstatePage', 'firePage', 'calculatorPage', 'budgetPage', 'goalsPage'];
         allPageIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -1010,7 +1007,6 @@ el.addEventListener('animationend', () => el.classList.remove('page-entering'), 
                 runCompoundCalc();
             }),
             'budget':     () => showPage('budgetPage', () => { seedBudgetCalc(); runBudgetCalc(); }),
-            'spending':   () => showPage('spendingPage', () => updateSpendingPage()),   // 4.8.0: the home Spending widget
             'data':       () => showPage('dataPage', () => { ddBuildMonthDropdown(); }),   // v3.3: full page (was dataDumpModal)
             'loans':      () => showPage('loansPage', () => updateLoansPage()),   // 3.5.4: a regular page
             'allgoals':   () => showPage('goalsPage', () => updateGoalsOverview()),   // 3.8: every goal's next step

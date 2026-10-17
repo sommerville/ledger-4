@@ -40,7 +40,7 @@
     // Page 2 icon definitions
     let homeIconsP2 = [
 { id:'compound', label:'Compound Int.',     cls:'icon-compound', fn:"openCalculator('compound')" },
-{ id:'budget',   label:'Spending',          cls:'icon-budget',   fn:"navigate('spending')" },   // 4.8.0: was the Budget calculator (now a button on the Spending page)
+{ id:'budget',   label:'Budget',            cls:'icon-budget',   fn:"openCalculator('budget')" },
 { id:'loans',    label:'Loans',             cls:'icon-loans',    fn:"openLoans()" },   // v3.4
 { id:'goals',    label:'Goals',             cls:'icon-goals',    fn:"openGoals()" },   // 3.8
 { id:'monthreview', label:'Month in Review', cls:'icon-monthreview', fn:"openMonthReview()" },   // 4.7.0: was a link inside Summary

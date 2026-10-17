@@ -501,31 +501,6 @@
     </div>
 </div>
 
-<!-- Spending Page (4.8.0): the home "Spending" widget. Year to date from logged data; the Budget calculator opens from here -->
-<div id="spendingPage" class="container u-hidden">
-    <div class="header">
-        <h1>Spending</h1>
-        <div class="total-balance" id="spPageTotal">$0</div>
-        <p class="balance-label" id="spPageLabel">Household spending this year</p>
-        <div style="font-size:15px; color:rgba(255,255,255,0.75); margin-top:6px;" id="spPageSub"></div>
-    </div>
-    <div class="content">
-        <div id="spYearNav" class="sp-year-nav"></div>
-        <div class="chart-controls" id="spChartControls">
-            <button data-spview="household" class="active" onclick="setSpendView('household')">Household</button>
-            <button data-spview="me" onclick="setSpendView('me')">Me</button>
-            <button data-spview="partner" onclick="setSpendView('partner')">Partner</button>
-        </div>
-        <div class="chart-container" title="Spending so far this year, month by month">
-            <canvas id="spendChart"></canvas>
-        </div>
-        <button class="action-btn" onclick="openCalculator('budget')">🧮 Budget Calculator</button>
-        <div class="u-mt16">
-            <div id="spendingMap"></div>
-        </div>
-    </div>
-</div>
-
 <!-- Debt Page -->
 <div id="debtPage" class="container u-hidden">
     <div class="header">
@@ -918,7 +893,7 @@
         <div class="settings-section">
             <h3>About</h3>
             <div id="settingsAboutCard" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
-                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.8.2 &nbsp;·&nbsp; Mobile</div>
+                <div class="about-version" style="font-size:12px;color:rgba(255,255,255,0.45);font-weight:600;letter-spacing:0.5px;margin-bottom:10px;font-family:-apple-system,sans-serif;">Ledger 4.9.0 &nbsp;·&nbsp; Mobile</div>
                 <div class="about-divider" style="height:1px;background:rgba(255,255,255,0.08);margin-bottom:10px;"></div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <span style="font-size:18px;">🤖</span>

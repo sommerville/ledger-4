@@ -64,7 +64,26 @@
         if (s.rows) h += s.rows.map(r => `<div class="info-row${r[2] ? ' total' : ''}"><span>${_infoEsc(r[0])}</span><span>${_infoEsc(r[1])}</span></div>`).join('');
         if (s.formula) h += `<div class="info-formula">${_infoEsc(s.formula)}</div>`;
         if (s.notes) h += `<ul class="info-notes">${s.notes.map(n => `<li>${_infoEsc(n)}</li>`).join('')}</ul>`;
+        if (s.html) h += s.html;   // 4.9.0: a control built by the panel itself (already escaped)
         return h + '</div>';
+    }
+
+    // ─── My spending (4.9.0: Month / Year in Review → Spending tile) ───
+    // take-home − coast − expenses − one partner's take-home. The partner is a payer picked in the tile's ⓘ panel,
+    // saved in pf_spendMap.payer (UI only, not exported; the key the 4.8.x Spending page used).
+    function spendPayerKey(e) { return e.payerId ? String(e.payerId) : 'name:' + (e.payerName || 'Other'); }
+    function spendPartnerKey() {
+        let s = {};
+        try { s = JSON.parse(localStorage.getItem('pf_spendMap') || '{}') || {}; } catch (e) {}
+        return s.payer && (incomeEntries || []).some(e => spendPayerKey(e) === s.payer) ? s.payer : '';
+    }
+    function setSpendPartner(key) {
+        let s = {};
+        try { s = JSON.parse(localStorage.getItem('pf_spendMap') || '{}') || {}; } catch (e) {}
+        s.payer = key || '';
+        try { localStorage.setItem('pf_spendMap', JSON.stringify(s)); } catch (e) {}
+        if (typeof mirIsOpen === 'function' && mirIsOpen()) renderMonthReview();
+        openInfo('mirSpending');
     }
     const _$ = n => fmt(n);                                         // respects Demo Mode
     const _pct = (n, d = 1) => (n * 100).toFixed(d) + '%';
@@ -89,6 +108,28 @@
     function _taxDiv() { return LC.taxDivisor(taxRatePct); }
 
     const INFO_PANELS = {
+        mirSpending() {
+            const m = mirSpend || { takeHome: 0, coast: 0, spent: 0, partnerTH: 0, mySpend: 0, partnerKey: '', period: '' };
+            const names = {};
+            (incomeEntries || []).forEach(e => { const k = spendPayerKey(e);
+                if (!names[k]) { const p = (payers || []).find(x => String(x.id) === String(e.payerId)); names[k] = (p && p.name) || e.payerName || 'Other'; } });
+            const opts = ['<option value="">Nobody</option>'].concat(Object.entries(names).map(([k, n]) =>
+                `<option value="${_infoEsc(k).replace(/"/g, '&quot;')}"${k === m.partnerKey ? ' selected' : ''}>${_infoEsc(n)}</option>`)).join('');
+            return { title: '🧾 My Spending', sections: [
+                { h: m.period, rows: [
+                    ['Brought home (take-home)', _$(m.takeHome)],
+                    ['− Coast savings', _$(m.coast)],
+                    ['− Expenses (bills logged)', _$(m.spent)],
+                    ...(m.partnerKey ? [['− ' + (names[m.partnerKey] || 'Partner') + ' take-home', _$(m.partnerTH)]] : []),
+                    ['My spending', (m.mySpend < 0 ? '−' : '') + _$(Math.abs(m.mySpend)), true],
+                ] },
+                { h: 'Partner’s paychecks', notes: ['Their whole take-home counts as their spending, so it comes off before what’s left is yours.'],
+                  html: `<select onchange="setSpendPartner(this.value)" style="width:100%;padding:8px;border-radius:6px;font-size:14px;margin-top:6px">${opts}</select>` },
+                { h: 'Good to know', notes: [
+                    'Payroll savings (401(k), HSA, match) never reach take-home, so they aren’t part of this.',
+                    'Money that stays in checking counts as spent, and a month can go below zero when savings that month came from money already in checking.'] },
+            ] };
+        },
         fullFire() {
             const S = getAnnualSpending(), wr = _wr(), P = _latestBal(() => true);
             const goal = S / _taxDiv() / wr, sv = getT12Savings();
@@ -543,241 +584,6 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         } else {
             document.getElementById('budgetComparison').innerHTML = '';
         }
-    }
-
-    // ─── Spending page (4.8.0; the 4.7.13 Spending Map moved here from Budget) ───
-    // The home "Spending" widget. This year to date, from logged data only:
-    //   Household = take-home (every income entry) − coast contributions   (bills + everyday spending)
-    //   Partner   = the take-home of one chosen payer (e.g. a spouse's paychecks, all counted as spent)
-    //   Me        = take-home − coast − logged bills − Partner                (what's left)
-    // Payroll savings (retirementContribs) never reach take-home, so they're shown apart and not subtracted.
-    // Settings live in pf_spendMap { view, payer, me, partner } (UI only, not exported). No LC math changes.
-    let spendChart = null;
-    let spYr = null;   // 4.8.1: the year shown ('YYYY'); starts on this year. Sideways swipes / ‹ › step it.
-    // Years with anything logged, oldest first, never past this year
-    function spYears() {
-        const cur = String(new Date().getFullYear());
-        return [...new Set([incomeEntries, coastContribs, expenses].flatMap(l => (l || []).map(e => e && e.date && e.date.slice(0, 4))).filter(Boolean))]
-            .filter(y => y <= cur).sort();
-    }
-    // dir +1 = newer year, -1 = older (a left swipe is newer, like the Data page's months)
-    function spStepYear(dir) {
-        const ys = spYears(), i = ys.indexOf(spYr), j = i + dir;
-        if (i < 0 || j < 0 || j >= ys.length) return;
-        spYr = ys[j];
-        updateSpendingPage();
-        const pg = document.getElementById('spendingPage');
-        if (pg) pg.scrollTop = 0;
-        window.scrollTo(0, 0);
-    }
-    function spGet() {
-        let s = {};
-        try { s = JSON.parse(localStorage.getItem('pf_spendMap') || '{}') || {}; } catch (e) {}
-        return { view: s.view || 'household', payer: s.payer || '', me: s.me || 'Me', partner: s.partner || 'Partner' };
-    }
-    function spSet(patch) {
-        const s = Object.assign(spGet(), patch);
-        try { localStorage.setItem('pf_spendMap', JSON.stringify(s)); } catch (e) {}
-        updateSpendingPage();
-    }
-    function setSpendView(v) { spSet({ view: v }); }
-    function setSpendingMapPayer(id) { spSet({ payer: id }); }
-    function setSpendName(which, val) {
-        const v = String(val || '').trim().slice(0, 20);
-        spSet(which === 'me' ? { me: v || 'Me' } : { partner: v || 'Partner' });
-    }
-    // Everything the page shows for one year: totals, take-home by payer, and month-by-month amounts
-    function spendingData(yr) {
-        const now = new Date(), curYr = String(now.getFullYear());
-        yr = yr || curYr;
-        const isCur = yr === curYr;
-        const inYr = e => e && e.date && e.date.slice(0, 4) === yr;
-        const daysInMo = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const months = isCur ? now.getMonth() + now.getDate() / daysInMo : 12;   // months covered, for the per-month figure
-        const st = spGet();
-        const payerName = id => { const p = (payers || []).find(x => String(x.id) === String(id)); return p ? p.name : null; };
-        const keyOf = e => e.payerId ? String(e.payerId) : 'name:' + (e.payerName || 'Other');
-        const byPayer = {};
-        (incomeEntries || []).filter(inYr).forEach(e => {
-            const k = keyOf(e);
-            if (!byPayer[k]) byPayer[k] = { name: (e.payerId && payerName(e.payerId)) || e.payerName || 'Other', amt: 0 };
-            byPayer[k].amt += e.amount || 0;
-        });
-        const payer = st.payer && (incomeEntries || []).some(e => keyOf(e) === st.payer) ? st.payer : '';
-        // This year's months with anything logged, newest first, never past this month (the month cards, 4.8.1)
-        const curMk = moKey(now);
-        const allMonths = [...new Set([incomeEntries, coastContribs, expenses].flatMap(l => (l || []).map(e => e && e.date && e.date.slice(0, 7))).filter(Boolean))]
-            .filter(m => m <= curMk && m.slice(0, 4) === yr).sort().reverse();
-        // Month by month (Jan → this month, or → Dec for a finished year)
-        const mks = [];
-        for (let m = 1; m <= (isCur ? now.getMonth() + 1 : 12); m++) mks.push(yr + '-' + String(m).padStart(2, '0'));
-        const inMo = mk => e => e && e.date && e.date.slice(0, 7) === mk;
-        const mSum = (list, mk, f) => (list || []).filter(inMo(mk)).reduce((s, e) => s + (f(e) || 0), 0);
-        const partnerInc = payer ? (incomeEntries || []).filter(e => keyOf(e) === payer) : [];
-        const rows = mks.map(mk => {
-            const th = mSum(incomeEntries, mk, e => e.amount);
-            const co = mSum(coastContribs, mk, e => e.amount);
-            const bi = mSum(expenses, mk, e => e.amount);
-            const pa = mSum(partnerInc, mk, e => e.amount);
-            return { mk, household: th - co, partner: pa, me: th - co - bi - pa };
-        });
-        const tot = k => rows.reduce((s, r) => s + r[k], 0);
-        return {
-            yr, isCur, months, st, byPayer, payer, rows, allMonths,
-            takeHome: Object.values(byPayer).reduce((s, v) => s + v.amt, 0),
-            coast:    (coastContribs || []).filter(inYr).reduce((s, e) => s + (e.amount || 0), 0),
-            bills:    (expenses || []).filter(inYr).reduce((s, e) => s + (e.amount || 0), 0),
-            payroll:  (retirementContribs || []).filter(inYr).reduce((s, e) => s + ((e.totalAmount || e.amount) || 0), 0),
-            household: tot('household'), partner: tot('partner'), me: tot('me')
-        };
-    }
-    function updateSpendingPage() {
-        const ys = spYears(), curYr = String(new Date().getFullYear());
-        if (!spYr || !ys.includes(spYr)) spYr = ys.includes(curYr) || !ys.length ? curYr : ys[ys.length - 1];
-        const D = spendingData(spYr), st = D.st;
-        const nav = document.getElementById('spYearNav');
-        if (nav) {
-            const i = ys.indexOf(spYr);
-            nav.innerHTML = `<button onclick="spStepYear(-1)" ${i <= 0 ? 'disabled' : ''} aria-label="Older year">‹</button>
-                <span>${spYr}</span>
-                <button onclick="spStepYear(1)" ${i < 0 || i >= ys.length - 1 ? 'disabled' : ''} aria-label="Newer year">›</button>`;
-        }
-        const view = (st.view !== 'household' && !D.payer) ? 'household' : st.view;   // no partner picked yet → Household
-        const names = { household: 'Household', me: st.me, partner: st.partner };
-        document.querySelectorAll('[data-spview]').forEach(b => {
-            const v = b.getAttribute('data-spview');
-            b.textContent = names[v];
-            b.classList.toggle('active', v === view);
-        });
-        const total = D[view];
-        const tEl = document.getElementById('spPageTotal'), lEl = document.getElementById('spPageLabel'), sEl = document.getElementById('spPageSub');
-        if (tEl) tEl.textContent = fmt(total);
-        if (lEl) lEl.textContent = (view === 'household' ? 'Household' : names[view] + '’s') + ' spending · ' + D.yr + (D.isCur ? ' to date' : '');
-        if (sEl) sEl.textContent = D.months > 0 ? '≈ ' + fmt(total / D.months) + ' a month' : '';
-        buildSpendChart(D, view, names[view]);
-        renderSpendingMap(D);
-    }
-    // Running total through the year (like the Net Worth line), so a lumpy month doesn't swamp the picture
-    function buildSpendChart(D, view, name) {
-        const canvas = document.getElementById('spendChart');
-        if (!canvas) return;
-        if (spendChart) { spendChart.destroy(); spendChart = null; }
-        if (!D.rows.length) return;
-        const scale = demoMode ? 0.01 : 1;
-        let run = 0;
-        const data = D.rows.map(r => Math.round((run += r[view]) * scale));
-        const labels = D.rows.map(r => new Date(r.mk + '-02').toLocaleDateString('en-US', { month: 'short' }));
-        const col = tc('#D4AF37'), bg = tc('rgba(212,175,55,0.15)'), tick = tc('#C0C0C0'), grid = tc('#5A6F83');
-        const fmtTick = v => { const a = Math.abs(v); return a >= 1e6 ? '$' + Math.round(v / 1e6) + 'M' : a >= 1e3 ? '$' + Math.round(v / 1e3) + 'k' : '$' + Math.round(v); };
-        spendChart = new Chart(canvas.getContext('2d'), {
-            type: 'line',
-            data: { labels, datasets: [{ label: name, data, borderColor: col, backgroundColor: bg, tension: 0.3, fill: true, pointRadius: 3, pointHoverRadius: 5 }] },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.parsed.y / scale) + ' so far' } } },
-                scales: { x: { ticks: { color: tick }, grid: { color: grid } },
-                          y: { beginAtZero: true, ticks: { callback: fmtTick, color: tick }, grid: { color: grid } } }
-            }
-        });
-    }
-    // One period's numbers (a month 'YYYY-MM' or a year 'YYYY'), for the month cards and the year-end cards (4.8.1)
-    function spPeriod(key, st) {
-        const inP = e => e && e.date && e.date.slice(0, key.length) === key;
-        const sum = (list, f) => (list || []).filter(inP).reduce((s, e) => s + (f(e) || 0), 0);
-        const keyOf = e => e.payerId ? String(e.payerId) : 'name:' + (e.payerName || 'Other');
-        const payerName = id => { const p = (payers || []).find(x => String(x.id) === String(id)); return p ? p.name : null; };
-        const byPayer = {};
-        (incomeEntries || []).filter(inP).forEach(e => {
-            const k = keyOf(e);
-            if (!byPayer[k]) byPayer[k] = { name: (e.payerId && payerName(e.payerId)) || e.payerName || 'Other', amt: 0 };
-            byPayer[k].amt += e.amount || 0;
-        });
-        const takeHome = sum(incomeEntries, e => e.amount), coast = sum(coastContribs, e => e.amount), bills = sum(expenses, e => e.amount);
-        const partner = st.payer ? sum((incomeEntries || []).filter(e => keyOf(e) === st.payer), e => e.amount) : 0;
-        return { byPayer, takeHome, coast, bills, partner, payroll: sum(retirementContribs, e => e.totalAmount || e.amount),
-                 household: takeHome - coast, left: takeHome - coast - bills, me: takeHome - coast - bills - partner };
-    }
-    // Under the chart: this year's "Where it went", then one card per month (newest first, like Investments'
-    // Monthly Snapshots) with a "Year end" card after each December, then take-home by payer, payroll savings,
-    // and Who's who. Each card's right side is the chosen view's amount (Household / Me / Partner).
-    function renderSpendingMap(D) {
-        const el = document.getElementById('spendingMap');
-        if (!el) return;
-        D = D || spendingData();
-        const st = D.st;
-        const view = (st.view !== 'household' && !D.payer) ? 'household' : st.view;
-        const isSunset = (document.body.classList.contains('sunset-theme') || document.body.classList.contains('navy-theme'));
-        const cardBg   = isSunset ? tc('rgba(35,8,4,0.90)')  : '#1A2A42';
-        const subBg    = isSunset ? tc('rgba(50,12,6,0.85)') : 'rgba(10,26,47,0.7)';
-        const border   = isSunset ? tc('#5A2018')             : '#2A3A52';
-        const headColor= isSunset ? tc('#F5C030')             : '#D4AF37';
-        const txtMain  = isSunset ? tc('#F0D0A0')             : '#E0E0E0';
-        const txtSub   = isSunset ? tc('#C09070')             : '#8A8F98';
-        const negCol   = isSunset ? tc('#E05050')             : '#E57373';
-        const savCol   = isSunset ? tc('#6AB0E0')             : '#5BA8D8';
-        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-        const money = n => (n < 0 ? '−' : '') + fmt(Math.abs(n));
-        const minus = n => '− ' + fmt(n);
-
-        const row = (label, val, opts = {}) => `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:${opts.big ? '12px' : '7px'} 12px;${opts.big ? ` margin-top:6px; background:${subBg}; border-radius:8px;` : ''}">
-                <span style="font-size:${opts.big ? 15 : 14}px; color:${opts.big ? txtMain : txtSub};${opts.big ? ' font-weight:600;' : ''}">${label}</span>
-                <span style="font-size:${opts.big ? 19 : 15}px; font-weight:${opts.big ? 700 : 600}; color:${opts.col || txtMain};">${val}</span>
-            </div>`;
-        const box = (title, body) => `
-            <div style="background:${cardBg}; border-radius:12px; padding:14px 6px; margin-bottom:14px;">
-                <h3 style="font-size:16px; margin:0 12px 10px; color:${headColor};">${title}</h3>${body}
-            </div>`;
-        const field = (label, ctl) => `
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 12px;">
-                <span style="font-size:13px; color:${txtSub};">${label}</span>${ctl}
-            </div>`;
-        const inp = 'padding:6px 8px; border-radius:6px; font-size:14px; width:140px;';
-
-        // Inside every card: the same rows as the year-to-date breakdown, nothing more (Darrin, 4.8.1).
-        // months = how many months the card covers, for the ≈ per-month lines (none on a single month)
-        const cardBody = (P, months) => {
-            const pm = n => months > 1 ? `<div style="text-align:right; font-size:12px; color:${txtSub}; padding:0 12px 4px;">≈ ${fmt(n / months)}/mo</div>` : '';
-            return row('Brought home', fmt(P.takeHome)) +
-                row('Coast savings', minus(P.coast), { col: savCol }) +
-                row('Household spending', money(P.household), { big: true }) + pm(P.household) +
-                row('Bills logged', minus(P.bills), { col: negCol }) +
-                row('Left over (everyday spending)', money(P.left), { big: true }) + pm(P.left) +
-                (D.payer ? row(esc(st.partner) + '’s take-home', minus(P.partner), { col: negCol }) +
-                           row(esc(st.me) + '’s spending', money(P.me), { big: true }) + pm(P.me) : '');
-        };
-        const rightAmt = P => `<span style="font-size:14px;font-weight:700;color:${P[view] < 0 ? negCol : txtMain};">${money(P[view])}</span>`;
-
-        if (!D.takeHome && !D.bills && !D.coast && !D.allMonths.length) {
-            el.innerHTML = box('🗺️ Spending Map · ' + D.yr, `<p style="font-size:13px; padding:0 12px;" class="col-muted">Nothing logged yet.</p>`);
-            return;
-        }
-
-        // One year at a time (‹ › or a sideways swipe): the year's card, then its months newest first
-        const fmtMK = mk => new Date(mk + '-02').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        const curMk = moKey(new Date());
-        const card = (id, title, P, months) => snapCard('sp', id, cardBg, border, txtMain, title, rightAmt(P), cardBody(P, months), 6);
-        // The year's card starts open: Year to date for this year, Year end for a finished one
-        let cards = card('yr', D.yr + (D.isCur ? ' · Year to date' : ' · Year end'), spPeriod(D.yr, st), D.months)
-            .replace('id="sp-snap-yr" style="display:none;', 'id="sp-snap-yr" style="display:block;');
-        D.allMonths.forEach(mk => { cards += card(mk, fmtMK(mk) + (mk === curMk ? ' · so far' : ''), spPeriod(mk, st), 1); });
-        let html = `<div class="u-mb16">${cards}</div>`;
-
-        // Then payroll savings and Who's who (take-home by payer is shown elsewhere in the app)
-        const all = {};
-        (incomeEntries || []).forEach(e => { const k = e.payerId ? String(e.payerId) : 'name:' + (e.payerName || 'Other');
-            if (!all[k]) { const p = (payers || []).find(x => String(x.id) === String(e.payerId)); all[k] = (p && p.name) || e.payerName || 'Other'; } });
-        const options = ['<option value="">Nobody</option>'].concat(Object.entries(all).map(([k, n]) =>
-            `<option value="${esc(k)}"${k === D.payer ? ' selected' : ''}>${esc(n)}</option>`)).join('');
-        html +=
-            box('🏦 Saved before payday (not counted above)',
-                row('401(k), HSA, match and other payroll savings', fmt(D.payroll), { col: savCol }) +
-                `<p style="font-size:12px; padding:6px 12px 0; margin:0;" class="col-muted">These come out of paychecks before take-home. "Left over" also counts money still sitting in checking. A month can go below zero when savings that month came from money already in checking.</p>`) +
-            box('⚙️ Who’s who',
-                field('Your name', `<input type="text" value="${esc(st.me)}" maxlength="20" onchange="setSpendName('me', this.value)" style="${inp}">`) +
-                field('Partner’s name', `<input type="text" value="${esc(st.partner)}" maxlength="20" onchange="setSpendName('partner', this.value)" style="${inp}">`) +
-                field('Partner’s paychecks', `<select onchange="setSpendingMapPayer(this.value)" style="${inp}">${options}</select>`));
-        el.innerHTML = html;
     }
 
     // ─── Yearly Goals ────────────────────────────────────────
