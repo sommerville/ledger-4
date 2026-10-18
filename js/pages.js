@@ -129,7 +129,7 @@ return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             const investRows = accounts.map(acct => {
                 const v = latestForAcct(acct.id, entries, mk);
                 invest += v;
-                return v > 0 ? `<div style="display:flex;justify-content:space-between;font-size:11px;color:${subClr};padding:1px 0;"><span>${acct.institution || acct.name}</span><span>${fmt(v)}</span></div>` : '';
+                return v > 0 ? `<div style="display:flex;justify-content:space-between;font-size:11px;color:${subClr};padding:1px 0;"><span>${acctDisplayName(acct)}</span><span>${fmt(v)}</span></div>` : '';
             }).filter(Boolean).join('');
 
             // Debt by account
@@ -912,7 +912,7 @@ const fmtMK = mk => new Date(mk + '-02').toLocaleDateString('en-US', { month: 'l
                 total += v;
                 return v > 0
                     ? `<div style="display:flex;justify-content:space-between;font-size:11px;color:${subClr};padding:1px 0;">
-                        <span>${acct.institution || acct.name}</span><span>${fmt(v)}</span>
+                        <span>${acctDisplayName(acct)}</span><span>${fmt(v)}</span>
                        </div>`
                     : '';
             }).filter(Boolean).join('');

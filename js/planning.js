@@ -109,7 +109,7 @@
 
     const INFO_PANELS = {
         mirSpending() {
-            const m = mirSpend || { takeHome: 0, coast: 0, spent: 0, partnerTH: 0, mySpend: 0, partnerKey: '', period: '' };
+            const m = mirSpend || { takeHome: 0, coast: 0, spent: 0, partnerTH: 0, lent: 0, repaid: 0, mySpend: 0, partnerKey: '', period: '' };
             const names = {};
             (incomeEntries || []).forEach(e => { const k = spendPayerKey(e);
                 if (!names[k]) { const p = (payers || []).find(x => String(x.id) === String(e.payerId)); names[k] = (p && p.name) || e.payerName || 'Other'; } });
@@ -121,13 +121,20 @@
                     ['− Coast savings', _$(m.coast)],
                     ['− Expenses (bills logged)', _$(m.spent)],
                     ...(m.partnerKey ? [['− ' + (names[m.partnerKey] || 'Partner') + ' take-home', _$(m.partnerTH)]] : []),
+                    ...(m.lent ? [['− Money lent out (owed to you)', _$(m.lent)]] : []),
+                    ...(m.repaid ? [['+ Loan repayments received', _$(m.repaid)]] : []),
                     ['My spending', (m.mySpend < 0 ? '−' : '') + _$(Math.abs(m.mySpend)), true],
                 ] },
                 { h: 'Partner’s paychecks', notes: ['Their whole take-home counts as their spending, so it comes off before what’s left is yours.'],
                   html: `<select onchange="setSpendPartner(this.value)" style="width:100%;padding:8px;border-radius:6px;font-size:14px;margin-top:6px">${opts}</select>` },
+                { h: 'Why a month can be negative', notes: [
+                    'Money is often earned in one month and saved the next: a bonus check deposited later, or a paycheck moved to savings after the month ends.',
+                    'That month then shows more saved than it brought in, so spending dips below zero, and the month before looks high by the same amount.',
+                    'The two cancel out, so the year’s total and the per-month average in Year in Review are the numbers to trust.'] },
                 { h: 'Good to know', notes: [
                     'Payroll savings (401(k), HSA, match) never reach take-home, so they aren’t part of this.',
-                    'Money that stays in checking counts as spent, and a month can go below zero when savings that month came from money already in checking.'] },
+                    'Money you lend out (Loans) isn’t spending; repayments count as money back in.',
+                    'Money that stays in checking counts as spent until it’s moved to savings.'] },
             ] };
         },
         fullFire() {
@@ -162,7 +169,7 @@ Progress = portfolio ÷ Full FIRE
             const S = getAnnualSpending(), M = getAnnualMortgage(), wr = _wr();
             const T = _latestBal(a => a.type === 'taxable'), goal = (S - M) / _taxDiv() / wr, sv = getT12Savings();
             const mo = projectMonthsToGoal(T, goal, sv.coastMonthly);
-            const names = accounts.filter(a => a.type === 'taxable').map(a => a.institution || a.name).join(' + ');
+            const names = accounts.filter(a => a.type === 'taxable').map(a => acctDisplayName(a)).join(' + ');
             return { title: '🏠 Coast FIRE (No Mortgage)', sections: [
                 _spendingSection(),
                 { h: 'Formula', formula:

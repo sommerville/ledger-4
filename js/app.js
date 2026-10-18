@@ -262,8 +262,11 @@
         // pf_spendMap.payer). Whatever's left is counted as spent, including money that stayed in checking.
         const partnerKey = spendPartnerKey();
         const partnerTH  = partnerKey ? sum(incomeEntries.filter(e => spendPayerKey(e) === partnerKey), e => e.amount) : 0;
-        const mySpend    = takeHome - coast - spent - partnerTH;
-        mirSpend = { takeHome, coast, spent, partnerTH, mySpend, partnerKey, period: isYear ? (key === String(now.getFullYear()) ? key + ' so far' : key) : new Date(key + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' }) };
+        // 4.9.1: money lent out isn't spending (the Ledger tracks it as owed to you); repayments are money back in
+        const lent       = sum((loanEvents || []).filter(e => e.type === 'lend'), e => e.amount);
+        const repaid     = sum((loanEvents || []).filter(e => e.type === 'payment'), e => e.amount);
+        const mySpend    = takeHome + repaid - coast - spent - partnerTH - lent;
+        mirSpend = { takeHome, coast, spent, partnerTH, lent, repaid, mySpend, partnerKey, period: isYear ? (key === String(now.getFullYear()) ? key + ' so far' : key) : new Date(key + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' }) };
         // Starting month (4.7.3): the first month on record has no balance before it, so its "change" would just be
         // the money already there. That month shows a starting point instead; the first year measures from the
         // end of that month, and goals already met at the start aren't listed as reached.
@@ -429,7 +432,7 @@ now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', 
             .map(({ acct, val }) => {
                 const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
                 return `<div class="overview-row">
-                    <span class="row-label">${acct.nickname || acct.institution} <span style="font-size:10px;opacity:0.5;">${acct.type.toUpperCase()}</span></span>
+                    <span class="row-label">${acct.nickname || acctDisplayName(acct)} <span style="font-size:10px;opacity:0.5;">${acct.type.toUpperCase()}</span></span>
                     <span class="row-value">${fmtR(val)} <span style="font-size:11px;opacity:0.5;">${pct}%</span></span>
                 </div>`;
             }).join('') || '<div class="overview-row"><span class="row-label">No accounts</span></div>';

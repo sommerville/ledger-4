@@ -313,6 +313,14 @@
     }
 
     // ─── Helpers ─────────────────────────────────────────────
+    // 4.9.3: an investment account's label, always "Institution · Name" (e.g. Sofi · HYSA, M1 · FIRE), so accounts at
+    // the same place never look like duplicates. Just one of them when the other is missing or they're the same.
+    function acctDisplayName(acct) {
+        if (!acct) return '';
+        const inst = acct.institution || '', name = acct.name || '';
+        return inst && name && inst !== name ? inst + ' · ' + name : (inst || name);
+    }
+
     function fmt(n) {
         const value = demoMode ? n * 0.01 : n;
 return new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(Math.round(value));
