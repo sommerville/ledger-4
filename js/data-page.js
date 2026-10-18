@@ -338,8 +338,26 @@
         const v = value === '' || value == null ? '' : ' value="' + ddE(value) + '"';
         const step = kind === 'oz' ? '0.001' : '0.01';
         return '<span class="dd-money' + (kind === 'oz' ? ' oz' : '') + (kind === 'net' ? ' net' : '') + '"><input type="number"' + v
-             + ' placeholder="' + (kind === 'oz' ? '0' : '0.00') + '" step="' + step + '"' + (kind === 'signed' ? '' : ' inputmode="decimal"') + ' enterkeyhint="done" ' + (ddDemo() ? 'readonly ' : '') + (attrs || '') + (/\bclass="/.test(attrs || '') ? '' : ' class="dd-in"') + '></span>';
+             + ' placeholder="' + (kind === 'oz' ? '0' : '0.00') + '" step="' + step + '" inputmode="decimal" enterkeyhint="done" ' + (ddDemo() ? 'readonly ' : '') + (attrs || '') + (/\bclass="/.test(attrs || '') ? '' : ' class="dd-in"') + '></span>';
     }
+    // 4.9.6: coast amount with a +/− button in front (the phone's number pad has no minus key). The box always shows a
+    // positive number; the row's data-neg="1" makes it a withdrawal, applied on save (ddSignedVal).
+    function ddSigned(value, attrs) {
+        const neg = value !== '' && value != null && Number(value) < 0;
+        const v = value === '' || value == null ? '' : Math.abs(Number(value));
+        const btn = ddDemo() ? '' : '<button type="button" class="dd-sign" onclick="ddFlipSign(this)" aria-label="Deposit or withdrawal">' + (neg ? '−' : '+') + '</button>';
+        return btn + ddIn(v, (attrs || '') + (neg ? ' data-neg="1"' : ''));
+    }
+    function ddFlipSign(btn) {
+        const row = btn.closest('.dd-entry-row'), inp = row && row.querySelector('input[type="number"]');
+        if (!inp) return;
+        const neg = inp.dataset.neg !== '1';
+        if (neg) inp.dataset.neg = '1'; else delete inp.dataset.neg;
+        btn.textContent = neg ? '−' : '+';
+        row.classList.toggle('dd-neg', neg);
+        inp.dispatchEvent(new Event('input', { bubbles: true }));   // marks the section Unsaved
+    }
+    function ddSignedVal(inp, v) { return inp && inp.dataset.neg === '1' ? -Math.abs(v) : v; }
     function ddXBtn(onclick) {
         if (ddDemo()) return '';   // 4.0.5: view-only
         return '<button type="button" class="dd-x-btn" aria-label="Remove" onclick="' + onclick + '">' + DD_ICON.x + '</button>';
@@ -789,10 +807,10 @@
         monthCoast.forEach(e => {
             const gi = coastContribs.indexOf(e);
             const acctLabel = coastLabel(e) || 'Contribution';   // 4.9.4: Institution · Name
-            rows += `<div class="dd-entry-row" data-gidx="${gi}" data-section="coast" data-mk="${mk}">
+            rows += `<div class="dd-entry-row${(e.amount || 0) < 0 ? ' dd-neg' : ''}" data-gidx="${gi}" data-section="coast" data-mk="${mk}">
                 ${ddXBtn(`ddCoastDelete(${gi},'${mk}')`)}
                 ${ddLbl(ddE(acctLabel), (e.amount || 0) < 0 ? 'Withdrawal' + (e.note ? ' · ' + ddE(e.note) : '') : (e.note ? ddE(e.note) : ''))}
-                ${ddIn(e.amount, 'data-entry-idx="' + gi + '" data-field="amount"', 'signed')}
+                ${ddSigned(e.amount, 'data-entry-idx="' + gi + '" data-field="amount"')}
             </div>`;
         });
         let blanks = 0;
@@ -807,7 +825,7 @@
             rows += `<div class="dd-entry-row dd-new-row" data-section="coast" data-mk="${mk}" data-account-id="${ddE(a.id)}" data-account-name="${ddE(lbl)}">
                 ${ddXBtn("this.closest('.dd-entry-row').remove()")}
                 ${ddLbl(ddE(lbl), hint, true)}
-                ${ddIn('', '', 'signed')}
+                ${ddSigned('', '')}
             </div>`;
             blanks++;
         });
@@ -1009,7 +1027,7 @@
         const empty = container.querySelector('.dd-empty'); if (empty) empty.remove();
         const xBtn = ddXBtn("this.closest('.dd-entry-row').remove()");
         const open = (list, lbl) => list.filter(a => activeInMonth(a, mk)).map(a => '<option value="'+ddE(a.id)+'">'+ddE(lbl(a))+'</option>').join('');
-        const row  = (attrs, sel) => '<div class="dd-entry-row dd-new-row dd-added" data-section="'+sectionId+'" data-mk="'+mk+'" '+attrs+'>' + xBtn + sel + ddIn('', '', sectionId === 'coast' ? 'signed' : '') + '</div>';   // 4.9.5: coast keypad has a minus key
+        const row  = (attrs, sel) => '<div class="dd-entry-row dd-new-row dd-added" data-section="'+sectionId+'" data-mk="'+mk+'" '+attrs+'>' + xBtn + sel + (sectionId === 'coast' ? ddSigned('', '') : ddIn('', '')) + '</div>';   // 4.9.6: coast rows get the +/− button
         let html = '';
         if (sectionId === 'income') {
             const payerOpts = payers.filter(p => activeInMonth(p, mk)).map(p=>'<option value="p:'+ddE(p.id)+'" data-payer-id="'+ddE(p.id)+'" data-payer-name="'+ddE(p.name)+'" data-type="'+ddE(p.defaultType||'payroll')+'">'+ddE(p.name)+'</option>').join('');
@@ -1182,7 +1200,7 @@
             const inputs = row.querySelectorAll('input[type="number"]');
             const inp = inputs[inputs.length - 1];
             if (!inp) return;
-            const raw = inp.value.trim(), val = parseFloat(raw);
+            const raw = inp.value.trim(), val = ddSignedVal(inp, parseFloat(raw));   // 4.9.6: − button = withdrawal
             if (raw === '' || isNaN(val)) {
                 const label = (row.querySelector('span:not(.dd-x-btn)') || {}).textContent || 'entry';
                 removals.push({ section: sectionId, obj, label: label.replace(/\s+/g, ' ').trim() });
@@ -1264,7 +1282,7 @@
             const numInputs  = row.querySelectorAll('input[type="number"]');
             const textInputs = row.querySelectorAll('input[type="text"]');
             const selects    = row.querySelectorAll('select');
-            const amount     = parseFloat(numInputs[numInputs.length-1] && numInputs[numInputs.length-1].value);
+            const amount     = ddSignedVal(numInputs[numInputs.length-1], parseFloat(numInputs[numInputs.length-1] && numInputs[numInputs.length-1].value));   // 4.9.6
             if (isNaN(amount)) return;
             if (sectionId === 'income') {
                 const incType = row.dataset.type || 'payroll';
