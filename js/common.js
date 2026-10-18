@@ -320,6 +320,12 @@
         const inst = acct.institution || '', name = acct.name || '';
         return inst && name && inst !== name ? inst + ' · ' + name : (inst || name);
     }
+    // 4.9.4: a coast contribution's label, from its coast account (same "Institution · Name" rule), so renaming the
+    // account relabels its history. Falls back to the name saved on the entry for an account that's gone.
+    function coastLabel(e) {
+        const a = (typeof coastAccounts !== 'undefined' ? coastAccounts : []).find(x => String(x.id) === String(e && e.accountId));
+        return a ? acctDisplayName(a) : ((e && (e.accountName || e.institution)) || '—');
+    }
 
     function fmt(n) {
         const value = demoMode ? n * 0.01 : n;

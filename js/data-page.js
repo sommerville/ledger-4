@@ -338,7 +338,7 @@
         const v = value === '' || value == null ? '' : ' value="' + ddE(value) + '"';
         const step = kind === 'oz' ? '0.001' : '0.01';
         return '<span class="dd-money' + (kind === 'oz' ? ' oz' : '') + (kind === 'net' ? ' net' : '') + '"><input type="number"' + v
-             + ' placeholder="' + (kind === 'oz' ? '0' : '0.00') + '" step="' + step + '" inputmode="decimal" enterkeyhint="done" ' + (ddDemo() ? 'readonly ' : '') + (attrs || '') + (/\bclass="/.test(attrs || '') ? '' : ' class="dd-in"') + '></span>';
+             + ' placeholder="' + (kind === 'oz' ? '0' : '0.00') + '" step="' + step + '"' + (kind === 'signed' ? '' : ' inputmode="decimal"') + ' enterkeyhint="done" ' + (ddDemo() ? 'readonly ' : '') + (attrs || '') + (/\bclass="/.test(attrs || '') ? '' : ' class="dd-in"') + '></span>';
     }
     function ddXBtn(onclick) {
         if (ddDemo()) return '';   // 4.0.5: view-only
@@ -788,11 +788,11 @@
         let rows = '';
         monthCoast.forEach(e => {
             const gi = coastContribs.indexOf(e);
-            const acctLabel = e.accountName || (coastAccounts.find(a=>a.id===e.accountId)||{}).institution || 'Contribution';
+            const acctLabel = coastLabel(e) || 'Contribution';   // 4.9.4: Institution · Name
             rows += `<div class="dd-entry-row" data-gidx="${gi}" data-section="coast" data-mk="${mk}">
                 ${ddXBtn(`ddCoastDelete(${gi},'${mk}')`)}
-                ${ddLbl(ddE(acctLabel), e.note ? ddE(e.note) : '')}
-                ${ddIn(e.amount, 'data-entry-idx="' + gi + '" data-field="amount"')}
+                ${ddLbl(ddE(acctLabel), (e.amount || 0) < 0 ? 'Withdrawal' + (e.note ? ' · ' + ddE(e.note) : '') : (e.note ? ddE(e.note) : ''))}
+                ${ddIn(e.amount, 'data-entry-idx="' + gi + '" data-field="amount"', 'signed')}
             </div>`;
         });
         let blanks = 0;
@@ -801,13 +801,13 @@
             if (seen.has(String(a.id))) return;
             if (!ddSuggest(coastContribs, mk, e => String(e.accountId) === String(a.id))) return;
             seen.add(String(a.id));
-            const lbl  = a.institution || a.id;
+            const lbl  = acctDisplayName(a) || a.id;   // 4.9.4
             const last = ddLastBefore(coastContribs, mk, e => String(e.accountId) === String(a.id));
             const hint = last ? ddLastHint(last) : '';   // 3.8: monthly coast goals removed
             rows += `<div class="dd-entry-row dd-new-row" data-section="coast" data-mk="${mk}" data-account-id="${ddE(a.id)}" data-account-name="${ddE(lbl)}">
                 ${ddXBtn("this.closest('.dd-entry-row').remove()")}
                 ${ddLbl(ddE(lbl), hint, true)}
-                ${ddIn('', '')}
+                ${ddIn('', '', 'signed')}
             </div>`;
             blanks++;
         });
@@ -1009,7 +1009,7 @@
         const empty = container.querySelector('.dd-empty'); if (empty) empty.remove();
         const xBtn = ddXBtn("this.closest('.dd-entry-row').remove()");
         const open = (list, lbl) => list.filter(a => activeInMonth(a, mk)).map(a => '<option value="'+ddE(a.id)+'">'+ddE(lbl(a))+'</option>').join('');
-        const row  = (attrs, sel) => '<div class="dd-entry-row dd-new-row dd-added" data-section="'+sectionId+'" data-mk="'+mk+'" '+attrs+'>' + xBtn + sel + ddIn('', '') + '</div>';
+        const row  = (attrs, sel) => '<div class="dd-entry-row dd-new-row dd-added" data-section="'+sectionId+'" data-mk="'+mk+'" '+attrs+'>' + xBtn + sel + ddIn('', '', sectionId === 'coast' ? 'signed' : '') + '</div>';   // 4.9.5: coast keypad has a minus key
         let html = '';
         if (sectionId === 'income') {
             const payerOpts = payers.filter(p => activeInMonth(p, mk)).map(p=>'<option value="p:'+ddE(p.id)+'" data-payer-id="'+ddE(p.id)+'" data-payer-name="'+ddE(p.name)+'" data-type="'+ddE(p.defaultType||'payroll')+'">'+ddE(p.name)+'</option>').join('');
@@ -1030,7 +1030,7 @@
             if (!opts) { ddShowMsg(sectionId, mk, 'No investment accounts. Set one up in Accounts first.', true); return; }
             html = row('', '<select class="dd-sel" aria-label="Account">' + opts + '</select>');
         } else if (sectionId === 'coast') {
-            const opts = open(coastAccounts, a => a.institution || a.id);
+            const opts = open(coastAccounts, a => acctDisplayName(a) || a.id);   // 4.9.4
             if (!opts) { ddShowMsg(sectionId, mk, 'No coast accounts. Set one up in Accounts first.', true); return; }
             html = row('data-account-id="" data-account-name=""',
                    '<select class="dd-sel" aria-label="Coast account" onchange="this.closest(\'.dd-entry-row\').dataset.accountId=this.value;this.closest(\'.dd-entry-row\').dataset.accountName=this.options[this.selectedIndex].text;">' + opts + '</select>');
@@ -1129,7 +1129,8 @@
             if (raw === '' || isNaN(v)) continue;
             const row = inp.closest('.dd-entry-row, .dd-row');
             const what = row && row.querySelector('.dd-name') ? row.querySelector('.dd-name').textContent : 'an amount';
-            if (v < 0 && sectionId !== 'expenses') { inp.focus(); return '“' + what + '” is negative. Amounts here can’t be below zero.'; }
+            // 4.9.5: a negative coast amount is a withdrawal
+            if (v < 0 && sectionId !== 'expenses' && sectionId !== 'coast') { inp.focus(); return '“' + what + '” is negative. Amounts here can’t be below zero.'; }
             if (Math.abs(v) >= 1e9)                { inp.focus(); return '“' + what + '” is ' + v.toLocaleString() + '. That looks like a typo.'; }
         }
         const sel = sectionId === 'income'
@@ -1304,12 +1305,12 @@
                 bulkDebtPayments.push({ id: 'bp_'+ddTs(), date: dateStr, amount, accountId: acct.id, accountName: acct.name, note: '', ts: ddTs() });
                 touched.add('bulkdebt'); saved++;
             } else if (sectionId === 'coast') {
-                if (!(amount > 0)) return;
+                if (!amount) return;   // 4.9.5: a negative amount is a withdrawal (was: positive only)
                 const selEl    = selects[0];
                 const acctId   = row.dataset.accountId || (selEl ? selEl.value : '');
                 if (!acctId) return;
                 const acct     = coastAccounts.find(a => String(a.id) === String(acctId));
-                const acctName = row.dataset.accountName || (acct ? acct.institution : (selEl ? (selEl.options[selEl.selectedIndex] || {}).text : ''));
+                const acctName = acct ? acctDisplayName(acct) : (row.dataset.accountName || (selEl ? (selEl.options[selEl.selectedIndex] || {}).text : ''));   // 4.9.4
                 coastContribs.push({ id: 'cc_'+ddTs(), date: dateStr, accountId: acctId, accountName: acctName,
                                      institution: acct ? acct.institution : acctName, amount, note: '', ts: ddTs(), editedAt: Date.now() });
                 touched.add('coast'); saved++;

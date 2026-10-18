@@ -201,7 +201,7 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <aside>
-    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.13.3</span></div>
+    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.13.4</span></div>
     <nav id="nav"></nav>
     <div class="side-foot">
       <button onclick="toggleTheme()">🎨 Switch theme</button>
@@ -2014,8 +2014,12 @@ retirement() {
 
 coast() {
   const months = monthAxis(D.coastContribs.map(e => e.date.slice(0, 7)).sort()[0]);
-  const insts = [...new Set(D.coastContribs.map(e => e.institution || e.accountName))];
-  const sets = insts.map((n, i) => ({ label: n, color: SERIES[i], data: months.map(m => D.coastContribs.filter(e => (e.institution || e.accountName) === n && e.date.startsWith(m)).reduce((a, e) => a + e.amount, 0)) }));
+  // 4.13.4: one column per coast account, labeled "Institution · Name" like the phone (Sofi · Coast and Sofi · HYSA stay apart)
+  const ccLbl = e => { const a = (D.coastAccounts || []).find(x => String(x.id) === String(e.accountId));
+    const inst = a ? a.institution || '' : '', nm = a ? a.name || '' : '';
+    return a ? (inst && nm && inst !== nm ? inst + ' · ' + nm : (inst || nm)) : (e.accountName || e.institution || '—'); };
+  const insts = [...new Set(D.coastContribs.map(ccLbl))];
+  const sets = insts.map((n, i) => ({ label: n, color: SERIES[i], data: months.map(m => D.coastContribs.filter(e => ccLbl(e) === n && e.date.startsWith(m)).reduce((a, e) => a + e.amount, 0)) }));
   TABLES.cc = () => tableFor(months.map(mkLabel), sets);
   let run = 0; const cum = months.map(m => (run += D.coastContribs.filter(e => e.date.startsWith(m)).reduce((a, e) => a + e.amount, 0)));
   TABLES.ccum = () => tableFor(months.map(mkLabel), [{ label: 'Cumulative', data: cum }]);
@@ -2029,7 +2033,7 @@ coast() {
       ${card('ccum', 'Cumulative contributions', '<div class="chart"><canvas id="c-ccum"></canvas></div>')}
     </div>
     <div class="card"><div class="card-h"><h3>By year</h3></div><table><thead><tr><th>Year</th>${insts.map(i => `<th class="r">${esc(i)}</th>`).join('')}<th class="r">Total</th><th class="r">Avg / mo</th></tr></thead><tbody>
-      ${years.map(y => { const v = insts.map(n => D.coastContribs.filter(e => (e.institution || e.accountName) === n && e.date.startsWith(y)).reduce((a, e) => a + e.amount, 0)); const t = v.reduce((a, b) => a + b, 0);
+      ${years.map(y => { const v = insts.map(n => D.coastContribs.filter(e => ccLbl(e) === n && e.date.startsWith(y)).reduce((a, e) => a + e.amount, 0)); const t = v.reduce((a, b) => a + b, 0);
         const mo = y === yr ? ASOF.getMonth() + 1 : 12;
         return `<tr><td>${y}</td>${v.map(x => `<td class="r num">${x ? $(x) : '—'}</td>`).join('')}<td class="r num"><b>${$(t)}</b></td><td class="r num">${$(t / mo)}</td></tr>`; }).join('')}
     </tbody></table></div>`;

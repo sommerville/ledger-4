@@ -806,10 +806,10 @@ const fmtMK = mk => new Date(mk + '-15').toLocaleDateString('en-US', { month: 'l
             const hasEnts = ents.length > 0;
             const totalClr = total < 0 ? wdClr : T.valClr;
 
-            // Group by institution
+            // Group by coast account, labeled "Institution · Name" (4.9.4)
             const instMap = {};
             ents.forEach(e => {
-                const key = e.institution || e.accountName || '—';
+                const key = coastLabel(e);
                 if (!instMap[key]) instMap[key] = [];
                 instMap[key].push(e);
             });
@@ -828,8 +828,9 @@ const fmtMK = mk => new Date(mk + '-15').toLocaleDateString('en-US', { month: 'l
                     <span style="font-size:13px;font-weight:700;color:${instClr};">${fmt(instTotal)}</span>
                 </div>`;
 
-                // Contributions label (no value), then amount-only lines
-                if (contribs.length) {
+                // 4.9.4: list the separate deposits only when there's more than one (a lone one just repeats the total);
+                // no dates: coast entries are logged by month (all on the 15th)
+                if (contribs.length > 1 || (contribs.length && withdrawals.length)) {
                     block += `<div style="font-size:11px;color:${T.mutedClr};padding:1px 0 1px 14px;">Contributions</div>`;
                     contribs.forEach(e => {
                         block += `<div style="display:flex;justify-content:flex-end;font-size:11px;color:${T.mutedClr};padding:1px 0 1px 14px;">
@@ -838,13 +839,13 @@ const fmtMK = mk => new Date(mk + '-15').toLocaleDateString('en-US', { month: 'l
                     });
                 }
 
-                // Withdrawals: label + subtotal, then amount-only lines
+                // Withdrawals: label + subtotal, then the separate amounts only when there's more than one
                 if (withdrawals.length) {
                     block += `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 0 1px 14px;">
                         <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${wdClr};">Withdrawals</span>
                         <span style="font-size:11px;font-weight:700;color:${wdClr};">${fmt(wdTotal)}</span>
                     </div>`;
-                    withdrawals.forEach(e => {
+                    if (withdrawals.length > 1) withdrawals.forEach(e => {
                         block += `<div style="display:flex;justify-content:flex-end;font-size:11px;color:${wdClr};padding:1px 0 1px 14px;">
                             <span>${fmt(e.amount || 0)}</span>
                         </div>`;

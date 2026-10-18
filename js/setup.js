@@ -183,7 +183,7 @@
                      val: last ? suMoney(last.amount) : '', closed: d.closed, closedMonth: d.closedMonth };
         });
 
-        const coast = coastAccounts.map(a => ({ kind: 'coast', id: a.id, name: a.institution || 'Coast account',
+        const coast = coastAccounts.map(a => ({ kind: 'coast', id: a.id, name: acctDisplayName(a) || 'Coast account',
             sub: 'Coast savings', closed: a.closed, closedMonth: a.closedMonth }));
 
         return [
@@ -262,7 +262,7 @@
         } else if (kind === 'coast') {
             const a = isNew ? {} : coastAccounts.find(x => suSame(x.id, id));
             if (!a) return;
-            Object.assign(d, { institution: a.institution || '' });   // 3.8: monthly goals removed
+            Object.assign(d, { institution: a.institution || '', name: a.name || '' });   // 3.8: monthly goals removed; 4.9.4: nickname
         } else if (kind === 'loan') {   // 3.5.4
             const p = isNew ? null : loanPeople.find(x => suSame(x.id, id));
             if (!isNew && !p) return;
@@ -371,8 +371,10 @@
                     <input id="suCat" class="su-input" type="text" placeholder="Or type a new one" value="${suEsc(cats.includes(d.serviceType) ? '' : d.serviceType)}" oninput="suSet('serviceType', this.value)" autocomplete="off"></div>
                 <div class="su-note">${SU_ICON.info}<span>Log this month’s amount in Data once you’ve paid it. After that it’s filled in as a reminder each month.</span></div>`;
         } else if (d.kind === 'coast') {
-            title = d.isNew ? 'New coast savings account' : d.institution;
-            body = `${suTextField('suInst', 'Where is it?', 'institution', { placeholder: 'e.g. Schwab' })}`;   // 3.8: no monthly goal
+            title = d.isNew ? 'New coast savings account' : acctDisplayName(d);
+            body = `${suTextField('suInst', 'Where is it?', 'institution', { placeholder: 'e.g. Schwab' })}
+                ${suTextField('suName', 'Nickname <em>(optional)</em>', 'name', { placeholder: 'e.g. HYSA' })}
+                <span class="su-hint">Shows as “Institution · Nickname”, like your investment accounts.</span>`;   // 3.8: no monthly goal; 4.9.4: nickname
         } else if (d.kind === 'loan') {   // 3.5.4
             title = d.isNew ? 'New loan' : d.name;
             const p = d.isNew ? null : loanPeople.find(x => suSame(x.id, d.id));
@@ -694,17 +696,20 @@
         }
 
         if (d.kind === 'coast') {
-            const inst = trim(d.institution);
+            const inst = trim(d.institution), nick = trim(d.name || '');
             if (!inst) return suFail('Say where the account is.');
-            if (suDupe(coastAccounts, 'institution', inst, d.id)) return suFail('You already have a coast account at ' + inst + '.');
+            // 4.9.4: two coast accounts can share an institution as long as their labels differ (Sofi · Coast, Sofi · HYSA)
+            const lbl = acctDisplayName({ institution: inst, name: nick }), lc = lbl.toLowerCase();
+            if (coastAccounts.some(x => !suSame(x.id, d.id) && acctDisplayName(x).toLowerCase() === lc))
+                return suFail('You already have a coast account called ' + lbl + '.' + (nick ? '' : ' Give this one a nickname.'));
             // 3.8: monthly coast goals were removed; saving an account drops its old monthlyGoal
-            if (d.isNew) { coastAccounts.push({ id: 'cacct_' + Date.now(), institution: inst }); saveCoastAccounts(); return suDone('Added ' + inst); }
+            if (d.isNew) { const na = { id: 'cacct_' + Date.now(), institution: inst }; if (nick) na.name = nick; coastAccounts.push(na); saveCoastAccounts(); return suDone('Added ' + lbl); }
             const a = suItem(); if (!a) return;
-            a.institution = inst; delete a.monthlyGoal; saveCoastAccounts();
+            a.institution = inst; if (nick) a.name = nick; else delete a.name; delete a.monthlyGoal; saveCoastAccounts();
             let touched = false;
-            coastContribs.forEach(e => { if (suSame(e.accountId, a.id) && e.accountName !== inst) { e.accountName = inst; touched = true; } });
+            coastContribs.forEach(e => { if (suSame(e.accountId, a.id) && (e.accountName !== lbl || e.institution !== inst)) { e.accountName = lbl; e.institution = inst; touched = true; } });
             if (touched) saveCoastContribs();
-            return suDone('Saved ' + inst);
+            return suDone('Saved ' + lbl);
         }
 
         if (d.kind === 'plan') {

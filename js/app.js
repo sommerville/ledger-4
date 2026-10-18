@@ -595,9 +595,18 @@ now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', 
         const coastAvgVal   = typeof coastCalcMonthlyAvg === 'function' ? coastCalcMonthlyAvg() : 0;
         const coastAllVal   = typeof coastCalcAllTime === 'function' ? coastCalcAllTime() : 0;
 
-        if (coastYTDEl)  coastYTDEl.textContent  = coastYTDVal > 0  ? fmtRraw(coastYTDVal)  : '—';
-        if (coastMoEl)   coastMoEl.textContent   = coastAvgVal > 0  ? fmtRraw(coastAvgVal)  : '—';
-        if (coastAllEl)  coastAllEl.textContent  = coastAllVal > 0  ? fmtRraw(coastAllVal)  : '—';
+        if (coastYTDEl)  coastYTDEl.textContent  = coastYTDVal  ? fmtRraw(coastYTDVal)  : '—';   // 4.9.5: a withdrawal can take a total below zero
+        if (coastMoEl)   coastMoEl.textContent   = coastAvgVal  ? fmtRraw(coastAvgVal)  : '—';
+        if (coastAllEl)  coastAllEl.textContent  = coastAllVal  ? fmtRraw(coastAllVal)  : '—';
+        // 4.9.5: this year's withdrawals (already subtracted from the totals above), shown only when there are any
+        const coastWdEl  = document.getElementById('ovCoastWithdrawals');
+        if (coastWdEl) {
+            const yr = String(new Date().getFullYear());
+            const wd = (coastContribs || []).filter(e => e.date && e.date.startsWith(yr) && (e.amount || 0) < 0).reduce((s, e) => s + e.amount, 0);
+            coastWdEl.textContent = fmtRraw(wd);
+            coastWdEl.style.color = '#c0392b';
+            coastWdEl.closest('.overview-row').style.display = wd ? '' : 'none';
+        }
 
         // Combined savings rate — v15.1: trailing 12 months, after-tax basis
         const _svOv          = getT12Savings();
