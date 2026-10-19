@@ -284,7 +284,7 @@
         const reached = [];
         if (!isFirst && typeof GOAL_TRACKS !== 'undefined' && typeof goalState === 'function') {
             GOAL_TRACKS.forEach(t => (goalState(t.id).done || []).filter(d => d.mk && d.mk !== firstMk && (isYear ? d.mk.slice(0, 4) === key : d.mk === key))
-                .forEach(d => reached.push(`${t.emoji} ${esc(t.name)} passed ${t.id === 'incomeMonthly' ? fmt(d.target) + '/mo' : fmt(d.target)}`)));
+                .forEach(d => reached.push(`${t.emoji} ${esc(t.name)} passed ${t.id === 'incomeMonthly' ? fmt(d.target) + '/mo' : t.ratio ? goalStepLabel(t.id, d.target) : fmt(d.target)}`)));
         }
 
         const ks = mirKeys(), i = ks.indexOf(key);

@@ -674,7 +674,7 @@ return d.toLocaleDateString('en-US', { month: 'short' }) + " '" + String(d.getFu
     // 3.8: the Net Worth and Liquid Net Worth goal tracks (goals.js); steps are set in Goals page → Edit goal steps
     function renderNetWorthGoals() {
         const container = document.getElementById('networthGoalsContent');
-        if (container) container.innerHTML = goalCard('networth') + goalCard('liquid');
+        if (container) container.innerHTML = goalCard('networth') + goalCard('liquid') + goalCard('mndRatio');   // 4.9.8
     }
 
     // ─── Retirement Snapshot List (inline monthly cards) ──────

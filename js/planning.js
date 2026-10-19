@@ -600,7 +600,7 @@ Coast FIRE = (${_$(S)} − ${_$(M)} mortgage)
         const totalPortfolio = getCurrentTotal();   // 3.7: latest balance by date
         const _goalMonthly = getT12Savings().totalMonthly;   // v15.1: 7% + trailing-12-month contributions
         const card = document.getElementById('portfolioGoalCard');
-        if (card) card.innerHTML = goalCard('portfolio');
+        if (card) card.innerHTML = goalCard('portfolio') + goalCard('salaryMult');   // 4.9.7: + the salary multiple
         renderYearlyGoals(totalPortfolio, _goalMonthly);
         renderTaxableMortgageMilestone();
     }

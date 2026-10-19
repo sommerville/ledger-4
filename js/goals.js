@@ -29,7 +29,49 @@
           defaults: [200000, 250000, 300000] },
         { id: 'incomeAllTime', name: 'All-Time Earned', emoji: '🏆', page: 'Income', note: 'every income entry',
           defaults: [500000, 1000000, 2000000] },
+        // 4.9.7: Fidelity-style salary multiple (Darrin, 2026-10-18): portfolio ÷ the household's gross pay over the last
+        // 12 months. Steps are multiples, not dollars; each default step has the age Fidelity suggests reaching it by.
+        { id: 'salaryMult', name: 'Salary Multiple', emoji: '✖️', page: 'Investments', note: 'portfolio ÷ household gross pay, last 12 months',
+          defaults: [1, 2, 3, 4, 6, 8, 10], ratio: true },
+        // 4.9.8: The Millionaire Next Door test (Stanley & Danko): expected net worth = age × household gross pay ÷ 10.
+        // The track is net worth (incl. real estate) ÷ that. ½× or less = under-accumulator, 2× or more = prodigious.
+        { id: 'mndRatio', name: 'Millionaire Next Door', emoji: '🏡', page: 'Net Worth', note: 'net worth ÷ (age × household gross pay ÷ 10)',
+          defaults: [0.5, 1, 1.5, 2], ratio: true },
     ];
+    const MND_NAMES = { 0.5: 'out of under-accumulator', 1: 'average accumulator', 2: 'prodigious accumulator' };
+    // Age (whole years) at the end of month mk, from the birthday setting; null without one (or an impossible one)
+    function _gAgeAt(mk) {
+        const bd = typeof getBirthday === 'function' ? getBirthday() : null;
+        if (!bd) return null;
+        const [y, m] = mk.split('-').map(Number);
+        const end = new Date(y, m, 0);   // last day of mk
+        let a = end.getFullYear() - bd.getFullYear();
+        if (end.getMonth() < bd.getMonth() || (end.getMonth() === bd.getMonth() && end.getDate() < bd.getDate())) a--;
+        return a > 0 && a < 120 ? a : null;
+    }
+    // Expected net worth at month mk (null when age or a full year of pay is missing)
+    function _gMndExpected(mk) {
+        const age = _gAgeAt(mk), g = _gGrossT12(LC.addMonths(mk, 1));
+        return age && g > 0 ? age * g / 10 : null;
+    }
+    const SALARY_MULT_AGE = { 1: 30, 2: 35, 3: 40, 4: 45, 6: 50, 7: 55, 8: 60, 10: 67 };   // Fidelity's guideline
+    // Household gross pay (every income entry's gross: paychecks + bonuses) for the 12 months before asOfMk
+    function _gGrossT12(asOfMk) { return LC.sumT12(incomeEntries, asOfMk, e => e.grossPay || e.gross || 0); }
+    // A full year of pay on record by month mk (earlier months would divide by a partial year)
+    function _gGrossReady(mk) {
+        const first = (incomeEntries || []).map(e => e && e.date ? e.date.slice(0, 7) : null).filter(Boolean).sort()[0];
+        return !!first && mk >= LC.addMonths(first, 11);
+    }
+    // How a track writes a step: dollars, or "4×" (+ "by 45 · Apr 2030" when the birthday is set)
+    function goalStepLabel(id, v, withAge) {
+        const t = goalTrack(id);
+        if (!t || !t.ratio) return fmt(v).replace('.00', '');
+        if (id === 'mndRatio') return (Math.round(v * 10) / 10) + '× expected' + (withAge && MND_NAMES[v] ? ' · ' + MND_NAMES[v] : '');
+        let s = (Math.round(v * 10) / 10) + '× salary';
+        const age = SALARY_MULT_AGE[v], bd = typeof getBirthday === 'function' ? getBirthday() : null;
+        if (withAge && age) s += ' by ' + age + (bd ? ' · ' + new Date(bd.getFullYear() + age, bd.getMonth(), 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '');
+        return s;
+    }
     const goalTrack = id => GOAL_TRACKS.find(t => t.id === id);
     const CRIT_INFLATION = 0.03;   // critical mass (spending): growth after inflation = 7% − 3%
 
@@ -73,6 +115,8 @@
             case 'incomeAnnual':  return LC.takeHome(incomeEntries, now);
             case 'incomeMonthly': return LC.takeHome(incomeEntries, now) / 12;
             case 'incomeAllTime': return incomeEntries.reduce((s, e) => s + (e.amount || 0), 0);
+            case 'salaryMult':    { const g = _gGrossT12(LC.addMonths(now, 1)); return g > 0 ? getCurrentTotal() / g : 0; }
+            case 'mndRatio':      { const x = _gMndExpected(now); return x ? (getCurrentNetWorth() + realEstateTotal()) / x : 0; }
         }
         return 0;
     }
@@ -90,13 +134,15 @@
             case 'incomeAnnual':  return LC.takeHome(incomeEntries, LC.addMonths(mk, 1));          // the 12 months ending with mk
             case 'incomeMonthly': return LC.takeHome(incomeEntries, LC.addMonths(mk, 1)) / 12;
             case 'incomeAllTime': return thru(incomeEntries);
+            case 'salaryMult':    { if (!_gGrossReady(mk)) return 0; const g = _gGrossT12(LC.addMonths(mk, 1)); return g > 0 ? inv() / g : 0; }
+            case 'mndRatio':      { if (!_gGrossReady(mk)) return 0; const x = _gMndExpected(mk); return x ? (liq() + realEstateTotal(mk)) / x : 0; }
         }
         return 0;
     }
     // Monthly amount used for a projected date (null = no date for this track)
     function goalMonthly(id) {
         const sv = LC.t12Savings(retirementContribs, coastContribs, _gNow());
-        if (id === 'portfolio' || id === 'networth' || id === 'liquid') return sv.totalMo;
+        if (id === 'portfolio' || id === 'networth' || id === 'liquid' || id === 'salaryMult' || id === 'mndRatio') return sv.totalMo;
         if (id === 'taxable' || id === 'coastContrib') return sv.coastMo;
         return null;
     }
@@ -105,6 +151,22 @@
         const mo = goalMonthly(id);
         if (mo == null) return null;
         if (id === 'coastContrib') return value >= target ? 0 : mo > 0 ? Math.ceil((target - value) / mo) : Infinity;
+        if (id === 'salaryMult') {   // in dollars: today's portfolio to the multiple of today's pay (pay held flat)
+            const g = _gGrossT12(LC.addMonths(_gNow(), 1));
+            return g > 0 ? LC.monthsToGoal(getCurrentTotal(), target * g, mo) : null;
+        }
+        if (id === 'mndRatio') {   // net worth grows with the portfolio (7% + savings); the bar rises a year of pay ÷ 10 each birthday
+            const now = _gNow(), x0 = _gMndExpected(now); if (!x0) return null;
+            const age0 = _gAgeAt(now), g = x0 * 10 / age0, inv0 = getCurrentTotal(), nw0 = getCurrentNetWorth() + realEstateTotal();
+            if (nw0 >= target * x0) return 0;
+            const r = LC.PLAN_RETURN / 12; let inv = inv0;
+            for (let n = 1; n <= 600; n++) {
+                inv = inv * (1 + r) + mo;
+                const age = _gAgeAt(LC.addMonths(now, n)) || age0 + Math.floor(n / 12);
+                if (nw0 + (inv - inv0) >= target * age * g / 10) return n;
+            }
+            return Infinity;
+        }
         return LC.monthsToGoal(value, target, mo);
     }
 
@@ -154,6 +216,18 @@
     function _gBar(T, pct, clr) {
         return `<div style="background:${T.borderClr};border-radius:6px;height:9px;overflow:hidden;margin:6px 0 4px;"><div style="width:${Math.min(100, Math.max(0, pct)).toFixed(1)}%;background:${clr};height:100%;border-radius:6px;"></div></div>`;
     }
+    // What's left to a step, in dollars (a salary multiple: that many years of pay minus the portfolio)
+    function _gToGo(id, value, target) {
+        if (id === 'salaryMult') { const g = _gGrossT12(LC.addMonths(_gNow(), 1)); return fmt(Math.max(0, target * g - getCurrentTotal())); }
+        if (id === 'mndRatio') { const x = _gMndExpected(_gNow()) || 0; return fmt(Math.max(0, target * x - (getCurrentNetWorth() + realEstateTotal()))); }
+        return fmt(target - value);
+    }
+    // 4.9.8: the Millionaire Next Door card says what "expected" is today
+    function _gMndLine(T) {
+        const now = _gNow(), x = _gMndExpected(now), age = _gAgeAt(now);
+        const txt = x ? 'Expected at ' + age + ': ' + fmt(x) + ' · prodigious: ' + fmt(2 * x) : 'Set your birthday (Settings → Display Options) to see this.';
+        return `<div style="font-size:11px;color:${T.mutedClr};margin-top:2px;">${txt}</div>`;
+    }
     // A row for one target: reached → ✓ + month; not reached → progress, amount left, projected date
     function _gTargetRow(T, id, label, target, mk, value, opts) {
         opts = opts || {};
@@ -167,7 +241,7 @@
                     <span style="color:${T.textClr};font-weight:700;">${opts.next ? 'Next: ' : ''}${label}</span>
                     <span style="color:${T.accent};font-weight:800;">${(target > 0 ? value / target * 100 : 0).toFixed(0)}%</span></div>
                 ${_gBar(T, target > 0 ? value / target * 100 : 0, T.accent)}
-                <div style="font-size:11px;color:${T.mutedClr};">${fmt(target - value)} to go${when}</div>
+                <div style="font-size:11px;color:${T.mutedClr};">${_gToGo(id, value, target)} to go${when}</div>
                 ${opts.note ? `<div style="font-size:10px;color:${T.mutedClr};margin-top:3px;font-style:italic;">${_gEsc(opts.note)}</div>` : ''}
             </div>`;
     }
@@ -176,7 +250,7 @@
         opts = opts || {};
         const t = goalTrack(id); if (!t) return '';
         const T = retTheme(), st = goalState(id);
-        const label = v => fmt(v).replace('.00', '');
+        const label = v => goalStepLabel(id, v, true);   // 4.9.7: "4× salary by 45 · Apr 2030" for the salary multiple
         let body = '';
         if (st.current) body += _gTargetRow(T, id, label(st.current.target), st.current.target, null, st.value, { next: true });
         else body += `<div style="font-size:13px;color:${T.greenClr};font-weight:700;padding:4px 0 8px;">✓ Every step reached. Add more with Edit goal steps on the Goals page.</div>`;
@@ -193,8 +267,8 @@
         return `<div style="background:${T.cardBg};border:1px solid ${T.borderClr};border-radius:12px;padding:14px;margin-bottom:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;">
                     <div><div style="font-size:15px;font-weight:800;color:${T.accent};">${t.emoji} ${t.name}</div>
-                        ${t.note ? `<div style="font-size:11px;color:${T.mutedClr};">${t.note}</div>` : ''}</div>
-                    <div style="font-size:16px;font-weight:800;color:${T.textClr};white-space:nowrap;">${fmt(st.value)}</div></div>
+                        ${t.note ? `<div style="font-size:11px;color:${T.mutedClr};">${t.note}</div>` : ''}${id === 'mndRatio' ? _gMndLine(T) : ''}</div>
+                    <div style="font-size:16px;font-weight:800;color:${T.textClr};white-space:nowrap;">${t.ratio ? st.value.toFixed(id === 'mndRatio' ? 2 : 1) + '×' : fmt(st.value)}</div></div>
                 ${body}</div>`;
     }
 
@@ -231,10 +305,10 @@
                         <span style="font-size:14px;font-weight:800;color:${T.accent};">${t.emoji} ${t.name}</span>
                         ${custom ? `<button class="u-btn-clear" style="width:auto;padding:0;font-size:11px;color:${T.mutedClr};text-decoration:underline;" onclick="goalStepsReset('${t.id}')">Reset to defaults</button>` : `<span style="font-size:11px;color:${T.mutedClr};">defaults</span>`}</div>
                     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
-                        ${steps.map(v => `<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:14px;border:1px solid ${T.borderClr};font-size:12px;color:${T.textClr};">${fmt(v)}
-                            <button aria-label="Remove ${fmt(v)}" onclick="goalStepsRemove('${t.id}',${v})" style="border:0;background:none;color:${T.mutedClr};font-size:15px;line-height:1;padding:0 2px;cursor:pointer;">×</button></span>`).join('') || `<span style="font-size:12px;color:${T.mutedClr};">No steps</span>`}</div>
+                        ${steps.map(v => `<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:14px;border:1px solid ${T.borderClr};font-size:12px;color:${T.textClr};">${t.ratio ? goalStepLabel(t.id, v) : fmt(v)}
+                            <button aria-label="Remove ${t.ratio ? goalStepLabel(t.id, v) : fmt(v)}" onclick="goalStepsRemove('${t.id}',${v})" style="border:0;background:none;color:${T.mutedClr};font-size:15px;line-height:1;padding:0 2px;cursor:pointer;">×</button></span>`).join('') || `<span style="font-size:12px;color:${T.mutedClr};">No steps</span>`}</div>
                     <div style="display:flex;gap:8px;">
-                        <input id="goalAdd-${t.id}" type="number" inputmode="decimal" placeholder="Add a step, e.g. 1250000" step="1000"
+                        <input id="goalAdd-${t.id}" type="number" inputmode="decimal" placeholder="${t.ratio ? 'Add a multiple, e.g. 5' : 'Add a step, e.g. 1250000'}" step="${t.ratio ? '0.5' : '1000'}"
                             style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;font-size:14px;" class="bdr-alaskan col-silver bg-deep-alaskan"
                             onkeydown="if(event.key==='Enter')goalStepsAdd('${t.id}')">
                         <button class="action-btn" style="margin:0;width:auto;padding:8px 14px;" onclick="goalStepsAdd('${t.id}')">Add</button></div>
@@ -248,11 +322,12 @@
     }
     function goalStepsAdd(id) {
         const inp = document.getElementById('goalAdd-' + id);
-        const v = Math.round(parseFloat(String(inp && inp.value || '').replace(/[$,\s]/g, '')));
+        const raw = parseFloat(String(inp && inp.value || '').replace(/[$,×x\s]/g, ''));
+        const v = goalTrack(id).ratio ? Math.round(raw * 10) / 10 : Math.round(raw);   // 4.9.7: multiples keep one decimal
         if (!(v > 0) || v >= 1e10) { if (inp) inp.focus(); return; }
-        _goalStepsSet(id, goalLadder(id).concat(v), goalTrack(id).name + ': added ' + fmt(v) + '.');
+        _goalStepsSet(id, goalLadder(id).concat(v), goalTrack(id).name + ': added ' + goalStepLabel(id, v) + '.');
     }
-    function goalStepsRemove(id, v) { _goalStepsSet(id, goalLadder(id).filter(x => x !== v), goalTrack(id).name + ': removed ' + fmt(v) + '.'); }
+    function goalStepsRemove(id, v) { _goalStepsSet(id, goalLadder(id).filter(x => x !== v), goalTrack(id).name + ': removed ' + goalStepLabel(id, v) + '.'); }
     function goalStepsReset(id) {
         if (!confirm('Put ' + goalTrack(id).name + ' back to its default steps?')) return;
         delete goalsLoad()[id];
