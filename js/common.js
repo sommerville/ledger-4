@@ -227,7 +227,9 @@
         const dates = [...new Set(
             entries
                 .filter(e => e.date >= '2024-01-01')
-                .filter(e => currentView === 'total' || e.accountType === currentView)
+                // 4.9.9: match by the entry's account (entries saved from the Data page since Mar 2026 have no accountType,
+                // so the Taxable / 401k / IRA / HSA charts skipped Mar–Sep 2026 and jumped straight to Oct)
+                .filter(e => currentView === 'total' || relevantAccounts.some(a => String(a.id) === String(e.accountId)))
                 .map(e => e.date)
         )].sort();
 
