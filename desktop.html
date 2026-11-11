@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sommerville Ledger 4 — Planner</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/app/icon-192.png">
+<link rel="apple-touch-icon" href="icons/app/icon.png">
 <script src="vendor/chart-4.4.1.umd.js"></script>
 <script src="js/ledger-core.js"></script>   <!-- 3.7: shared money math (same file as the phone) -->
 <style>
@@ -473,13 +475,13 @@ async function exportPlan() {
     if (window.showSaveFilePicker) {
       const h = await showSaveFilePicker({ id: 'ledger-plan', suggestedName: name, types: [{ description: 'Playbook', accept: { 'application/json': ['.json'] } }] });
       const w = await h.createWritable(); await w.write(text); await w.close();
-      alert('Playbook saved as ' + h.name + '.\nKeep it in Claude Projects → Assistant → retirement so Chad can track it.');
+      alert('Playbook saved as ' + h.name + '.\nKeep it in Olly HQ → Assistant → retirement so Chad can track it.');
       return;
     }
   } catch (e) { if (e && e.name === 'AbortError') return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  alert('Playbook downloaded as ' + name + '.\nMove it to Claude Projects → Assistant → retirement so Chad can track it.');
+  alert('Playbook downloaded as ' + name + '.\nMove it to Olly HQ → Assistant → retirement so Chad can track it.');
 }
 function importPlan() {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';

@@ -29,7 +29,7 @@
           defaults: [200000, 250000, 300000] },
         { id: 'incomeAllTime', name: 'All-Time Earned', emoji: '🏆', page: 'Income', note: 'every income entry',
           defaults: [500000, 1000000, 2000000] },
-        // 4.9.7: Fidelity-style salary multiple (Darrin, 2026-10-18): portfolio ÷ the household's gross pay over the last
+        // 4.9.7: Fidelity-style salary multiple (2026-10-18): portfolio ÷ the household's gross pay over the last
         // 12 months. Steps are multiples, not dollars; each default step has the age Fidelity suggests reaching it by.
         { id: 'salaryMult', name: 'Salary Multiple', emoji: '✖️', page: 'Investments', note: 'portfolio ÷ household gross pay, last 12 months',
           defaults: [1, 2, 3, 4, 6, 8, 10], ratio: true },
