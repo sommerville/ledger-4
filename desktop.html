@@ -203,7 +203,7 @@ tr.tot td{font-weight:700;border-top:1px solid var(--accent);border-bottom:0}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <aside>
-    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.13.4</span></div>
+    <div class="brand"><b>SOMMERVILLE LEDGER</b><span>Desktop Planner · v4.13.6</span></div>
     <nav id="nav"></nav>
     <div class="side-foot">
       <button onclick="toggleTheme()">🎨 Switch theme</button>
@@ -891,6 +891,35 @@ function ppSelfCheck(year) {
 }
 const median = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
+// paySchedule(): the Paycheck Planner's coming checks as plain data - the one official way for outside tools to read them
+// (4.13.5). The assistant's tools open this page in a hidden browser, load a backup and call it; before, they read the
+// planner's inner variables directly, so any change here could break them silently. Keep its answer's shape. It anchors the
+// schedule on the Friday nearest the last logged check (and each bonus on its nearest Friday), then projects this year and next.
+function paySchedule() {
+  const near = s => { const d = new Date(s + 'T12:00'), n = (5 - d.getDay() + 7) % 7; d.setDate(d.getDate() + (n > 3 ? n - 7 : n)); return ymd(d); };
+  ppInit();
+  const isPay = ppPayers(PS.plan).isPay;
+  const pay = D.incomeEntries.filter(e => isPay(e) && e.grossPay > 0).sort((a, b) => a.date.localeCompare(b.date));
+  const last = pay[pay.length - 1], paid = LC.payday(last.date, pay.map(e => e.date));   // 4.13.6: the real payday, not the tab date
+  const next = new Date(paid + 'T12:00'); next.setDate(next.getDate() + 14);
+  PS.nextDate = ymd(next);
+  const fri = L => L.forEach(b => b.date = near(b.date));
+  fri(PS.bonusNow); fri(PS.bonusNext);
+  const rows = [], years = {}, Y = PS.Y;
+  for (const mode of ['now', 'next']) {
+    PS.mode = mode;
+    const p = ppParams(), r = ppRun(p);
+    r.rows.forEach(x => rows.push({ date: ymd(x.date), kind: x.kind, gross: x.gross, deposit: x.deposit, pre: x.pre, after: x.after, match: x.match,
+                                    benefits: x.benefits, ss: x.ss, med: x.med, fed: x.fed, post: x.post, coast: x.coast, personal: x.personal }));
+    years[p.year] = { empHit: r.empHit && ymd(r.empHit), totHit: r.totHit && ymd(r.totHit), matchLost: r.sum.matchLost,
+                      tightest: r.shortest && { date: ymd(r.shortest.date), kind: r.shortest.kind, personal: r.shortest.personal } };
+  }
+  const logged = [...ppIncome(Y, 'payroll').map(e => ({ date: e.date, kind: e.grossPay > PAY_DEFAULTS.bigGross ? 'big' : 'little', gross: e.grossPay, deposit: e.amount })),
+                  ...ppIncome(Y, 'bonus').map(e => ({ date: e.date, kind: 'bonus', gross: e.grossPay, deposit: e.amount }))].sort((a, b) => a.date.localeCompare(b.date));
+  return { rows, logged, years, employer: PS.plan.name, last: { date: last.date, friday: paid, gross: last.grossPay }, asOf: ymd(ASOF),
+           elect: PS.e, bigAdj: PS.fixed.bigAdj, bigGross: PS.bigGross, littleGross: PS.littleGross };
+}
+
 function ppInit() {
   const Y = ASOF.getFullYear(), plan = ppPlan();
   const isPay = ppPayers(plan).isPay;
@@ -899,10 +928,12 @@ function ppInit() {
   const isBig = e => e.grossPay > PAY_DEFAULTS.bigGross;
   const last = pay[pay.length - 1];
   const lastBig = [...pay].reverse().find(isBig), lastLittle = [...pay].reverse().find(e => !isBig(e));
-  const next = last ? new Date(last.date + 'T12:00') : new Date(ASOF); next.setDate(next.getDate() + 14);
-  // Bonus checks: same dates as last year, shifted forward a year
+  // 4.13.6: from the last check's real payday (its tab date can be up to two weeks off: Nov 1 = the Nov 13 check)
+  const next = last ? new Date(LC.payday(last.date, pay.map(e => e.date)) + 'T12:00') : new Date(ASOF); next.setDate(next.getDate() + 14);
+  // Bonus checks: same dates as last year, shifted forward a year (4.13.6: not in a month whose bonus already came this year)
   const shift = (e, n) => { const d = new Date(e.date + 'T12:00'); d.setFullYear(d.getFullYear() + n); return { date: ymd(d), gross: Math.round(e.grossPay) }; };
-  const bonusNow = ppIncome(Y - 1, 'bonus').map(e => shift(e, 1)).filter(b => new Date(b.date + 'T12:00') > ASOF);
+  const bonusMonths = new Set(ppIncome(Y, 'bonus').map(e => e.date.slice(0, 7)));
+  const bonusNow = ppIncome(Y - 1, 'bonus').map(e => shift(e, 1)).filter(b => new Date(b.date + 'T12:00') > ASOF && !bonusMonths.has(b.date.slice(0, 7)));
   const bonusNext = [...ppIncome(Y, 'bonus').filter(e => new Date(e.date + 'T12:00') <= ASOF).map(e => shift(e, 1)), ...bonusNow.map(b => shift(b, 1))];
   const lim = D.retirementLimits || {}, pp = plan && lim.perPlan && lim.perPlan[plan.src.id] || {};
   const limits = { emp: pp.limit401k || lim.limit401k || 24500, total: pp.limitTotal401k || lim.limitTotal401k || 72000 };

@@ -384,7 +384,26 @@ var LC = (function () {
         return { balance: debtTotal(accts, debtEntries, asOfMk), principal, payment: mortgageSpending(expenses, asOfMk) / 12 };
     }
 
-    return { monthKey, addMonths, r2, latestEntry, balance, total, investTotal, taxableTotal, debtCap, debtTotal, debtThrough,
+    // ─── Paydays (desktop 4.13.6) ─────────────────────────────
+    // A paycheck's date is its tab in the month (1st / 15th / 28th = that month's first / second / third check), not
+    // the day it was paid. The real payday is that check's Friday in the every-two-weeks cycle; the cycle is pinned by a
+    // month with three checks (only possible when its first Friday is a payday). Other dates (older entries carried real
+    // paydays) and a history with no three-check month fall back to the nearest Friday.
+    // e.g. Oct 2026 tabs = Oct 2, 16, 30, so Nov 1 (November's first check) = Nov 13.
+    function payday(date, payDates) {
+        const ymdOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const near = s => { const d = new Date(s + 'T12:00'), n = (5 - d.getDay() + 7) % 7; d.setDate(d.getDate() + (n > 3 ? n - 7 : n)); return ymdOf(d); };
+        const tab = { '01': 0, '15': 1, '28': 2 }[date.slice(8)];
+        const three = (payDates || []).filter(s => s.slice(8) === '28').sort().pop();
+        if (tab === undefined || !three) return near(date);
+        const a = new Date(three.slice(0, 8) + '01T12:00');
+        a.setDate(1 + (5 - a.getDay() + 7) % 7);                  // that month's first Friday: a payday
+        const m = new Date(date.slice(0, 8) + '01T12:00'), days = Math.round((m - a) / 864e5);
+        const d = new Date(a); d.setDate(a.getDate() + Math.ceil(days / 14) * 14 + tab * 14);   // first payday on or after the 1st, then the tab-th
+        return ymdOf(d).slice(0, 7) === date.slice(0, 7) ? ymdOf(d) : near(date);
+    }
+
+    return { monthKey, addMonths, r2, latestEntry, payday, balance, total, investTotal, taxableTotal, debtCap, debtTotal, debtThrough,
              loanRateAt, loanEventsFor, loanCalc, loansOwed, propId, propertyValue, realEstateItems, realEstate, netWorth,
              t12Range, inT12, sumT12, MORTGAGE_RE, isMortgageBill, trackedSpending, mortgageSpending, t12Savings, takeHome, savingsRate,
              PLAN_RETURN, WR, taxDivisor, fullFire, coastFire, monthsToGoal, projectBalance, breakEvenHourly, mortgageInfo,

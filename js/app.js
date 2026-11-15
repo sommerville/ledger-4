@@ -265,8 +265,10 @@
         // 4.9.1: money lent out isn't spending (the Ledger tracks it as owed to you); repayments are money back in
         const lent       = sum((loanEvents || []).filter(e => e.type === 'lend'), e => e.amount);
         const repaid     = sum((loanEvents || []).filter(e => e.type === 'payment'), e => e.amount);
-        const mySpend    = takeHome + repaid - coast - spent - partnerTH - lent;
-        mirSpend = { takeHome, coast, spent, partnerTH, lent, repaid, mySpend, partnerKey, period: isYear ? (key === String(now.getFullYear()) ? key + ' so far' : key) : new Date(key + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' }) };
+        // 4.9.10: extra debt payments (Data → Debt → Extra payments) pay down a loan, so they aren't spending either
+        const extraDebt  = sum(bulkDebtPayments, e => e.amount);
+        const mySpend    = takeHome + repaid - coast - spent - partnerTH - lent - extraDebt;
+        mirSpend = { takeHome, coast, spent, partnerTH, lent, repaid, extraDebt, mySpend, partnerKey, period: isYear ? (key === String(now.getFullYear()) ? key + ' so far' : key) : new Date(key + '-15').toLocaleString('en-US', { month: 'long', year: 'numeric' }) };
         // Starting month (4.7.3): the first month on record has no balance before it, so its "change" would just be
         // the money already there. That month shows a starting point instead; the first year measures from the
         // end of that month, and goals already met at the start aren't listed as reached.

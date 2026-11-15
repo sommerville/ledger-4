@@ -108,6 +108,43 @@
     function _taxDiv() { return LC.taxDivisor(taxRatePct); }
 
     const INFO_PANELS = {
+        // 4.9.10: the two ratio goal cards (Goals page) show their math with your numbers
+        salaryMult() {
+            const now = _gNow(), g = _gGrossT12(LC.addMonths(now, 1)), p = getCurrentTotal(), st = goalState('salaryMult');
+            const mo = goalMonthly('salaryMult'), nx = st.current ? st.current.target : null;
+            return { title: 'Salary Multiple', sections: [
+                { h: 'Today', rows: [
+                    ['Portfolio (invested)', _$(p)],
+                    ['Household gross pay, last 12 months', _$(g)],
+                    ['Salary multiple', g > 0 ? (p / g).toFixed(1) + '×' : '—', true],
+                ], formula: 'portfolio ÷ household gross pay (last 12 months)' },
+                { h: 'Fidelity’s guideline', notes: ['1× by 30 · 2× by 35 · 3× by 40 · 4× by 45 · 6× by 50 · 7× by 55 · 8× by 60 · 10× by 67',
+                    'Gross pay is every income entry’s gross (paychecks and bonuses) for both of you.'] },
+                { h: 'Projected date', notes: [
+                    (nx && g > 0 ? 'Next step ' + nx + '× = ' + _$(nx * g) + ' at today’s pay. ' : '') +
+                    'The portfolio grows at ' + Math.round(LC.PLAN_RETURN * 100) + '% a year plus your last 12 months of saving (' + _$(mo || 0) + '/mo). Pay is held at today’s level.'] },
+            ] };
+        },
+        mndRatio() {
+            const now = _gNow(), g = _gGrossT12(LC.addMonths(now, 1)), age = _gAgeAt(now), x = _gMndExpected(now);
+            const nw = getCurrentNetWorth() + realEstateTotal();
+            return { title: 'Millionaire Next Door', sections: [
+                { h: 'Today', rows: [
+                    ['Age', age ? String(age) : 'set your birthday'],
+                    ['Household gross pay, last 12 months', _$(g)],
+                    ['Expected net worth (age × pay ÷ 10)', x ? _$(x) : '—'],
+                    ['Net worth (incl. real estate)', _$(nw)],
+                    ['Your ratio', x ? (nw / x).toFixed(2) + '×' : '—', true],
+                ], formula: 'net worth ÷ (age × household gross pay ÷ 10)' },
+                { h: 'The bands (Stanley & Danko)', notes: [
+                    'Under 0.5×: under-accumulator of wealth (UAW).',
+                    '0.5× to 2×: average accumulator (AAW); 1× is exactly expected.',
+                    '2× or more: prodigious accumulator (PAW)' + (x ? ', ' + _$(2 * x) + ' for you today.' : '.')] },
+                { h: 'Projected date', notes: [
+                    'Net worth grows with the portfolio: ' + Math.round(LC.PLAN_RETURN * 100) + '% a year plus your last 12 months of saving (' + _$(goalMonthly('mndRatio') || 0) + '/mo).',
+                    'The bar moves too: expected net worth rises by a year of pay ÷ 10 on each birthday, with pay held at today’s level.'] },
+            ] };
+        },
         mirSpending() {
             const m = mirSpend || { takeHome: 0, coast: 0, spent: 0, partnerTH: 0, lent: 0, repaid: 0, mySpend: 0, partnerKey: '', period: '' };
             const names = {};
@@ -122,6 +159,7 @@
                     ['− Expenses (bills logged)', _$(m.spent)],
                     ...(m.partnerKey ? [['− ' + (names[m.partnerKey] || 'Partner') + ' take-home', _$(m.partnerTH)]] : []),
                     ...(m.lent ? [['− Money lent out (owed to you)', _$(m.lent)]] : []),
+                    ...(m.extraDebt ? [['− Extra debt payments', _$(m.extraDebt)]] : []),
                     ...(m.repaid ? [['+ Loan repayments received', _$(m.repaid)]] : []),
                     ['My spending', (m.mySpend < 0 ? '−' : '') + _$(Math.abs(m.mySpend)), true],
                 ] },
@@ -134,6 +172,7 @@
                 { h: 'Good to know', notes: [
                     'Payroll savings (401(k), HSA, match) never reach take-home, so they aren’t part of this.',
                     'Money you lend out (Loans) isn’t spending; repayments count as money back in.',
+                    'Extra debt payments (paying a loan down early) aren’t spending either: the money went to the loan.',
                     'Money that stays in checking counts as spent until it’s moved to savings.'] },
             ] };
         },

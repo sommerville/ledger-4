@@ -266,7 +266,7 @@
         if (!opts.compact && st.rest.length) body += `<div style="font-size:10px;color:${T.mutedClr};margin-top:6px;">After that: ${st.rest.slice(0, 3).map(r => label(r.target)).join(' → ')}${st.rest.length > 3 ? ' → …' : ''}</div>`;
         return `<div style="background:${T.cardBg};border:1px solid ${T.borderClr};border-radius:12px;padding:14px;margin-bottom:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;">
-                    <div><div style="font-size:15px;font-weight:800;color:${T.accent};">${t.emoji} ${t.name}</div>
+                    <div><div style="font-size:15px;font-weight:800;color:${T.accent};">${t.emoji} ${t.name}${t.ratio ? ` <button type="button" class="info-btn" onclick="event.stopPropagation();openInfo('${id}')" aria-label="How this is calculated" style="margin-left:4px;vertical-align:middle">i</button>` : ''}</div>
                         ${t.note ? `<div style="font-size:11px;color:${T.mutedClr};">${t.note}</div>` : ''}${id === 'mndRatio' ? _gMndLine(T) : ''}</div>
                     <div style="font-size:16px;font-weight:800;color:${T.textClr};white-space:nowrap;">${t.ratio ? st.value.toFixed(id === 'mndRatio' ? 2 : 1) + '×' : fmt(st.value)}</div></div>
                 ${body}</div>`;
