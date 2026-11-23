@@ -249,7 +249,8 @@
         if (kind === 'account') {
             const a = isNew ? {} : accounts.find(x => suSame(x.id, id));
             if (!a) return;
-            Object.assign(d, { type: a.type || 'taxable', institution: a.institution || '', name: isNew ? '' : (a.name || ''),
+            Object.assign(d, { type: a.type || 'taxable', institution: a.institution || '',   // 4.9.11: a name that is just the institution = no nickname
+                               name: isNew || a.name === a.institution ? '' : (a.name || ''),
                                newInst: false, balance: '', asOf: mk });
         } else if (kind === 'debt') {
             const a = isNew ? {} : debtAccounts.find(x => suSame(x.id, id));
@@ -354,6 +355,7 @@
                     ${suChips(insts.map(i => [i, i]).concat([['__new', '+ New']]), d.newInst ? '__new' : d.institution, 'suSetInst')}
                     ${d.newInst ? `<input id="suNewInst" class="su-input" type="text" placeholder="Institution name" value="${suEsc(d.institution)}" oninput="suSet('institution', this.value)" autocomplete="off">` : ''}</div>
                 ${suTextField('suName', 'Nickname <em>(optional)</em>', 'name', { placeholder: 'e.g. Brokerage' })}
+                <span class="su-hint">Leave it blank to go by the institution’s name.</span>
                 ${d.isNew && d.type !== 'metals' ? suBalanceFields('balance') : ''}
                 ${d.isNew && d.type !== 'metals' ? `<div class="su-note">${SU_ICON.info}<span>With a balance, it shows up in Investments from that month on. Earlier months stay as they were.</span></div>` : ''}`;
         } else if (d.kind === 'debt') {
@@ -639,7 +641,10 @@
             if (!inst) return suFail('Pick where the account is, or add a new institution.');
             if (!institutions.includes(inst)) { institutions.push(inst); institutions.sort(); saveInstitutions(); }
             const typeLbl = (SU_ACCT_TYPES.find(t => t[0] === d.type) || [, d.type])[1];
-            const name = trim(d.name) || inst + ' ' + typeLbl;
+            // 4.9.11: no nickname = the institution alone, shown like "M1 · Taxable" (was "HSA Bank HSA"); the type is added only
+            // when another account at the same institution already goes by its name
+            const sameInst = accounts.some(x => !suSame(x.id, d.id) && x.name === inst);
+            const name = trim(d.name) || (sameInst ? inst + ' ' + typeLbl : inst);
             if (d.isNew) {
                 if (d.type !== 'metals' && d.balance && suParseMoney(d.balance) == null) return suFail('The balance doesn’t look like a number.');
                 if (d.balance && d.asOf && d.asOf > suMk()) return suFail('“As of” can’t be a future month.');
