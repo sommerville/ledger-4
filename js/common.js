@@ -284,15 +284,13 @@
     }
 
     // ─── Projections ─────────────────────────────────────────
-    // 4.7.12: the birthday is a setting (Settings → Display Options → Your birthday), kept on this phone and in its
-    // backups, never in the code (the repo is public). Null until it's set.
+    // 4.9.12: the birthday is fixed here (Darrin's choice: a near date, close enough for age-based projections), and the
+    // Settings field is gone. Any date saved by the old setting is cleared from the phone.
+    const BIRTHDAY_FIXED = '1985-05-01';
+    try { localStorage.removeItem('pf_birthday'); } catch (e) { /* storage off: nothing to clear */ }
     function getBirthday() {
-        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(localStorage.getItem('pf_birthday') || '');
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(BIRTHDAY_FIXED);
         return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
-    }
-    function setBirthday(v) {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(v || '')) localStorage.setItem('pf_birthday', v); else localStorage.removeItem('pf_birthday');
-        if (typeof refreshAll === 'function') refreshAll();
     }
 
     function getCurrentAge() {

@@ -44,7 +44,7 @@
             theme:          localStorage.getItem('pf_theme')            || 'alaskan',
             basicCalcEnabled: localStorage.getItem('pf_basicCalcEnabled') || '0',
             userAge:        localStorage.getItem('pf_dt_user_age')      || '',
-            birthday:       localStorage.getItem('pf_birthday')         || '',   // 4.7.12: the desktop planner reads it
+            birthday:       BIRTHDAY_FIXED,   // 4.7.12: the desktop planner reads it; 4.9.12: the fixed date (common.js)
             pinHint:        localStorage.getItem('pf_pin_hint')         || '',
             erGoal:         localStorage.getItem('pf_er_goal')           || ''
             // v3.1: monteCarloResult, untrackedLiving, healthInsurance no longer exported
@@ -454,7 +454,7 @@
                 if (b.theme)      localStorage.setItem('pf_theme',       b.theme);
                 if (b.basicCalcEnabled !== undefined) localStorage.setItem('pf_basicCalcEnabled', b.basicCalcEnabled);
                 if (b.userAge)    localStorage.setItem('pf_dt_user_age', b.userAge);
-                if (b.birthday)   localStorage.setItem('pf_birthday', b.birthday);
+                // 4.9.12: a backup's birthday isn't loaded: the date is fixed in common.js
                 if (b.erGoal)     localStorage.setItem('pf_er_goal',     b.erGoal);
                 linkBonusPayers();   // v3.2: link bonuses to their company and old entries to their payer
                 saveEntries();
